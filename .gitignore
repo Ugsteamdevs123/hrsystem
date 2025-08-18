@@ -1,0 +1,16 @@
+# For ignore Environment
+env/
+
+
+# For Ignore Python Files From Project
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+# For ignore .env file to get packages
+
+.env
+env
+
