@@ -53,6 +53,9 @@ INSTALLED_APPS = [
     # Rest Framework
     'rest_framework',
 
+    # For Audit Log Config
+    'auditlog',
+
     # App name
     'user',
 
@@ -66,6 +69,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # For csrf middleware
+    'django.middleware.csrf.CsrfViewMiddleware',
 ]
 
 ROOT_URLCONF = 'pyroll.urls'
@@ -150,5 +156,29 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # To Modify Default User Model Of Django
 
 AUTH_USER_MODEL = "user.CustomUser"
+
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# CSRF Token Authentication
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
+
+
+
+
+
+
+
 
 

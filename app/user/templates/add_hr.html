@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Add HR{% endblock %}
+
+{% block content %}
+<h2>Add HR User</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="message">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<form method="POST">
+    {% csrf_token %}
+
+    <!-- Form fields -->
+    <div class="form-field">
+        {{ form.full_name.label_tag }}
+        {{ form.full_name }}
+    </div>
+
+    <div class="form-field">
+        {{ form.email.label_tag }}
+        {{ form.email }}
+    </div>
+
+    <div class="form-field">
+        {{ form.password.label_tag }}
+        {{ form.password }}
+    </div>
+
+    <div class="form-field">
+        {{ form.gender.label_tag }}
+        {{ form.gender }}
+    </div>
+
+    <div class="form-field">
+        {{ form.contact.label_tag }}
+        {{ form.contact }}
+    </div>
+
+    <button type="submit" class="form-btn btn-submit">Save HR</button>
+    <button type="button" class="form-btn btn-back" onclick="window.location.href='{% url 'dashboard' %}'">Back to Dashboard</button>
+</form>
+
+<style>
+    /* Style form fields */
+    .form-field {
+        margin-bottom: 15px;
+        text-align: left;
+    }
+
+    .form-field input, 
+    .form-field select, 
+    .form-field textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+
+    /* Submit button */
+    .btn-submit {
+        background-color: #007bff;
+        color: #fff;
+        margin-top: 10px;
+    }
+    .btn-submit:hover {
+        background-color: #0056b3;
+    }
+
+    /* Back button */
+    .btn-back {
+        background-color: #6c757d;
+        color: #fff;
+        margin-top: 10px;
+    }
+    .btn-back:hover {
+        background-color: #5a6268;
+    }
+
+    /* Responsive adjustments */
+    @media screen and (max-width: 500px) {
+        .form-btn { font-size: 14px; padding: 10px; }
+        .form-field input, .form-field select, .form-field textarea { font-size: 14px; }
+    }
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{% comment %} <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add HR User</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f2f2f2; text-align: center; padding: 50px; }
+        form { display: inline-block; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 350px; }
+        input, select, button { padding: 12px; margin: 10px 0; width: 100%; border-radius: 5px; border: 1px solid #ccc; }
+        button { background: #007bff; color: #fff; border: none; cursor: pointer; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        .message { color: green; margin-bottom: 15px; }
+        a.back-link { display: inline-block; margin-top: 20px; text-decoration: none; color: #007bff; }
+        a.back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Add HR User</h1>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save HR</button>
+    </form>
+
+    <br>
+    <a href="{% url 'dashboard' %}" class="back-link">Back to Dashboard</a>
+
+    <form method="get" action="{% url 'logout' %}" style="position:absolute; top:20px; right:20px;">
+    <button type="submit" style="padding:8px 12px; background:#dc3545; color:#fff; border:none; border-radius:5px; cursor:pointer;">
+        Logout
+    </button>
+
+</form>
+</body>
+</html> {% endcomment %}

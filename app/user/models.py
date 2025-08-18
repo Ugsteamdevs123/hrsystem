@@ -6,11 +6,22 @@ from django.contrib.auth.models import (
 )
 from .managers import  CustomUserManager
 
+
+# For audit logs 
+from auditlog.registry import auditlog
+from auditlog.models import AuditlogHistoryField
+
 # Create your models here.
 
 
 class Gender(models.Model):
     gender = models.CharField(max_length=12)
+
+    history = AuditlogHistoryField()  # Required to store log
+
+    def __str__(self):
+        return self.gender
+
 
 class CustomUser(AbstractBaseUser , PermissionsMixin):
     email = models.EmailField(
@@ -46,6 +57,9 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
     USERNAME_FIELD ='email'
     objects = CustomUserManager()
 
+    history = AuditlogHistoryField()  # Required to store log
+
+
     @staticmethod
     def group_check(name: str) -> Group:
         designation, _ = Group.objects.get_or_create(name=name)
@@ -57,12 +71,18 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
 class Company(models.Model):
     name = models.CharField(max_length=255)
 
+    history = AuditlogHistoryField()  # Required to store log
+
+
     def __str__(self):
         return self.name
 
 
 class Designation(models.Model):
     title = models.CharField(max_length=255)
+
+    history = AuditlogHistoryField()  # Required to store log
+
 
     def __str__(self):
         return self.title
@@ -72,12 +92,18 @@ class DepartmentTeams(models.Model):
     name = models.CharField(max_length=255)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
 
+    history = AuditlogHistoryField()  # Required to store log
+
+
     def __str__(self):
         return self.name
 
 
 class DepartmentGroups(models.Model):
     name = models.CharField(max_length=255)
+
+    history = AuditlogHistoryField()  # Required to store log
+
 
     def __str__(self):
         return self.name
@@ -87,12 +113,16 @@ class Section(models.Model):
     name = models.CharField(max_length=255)
     department_group = models.ForeignKey(DepartmentGroups, on_delete=models.CASCADE, null=True)
 
+    history = AuditlogHistoryField()  # Required to store log
+
     def __str__(self):
         return self.name
 
 
 class EmployeeStatus(models.Model):
     status = models.CharField(max_length=255)
+
+    history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
         return self.status
@@ -101,6 +131,9 @@ class Formula(models.Model):
     formula_name = models.CharField(max_length=255)
     formula_expression = models.CharField(max_length=255)
 
+    history = AuditlogHistoryField()  # Required to store log
+
+
     def __str__(self):
         return self.formula_name
     
@@ -108,7 +141,7 @@ class Location(models.Model):
     location = models.CharField(max_length=122)
     code = models.CharField(max_length=50) 
 
-    
+    history = AuditlogHistoryField()  # Required to store log
 
 
 class Employee (models.Model):
@@ -130,6 +163,8 @@ class Employee (models.Model):
     remarks = models.TextField(blank=True)
     image = models.FileField(upload_to='employee_images/', blank=True, null=True)
 
+    history = AuditlogHistoryField()  # Required to store log
+
     def __str__(self):
         return self.fullname
 
@@ -140,6 +175,8 @@ class CurrentPackageDetails(models.Model):
     vehicle = models.DecimalField(max_digits=10, decimal_places=2)
     fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
+
+    history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
         return f"Package for {self.employee.fullname}"
@@ -155,6 +192,8 @@ class ProposedPackageDetails(models.Model):
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
     vehicle = models.DecimalField(max_digits=10, decimal_places=2)
 
+    history = AuditlogHistoryField()  # Required to store log
+
     def __str__(self):
         return f"Proposed Package for {self.employee.fullname}"
     
@@ -169,6 +208,8 @@ class FinancialImpactPerMonth(models.Model):
     mobile_allowance = models.ForeignKey(Formula, related_name='mobile_allowance', on_delete=models.SET_NULL, null=True)
     fuel = models.DecimalField(max_digits=10, decimal_places=2)
     total = models.ForeignKey(Formula, related_name='total', on_delete=models.SET_NULL, null=True)
+
+    history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
         return f"Final Impact for {self.employee.fullname}"
