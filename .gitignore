@@ -1,5 +1,6 @@
 # For ignore Environment
 env/
+venv/
 
 
 # For Ignore Python Files From Project

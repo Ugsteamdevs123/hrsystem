@@ -68,7 +68,15 @@ class Designation(models.Model):
         return self.title
 
 
-class Department(models.Model):
+class DepartmentTeams(models.Model):
+    name = models.CharField(max_length=255)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
+
+
+class DepartmentGroups(models.Model):
     name = models.CharField(max_length=255)
 
     def __str__(self):
@@ -77,6 +85,7 @@ class Department(models.Model):
 
 class Section(models.Model):
     name = models.CharField(max_length=255)
+    department_group = models.ForeignKey(DepartmentGroups, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return self.name
@@ -108,7 +117,8 @@ class Employee (models.Model):
     fullname = models.CharField(max_length=255)
     company_name = models.ForeignKey(Company, on_delete=models.CASCADE)
     designation = models.ForeignKey(Designation, on_delete=models.CASCADE)
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    department_group = models.ForeignKey(DepartmentGroups, on_delete=models.CASCADE, null=True)
+    department_team = models.ForeignKey(DepartmentTeams, on_delete=models.CASCADE, null=True)
     section = models.ForeignKey(Section, on_delete=models.CASCADE)
     
     location = models.ForeignKey(Location , on_delete=models.CASCADE)
