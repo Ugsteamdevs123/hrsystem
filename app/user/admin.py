@@ -52,7 +52,8 @@ class CustomUserAdmin(UserAdmin):
 
 
 admin.site.register(models.Designation)
-admin.site.register(models.Department)
+admin.site.register(models.DepartmentTeams)
+admin.site.register(models.DepartmentGroups)
 admin.site.register(models.Section)
 admin.site.register(models.EmployeeStatus)
 admin.site.register(models.CurrentPackageDetails)
