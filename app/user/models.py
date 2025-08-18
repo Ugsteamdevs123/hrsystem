@@ -101,49 +101,6 @@ class Location(models.Model):
 
     
 
-# class CurrentPackageDetails(models.Model):
-#     # employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
-#     gross_salary = models.DecimalField(max_digits=10, decimal_places=2)
-#     vehicle = models.DecimalField(max_digits=10, decimal_places=2)
-#     fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
-#     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
-
-#     # def __str__(self):
-#     #     return f"Package for {self.employee.fullname}"
-    
-
-
-# class ProposedPackageDetails(models.Model):
-#     # employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
-#     increment_percentage = models.DecimalField(max_digits=5, decimal_places=2)
-#     increased_amount = models.ForeignKey(Formula, related_name='increased_amount', on_delete=models.SET_NULL, null=True)
-#     revised_salary = models.ForeignKey(Formula, related_name='revised_salary', on_delete=models.SET_NULL, null=True)
-#     increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2)
-#     revised_fuel_allowance = models.ForeignKey(Formula, related_name='revised_fuel_allowance', on_delete=models.SET_NULL, null=True)
-#     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
-#     vehicle = models.DecimalField(max_digits=10, decimal_places=2)
-
-#     # def __str__(self):
-#     #     return f"Proposed Package for {self.employee.fullname}"
-    
-
-
-# class FinalImpactPerMonth(models.Model):
-#     # employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
-#     emp_status = models.ForeignKey(EmployeeStatus, on_delete=models.CASCADE)
-#     serving_years = models.IntegerField()
-#     salary = models.DecimalField(max_digits=10, decimal_places=2)
-#     gratuity = models.ForeignKey(Formula, related_name='gratuity', on_delete=models.SET_NULL, null=True)
-#     bonus = models.ForeignKey(Formula, related_name='bonus', on_delete=models.SET_NULL, null=True)
-#     le = models.ForeignKey(Formula, related_name='le', on_delete=models.SET_NULL, null=True)
-#     mobile_allowance = models.ForeignKey(Formula, related_name='mobile_allowance', on_delete=models.SET_NULL, null=True)
-#     fuel = models.DecimalField(max_digits=10, decimal_places=2)
-#     total = models.ForeignKey(Formula, related_name='total', on_delete=models.SET_NULL, null=True)
-
-#     # def __str__(self):
-#     #     return f"Final Impact for {self.employee.fullname}"
-
-
 
 class Employee (models.Model):
 
@@ -155,16 +112,13 @@ class Employee (models.Model):
     section = models.ForeignKey(Section, on_delete=models.CASCADE)
     
     location = models.ForeignKey(Location , on_delete=models.CASCADE)
-    # location = models.CharField(max_length=255)
-
-
     date_of_joining = models.DateField()  # Date of Joining
+
+    resign = models.BooleanField(default=False)
+    date_of_resignation = models.DateField(blank=True, null=True)
+
     remarks = models.TextField(blank=True)
     image = models.FileField(upload_to='employee_images/', blank=True, null=True)
-
-    # current_package_detail = models.ForeignKey(CurrentPackageDetails , on_delete=models.CASCADE)
-    # proposed_package_detail = models.ForeignKey(ProposedPackageDetails , on_delete=models.CASCADE)
-    # final_impact_per_month = models.ForeignKey(FinalImpactPerMonth , on_delete=models.CASCADE)
 
     def __str__(self):
         return self.fullname
@@ -194,7 +148,7 @@ class ProposedPackageDetails(models.Model):
     def __str__(self):
         return f"Proposed Package for {self.employee.fullname}"
     
-class FinalImpactPerMonth(models.Model):
+class FinancialImpactPerMonth(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
     emp_status = models.ForeignKey(EmployeeStatus, on_delete=models.CASCADE)
     serving_years = models.IntegerField()
