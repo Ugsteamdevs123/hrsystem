@@ -39,15 +39,7 @@ class CustomUserAdmin(UserAdmin):
     ordering = ("email",)
 
 
-
-
-
-
-
-
-
-
-
+admin.site.register(models.Location)
 admin.site.register(models.IncrementDetailsSummary)
 admin.site.register(models.hr_assigned_companies)
 admin.site.register(models.Company)

@@ -1,0 +1,604 @@
+{% extends 'base.html' %}
+{% block title %}Department - {{ department.name }}{% endblock %}
+{% block content %}
+    <div class="container mt-5">
+        <h1 class="mb-4 text-primary">Department - {{ department.name }}</h1>
+        <div class="card shadow-sm p-4 bg-light">
+            <div class="d-flex justify-content-between mb-3">
+                <h5>Employee Data</h5>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">Create New Record</button>
+            </div>
+            <div class="table-responsive">
+                {{ table_html | safe }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for creating new record -->
+    <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true" data-company-id="{{ department.company.id }}">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createModalLabel">Create New Record</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createForm">
+                        <!-- Step 1: Employee -->
+                        <div class="step" id="step-employee">
+                            <h6>Step 1: Employee Details</h6>
+                            <div class="mb-3">
+                                <label for="fullname" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="fullname" name="fullname" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="department_group_id" class="form-label">Department Group</label>
+                                <select class="form-select" id="department_group_id" name="department_group_id" required>
+                                    <option value="">Select Department Group</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="section_id" class="form-label">Section</label>
+                                <select class="form-select" id="section_id" name="section_id">
+                                    <option value="">Select Section</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Designation</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="designation_id" name="designation_id">
+                                        <option value="">Select Designation</option>
+                                    </select>
+                                    <div class="form-check ms-2">
+                                        <input class="form-check-input" type="checkbox" id="add_new_designation">
+                                        <label class="form-check-label" for="add_new_designation">Add New</label>
+                                    </div>
+                                </div>
+                                <input type="text" class="form-control mt-2" id="new_designation_title" name="new_designation_title" placeholder="Enter new designation title" disabled>
+                            </div>
+                            <div class="mb-3">
+                                <label for="location_id" class="form-label">Location</label>
+                                <select class="form-select" id="location_id" name="location_id">
+                                    <option value="">Select Location</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="date_of_joining" class="form-label">Date of Joining</label>
+                                <input type="date" class="form-control" id="date_of_joining" name="date_of_joining">
+                            </div>
+                            <div class="mb-3">
+                                <label for="resign" class="form-label">Resign</label>
+                                <select class="form-select" id="resign" name="resign">
+                                    <option value="false">No</option>
+                                    <option value="true">Yes</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="date_of_resignation" class="form-label">Date of Resignation</label>
+                                <input type="date" class="form-control" id="date_of_resignation" name="date_of_resignation" disabled>
+                            </div>
+                            <div class="mb-3">
+                                <label for="remarks" class="form-label">Remarks</label>
+                                <textarea class="form-control" id="remarks" name="remarks"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="image" class="form-label">Image</label>
+                                <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                            </div>
+                        </div>
+                        <!-- Step 2: Current Package -->
+                        <div class="step d-none" id="step-current_package">
+                            <h6>Step 2: Current Package Details</h6>
+                            <div class="mb-3">
+                                <label for="gross_salary" class="form-label">Gross Salary</label>
+                                <input type="number" class="form-control" id="gross_salary" name="gross_salary" step="0.01">
+                            </div>
+                            <div class="mb-3">
+                                <label for="vehicle" class="form-label">Vehicle</label>
+                                <input type="text" class="form-control" id="vehicle" name="vehicle">
+                            </div>
+                            <div class="mb-3">
+                                <label for="fuel_limit" class="form-label">Fuel Limit</label>
+                                <input type="number" class="form-control" id="fuel_limit" name="fuel_limit" step="0.01">
+                            </div>
+                            <div class="mb-3">
+                                <label for="mobile_allowance" class="form-label">Mobile Allowance</label>
+                                <input type="number" class="form-control" id="mobile_allowance" name="mobile_allowance" step="0.01">
+                            </div>
+                        </div>
+                        <!-- Step 3: Proposed Package -->
+                        <div class="step d-none" id="step-proposed_package">
+                            <h6>Step 3: Proposed Package Details</h6>
+                            <div class="mb-3">
+                                <label for="increment_percentage" class="form-label">Increment Percentage</label>
+                                <input type="number" class="form-control" id="increment_percentage" name="increment_percentage" step="0.01">
+                            </div>
+                            <div class="mb-3">
+                                <label for="increased_amount_id" class="form-label">Increased Amount ID</label>
+                                <input type="number" class="form-control" id="increased_amount_id" name="increased_amount_id">
+                            </div>
+                            <div class="mb-3">
+                                <label for="revised_salary_id" class="form-label">Revised Salary ID</label>
+                                <input type="number" class="form-control" id="revised_salary_id" name="revised_salary_id">
+                            </div>
+                            <div class="mb-3">
+                                <label for="increased_fuel_amount" class="form-label">Increased Fuel Amount</label>
+                                <input type="number" class="form-control" id="increased_fuel_amount" name="increased_fuel_amount" step="0.01">
+                            </div>
+                            <div class="mb-3">
+                                <label for="revised_fuel_allowance_id" class="form-label">Revised Fuel Allowance ID</label>
+                                <input type="number" class="form-control" id="revised_fuel_allowance_id" name="revised_fuel_allowance_id">
+                            </div>
+                            <div class="mb-3">
+                                <label for="mobile_allowance_proposed" class="form-label">Mobile Allowance</label>
+                                <input type="number" class="form-control" id="mobile_allowance_proposed" name="mobile_allowance" step="0.01">
+                            </div>
+                            <div class="mb-3">
+                                <label for="vehicle_proposed" class="form-label">Vehicle</label>
+                                <input type="text" class="form-control" id="vehicle_proposed" name="vehicle">
+                            </div>
+                        </div>
+                        <!-- Step 4: Financial Impact -->
+                        <div class="step d-none" id="step-financial_impact">
+                            <h6>Step 4: Financial Impact Details</h6>
+                            <div class="mb-3">
+                                <label for="emp_status_id" class="form-label">Employee Status ID</label>
+                                <input type="number" class="form-control" id="emp_status_id" name="emp_status_id">
+                            </div>
+                            <div class="mb-3">
+                                <label for="serving_years" class="form-label">Serving Years</label>
+                                <input type="number" class="form-control" id="serving_years" name="serving_years" step="0.1">
+                            </div>
+                            <div class="mb-3">
+                                <label for="salary" class="form-label">Salary</label>
+                                <input type="number" class="form-control" id="salary" name="salary" step="0.01">
+                            </div>
+                            <div class="mb-3">
+                                <label for="gratuity_id" class="form-label">Gratuity ID</label>
+                                <input type="number" class="form-control" id="gratuity_id" name="gratuity_id">
+                            </div>
+                            <div class="mb-3">
+                                <label for="bonus_id" class="form-label">Bonus ID</label>
+                                <input type="number" class="form-control" id="bonus_id" name="bonus_id">
+                            </div>
+                            <div class="mb-3">
+                                <label for="leave_encashment_id" class="form-label">Leave Encashment ID</label>
+                                <input type="number" class="form-control" id="leave_encashment_id" name="leave_encashment_id">
+                            </div>
+                            <div class="mb-3">
+                                <label for="mobile_allowance_financial" class="form-label">Mobile Allowance ID</label>
+                                <input type="number" class="form-control" id="mobile_allowance_financial" name="mobile_allowance_id">
+                            </div>
+                            <div class="mb-3">
+                                <label for="fuel" class="form-label">Fuel</label>
+                                <input type="number" class="form-control" id="fuel" name="fuel" step="0.01">
+                            </div>
+                            <div class="mb-3">
+                                <label for="total_id" class="form-label">Total ID</label>
+                                <input type="number" class="form-control" id="total_id" name="total_id">
+                            </div>
+                        </div>
+                        <input type="hidden" name="step" id="step">
+                        <input type="hidden" name="employee_id" id="employee_id">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary d-none" id="prevBtn">Previous</button>
+                    <button type="button" class="btn btn-primary" id="nextBtn">Next</button>
+                    <button type="button" class="btn btn-primary d-none" id="submitBtn">Submit</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .custom-table {
+            border-collapse: collapse;
+        }
+        .custom-table th, .custom-table td {
+            min-width: 120px;
+            max-width: 300px;
+            text-align: left !important;
+            padding: 12px;
+            border-end: 1px solid #dee2e6;
+        }
+        .custom-table th {
+            background-color: #e9ecef;
+        }
+        .custom-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .custom-table tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+        .custom-table .btn-sm {
+            padding: 4px 8px;
+        }
+        .form-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 16px 12px;
+        }
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            display: none;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = new bootstrap.Modal(document.getElementById('createModal'));
+
+            // Fetch Department Groups, Sections, Designations, and Locations
+            async function fetchDropdownData() {
+                const companyId = document.getElementById('createModal').dataset.companyId;
+
+                // Fetch Department Groups and Sections
+                try {
+                    const response = await fetch('/pyroll/department-groups-sections/', {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    if (!response.ok) throw new Error('Failed to fetch dropdown data');
+                    const data = await response.json();
+                    populateDepartmentGroups(data.data);
+                } catch (error) {
+                    console.error('Error fetching dropdown data:', error);
+                    alert('Error fetching dropdown data');
+                }
+
+                // Fetch Designations
+                try {
+                    const response = await fetch(`/pyroll/designations/?company_id=${companyId}`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    if (!response.ok) throw new Error('Failed to fetch designations');
+                    const data = await response.json();
+                    populateDesignations(data.data);
+                } catch (error) {
+                    console.error('Error fetching designations:', error);
+                    alert('Error fetching designations');
+                }
+
+                // Fetch Locations
+                try {
+                    const response = await fetch('/pyroll/locations/', {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    if (!response.ok) throw new Error('Failed to fetch locations');
+                    const data = await response.json();
+                    populateLocations(data.data);
+                } catch (error) {
+                    console.error('Error fetching locations:', error);
+                    alert('Error fetching locations');
+                }
+            }
+
+            function populateDepartmentGroups(data) {
+                const select = document.getElementById('department_group_id');
+                select.innerHTML = '<option value="">Select Department Group</option>';
+                data.forEach(group => {
+                    const option = document.createElement('option');
+                    option.value = group.id;
+                    option.textContent = group.name;
+                    select.appendChild(option);
+                });
+                window.departmentGroups = data; // Store for section filtering
+            }
+
+            function populateDesignations(data) {
+                const select = document.getElementById('designation_id');
+                select.innerHTML = '<option value="">Select Designation</option>';
+                data.forEach(designation => {
+                    const option = document.createElement('option');
+                    option.value = designation.id;
+                    option.textContent = designation.title;
+                    select.appendChild(option);
+                });
+            }
+
+            function populateLocations(data) {
+                const select = document.getElementById('location_id');
+                select.innerHTML = '<option value="">Select Location</option>';
+                data.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location.id;
+                    option.textContent = location.location;
+                    select.appendChild(option);
+                });
+            }
+
+            function populateSections(departmentGroupId) {
+                const select = document.getElementById('section_id');
+                select.innerHTML = '<option value="">Select Section</option>';
+                if (departmentGroupId) {
+                    const group = window.departmentGroups.find(g => g.id === parseInt(departmentGroupId));
+                    if (group && group.sections) {
+                        group.sections.forEach(section => {
+                            const option = document.createElement('option');
+                            option.value = section.id;
+                            option.textContent = section.name;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            }
+
+            // Toggle date of resignation input
+            const resign_dropdown = document.getElementById('resign');
+            const resignation_input = document.getElementById('date_of_resignation');
+            resign_dropdown.addEventListener('change', function () {
+                if (resign_dropdown.value === 'false') {
+                    resignation_input.disabled = true;
+                    resignation_input.value = '';
+                }
+                else {
+                    resignation_input.disabled = false;
+                }
+            });
+
+            // Toggle new designation input
+            const addNewDesignationCheckbox = document.getElementById('add_new_designation');
+            const newDesignationInput = document.getElementById('new_designation_title');
+            const designationSelect = document.getElementById('designation_id');
+            addNewDesignationCheckbox.addEventListener('change', function () {
+                newDesignationInput.disabled = !this.checked;
+                designationSelect.disabled = this.checked;
+                if (!this.checked) {
+                    newDesignationInput.value = '';
+                    designationSelect.value = '';
+                }
+            });
+
+            // Create new designation
+            async function createNewDesignation() {
+                const title = newDesignationInput.value.trim();
+                const companyId = document.getElementById('createModal').dataset.companyId;
+                if (!title) {
+                    alert('Please enter a designation title');
+                    return null;
+                }
+                try {
+                    const response = await fetch('/pyroll/designations/create/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+                        },
+                        body: JSON.stringify({ title, company: companyId })
+                    });
+                    if (!response.ok) throw new Error('Failed to create designation');
+                    const result = await response.json();
+                    if (result.error) {
+                        alert(result.error);
+                        return null;
+                    }
+                    return result;
+                } catch (error) {
+                    console.error('Error creating designation:', error);
+                    alert('Error creating designation');
+                    return null;
+                }
+            }
+
+            // Validate form fields for the employee step
+            function validateEmployeeStep() {
+                const form = document.getElementById('createForm');
+                const errors = [];
+
+                // Check required fields
+                if (!form.querySelector('#fullname').value.trim()) {
+                    errors.push('Full Name is required');
+                }
+                if (!form.querySelector('#department_group_id').value) {
+                    errors.push('Department is required');
+                }
+                if (!form.querySelector('#section_id').value) {
+                    errors.push('Section is required');
+                }
+                if (!form.querySelector('#location_id').value) {
+                    errors.push("Location is required");
+                }
+                if (!form.querySelector('#date_of_joining').value) {
+                    errors.push('Date of joining is required')
+                }
+                if (form.querySelector('#resign').value === 'true' && !form.querySelector('#date_of_resignation').value.trim()) {
+                    errors.push('Date of resignation is required')
+                }
+                if (addNewDesignationCheckbox.checked && !newDesignationInput.value.trim()) {
+                    errors.push('New Designation Title is required when adding a new designation');
+                }
+                if (!addNewDesignationCheckbox.checked && !designationSelect.value) {
+                    errors.push('Designation is required');
+                }
+
+                return errors;
+            }
+
+            // Update sections when department group changes
+            document.getElementById('department_group_id').addEventListener('change', function () {
+                populateSections(this.value);
+            });
+
+            // Intercept form submission to handle validation and new designation
+            async function handleFormSubmission(formData, step) {
+                if (step === 'employee') {
+                    const errors = validateEmployeeStep();
+                    if (errors.length > 0) {
+                        alert('Please fix the following errors:\n- ' + errors.join('\n- '));
+                        return null;
+                    }
+                    if (addNewDesignationCheckbox.checked) {
+                        const newDesignation = await createNewDesignation();
+                        if (newDesignation) {
+                            formData.set('designation_id', newDesignation.id);
+                            // Refresh designations dropdown
+                            const companyId = document.getElementById('createModal').dataset.companyId;
+                            try {
+                                const response = await fetch(`/pyroll/designations/?company_id=${companyId}`, {
+                                    method: 'GET',
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    }
+                                });
+                                if (!response.ok) throw new Error('Failed to fetch designations');
+                                const data = await response.json();
+                                populateDesignations(data.data);
+                                designationSelect.value = newDesignation.id;
+                            } catch (error) {
+                                console.error('Error refreshing designations:', error);
+                            }
+                        } else {
+                            return null; // Stop submission if designation creation fails
+                        }
+                    }
+                }
+                return formData;
+            }
+
+            // Delete button listeners
+            document.querySelectorAll('.delete-employee-btn').forEach(button => {
+                button.addEventListener('click', async function () {
+                    const employeeId = this.closest('tr').dataset.employeeId;
+                    if (!employeeId) {
+                        alert('Invalid employee ID');
+                        return;
+                    }
+                    if (!confirm('Are you sure you want to delete this employee?')) return;
+                    try {
+                        const response = await fetch(`/pyroll/delete-data/employee/${employeeId}/`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+                            }
+                        });
+                        if (!response.ok) throw new Error('Failed to delete employee');
+                        const result = await response.json();
+                        if (result.error) {
+                            alert(result.error);
+                        } else {
+                            window.location.reload();
+                        }
+                    } catch (error) {
+                        console.error('Error deleting employee:', error);
+                        alert('Error deleting employee');
+                    }
+                });
+            });
+
+            // Multi-step form logic
+            const steps = ['employee', 'current_package', 'proposed_package', 'financial_impact'];
+            let currentStep = 0;
+
+            const showStep = (stepIndex) => {
+                document.querySelectorAll('.step').forEach((step, index) => {
+                    step.classList.toggle('d-none', index !== stepIndex);
+                });
+                document.getElementById('step').value = steps[stepIndex];
+                document.getElementById('prevBtn').classList.toggle('d-none', stepIndex === 0);
+                document.getElementById('nextBtn').classList.toggle('d-none', stepIndex === steps.length - 1);
+                document.getElementById('submitBtn').classList.toggle('d-none', stepIndex !== steps.length - 1);
+                document.getElementById('createModalLabel').textContent = `Create New Record - Step ${stepIndex + 1}`;
+            };
+
+            document.getElementById('nextBtn').addEventListener('click', async function () {
+                const form = document.getElementById('createForm');
+                let formData = new FormData(form);
+                formData = await handleFormSubmission(formData, steps[currentStep]);
+                if (!formData) return; // Stop if validation or designation creation failed
+                try {
+                    const response = await fetch(`/pyroll/create-data/{{ department_id }}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+                    if (!response.ok) throw new Error('Failed to save step');
+                    const result = await response.json();
+                    if (result.error) {
+                        alert(result.error);
+                        return;
+                    }
+                    if (result.employee_id) {
+                        document.getElementById('employee_id').value = result.employee_id;
+                    }
+                    currentStep++;
+                    if (currentStep < steps.length) {
+                        showStep(currentStep);
+                        form.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
+                            if (input.id !== 'employee_id' && input.id !== 'step' && input.id !== 'csrfmiddlewaretoken') {
+                                input.value = '';
+                            }
+                        });
+                        addNewDesignationCheckbox.checked = false;
+                        newDesignationInput.disabled = true;
+                        designationSelect.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('Error saving step:', error);
+                    alert('Error saving step');
+                }
+            });
+
+            document.getElementById('submitBtn').addEventListener('click', async function () {
+                const form = document.getElementById('createForm');
+                let formData = new FormData(form);
+                formData = await handleFormSubmission(formData, steps[currentStep]);
+                if (!formData) return; // Stop if validation or designation creation failed
+                try {
+                    const response = await fetch(`/pyroll/create-data/{{ department_id }}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+                    if (!response.ok) throw new Error('Failed to save final step');
+                    const result = await response.json();
+                    if (result.error) {
+                        alert(result.error);
+                    } else {
+                        modal.hide();
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error saving final step:', error);
+                    alert('Error saving final step');
+                }
+            });
+
+            document.getElementById('prevBtn').addEventListener('click', function () {
+                if (currentStep > 0) {
+                    currentStep--;
+                    showStep(currentStep);
+                }
+            });
+
+            document.getElementById('createModal').addEventListener('show.bs.modal', function () {
+                currentStep = 0;
+                showStep(currentStep);
+                document.getElementById('createForm').reset();
+                document.getElementById('employee_id').value = '';
+                addNewDesignationCheckbox.checked = false;
+                newDesignationInput.disabled = true;
+                designationSelect.disabled = false;
+                fetchDropdownData();
+            });
+        });
+    </script>
+{% endblock %}

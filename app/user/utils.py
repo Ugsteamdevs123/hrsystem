@@ -1,5 +1,5 @@
-from .models import CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, configurations, Employee
-from django.db.models import Sum
+from .models import CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, configurations, Employee, hr_assigned_companies, DepartmentTeams
+from django.db.models import Sum, Prefetch
 
 
 def update_department_team_increment_summary(sender, instance, company, department_team):
@@ -72,3 +72,33 @@ def update_department_team_increment_summary(sender, instance, company, departme
             Increment_details_summary.staff_revised_cost = Increment_details_summary.total_cost_on_p_and_l_per_month + Increment_details_summary.current_salary
             Increment_details_summary.save()
             pass
+
+
+def get_companies_and_department_teams(hr_id):
+    try:
+        assigned_companies = (
+            hr_assigned_companies.objects
+            .filter(hr=hr_id)
+            .select_related("company")
+            .prefetch_related(
+                Prefetch(
+                    "company__departmentteams_set",  # reverse relation from Company → DepartmentTeams
+                    queryset=DepartmentTeams.objects.all(),
+                    to_attr="prefetched_departments"
+                )
+            )
+        )
+
+        return [
+            {
+                "company_id": ac.company.id,
+                "company_name": ac.company.name,
+                "departments": [
+                    {"id": dept.id, "name": dept.name}
+                    for dept in getattr(ac.company, "prefetched_departments", [])
+                ]
+            }
+            for ac in assigned_companies
+        ]
+    except Exception as e:
+        print(f"Error in fetching hr assigned companies and their respective deparment teams: {e}")

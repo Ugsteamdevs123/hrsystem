@@ -144,12 +144,25 @@
                         }
                         try {
                             const formData = new FormData(document.getElementById('editForm'));
+                            // Helper function to log FormData contents
+                            const entries = {};
+                            // let csrfToken;
+                            for (const [key, value] of formData.entries()) {
+                                if (key === 'csrfmiddlewaretoken') {
+                                    // csrfToken = value;
+                                    continue;
+                                }
+                                entries[key] = value;
+                            }
+
                             const response = await fetch('/pyroll/hr/', {
                                 method: 'PATCH',
                                 headers: {
-                                    'X-Requested-With': 'XMLHttpRequest'
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+                                    'Content-Type': 'application/json'
                                 },
-                                body: formData
+                                body: JSON.stringify(entries, null, 2)
                             });
                             if (!response.ok) throw new Error('Failed to update');
                             const result = await response.json();

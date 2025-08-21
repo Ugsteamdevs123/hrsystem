@@ -73,9 +73,10 @@ class hr_assigned_companies(models.Model):
 
 class Designation(models.Model):
     title = models.CharField(max_length=255)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.title
+        return self.title + ' ' + self.company
 
 
 class DepartmentTeams(models.Model):
@@ -169,7 +170,7 @@ class Employee(models.Model):
 class CurrentPackageDetails(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
     gross_salary = models.DecimalField(max_digits=10, decimal_places=2)
-    vehicle = models.DecimalField(max_digits=10, decimal_places=2)
+    vehicle = models.CharField(max_length=40)
     fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
 

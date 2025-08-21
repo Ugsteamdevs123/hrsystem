@@ -95,7 +95,7 @@
                 companySelect.innerHTML = '<option value="" selected>Select a company</option>';
                 window.companyData = data.data;
                 data.data.forEach(company => {
-                    companySelect.innerHTML += `<option value="${company.company_id}">${company.company}</option>`;
+                    companySelect.innerHTML += `<option value="${company.company_id}">${company.company_name}</option>`;
                 });
                 if (selectedCompanyId) {
                     companySelect.value = selectedCompanyId;

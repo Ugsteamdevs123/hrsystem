@@ -7,6 +7,14 @@ urlpatterns = [
     path('hr/', views.HrDashboardView.as_view(), name='hr_dashboard'),
     path('department-team/', views.DepartmentTeamView.as_view(), name='department_team'),
     path('get-companies-and-department-teams/', views.GetCompaniesAndDepartmentTeamsView.as_view(), name='get_companies_and_department_teams'),
-    # path('signup/', views.signup_view, name='signup'),
-    # add any other user-related URLs
+    
+    path('company-summary/<int:company_id>/', views.CompanySummaryView.as_view(), name='company_summary'),
+    path('department-table/<int:department_id>/', views.DepartmentTableView.as_view(), name='department_table'),
+    path('create-data/<int:department_id>/', views.CreateDataView.as_view(), name='create_data'),
+    path('delete-data/<str:table>/<int:id>/', views.DeleteDataView.as_view(), name='delete_data'),
+
+    path('department-groups-sections/', views.DepartmentGroupsSectionsView.as_view(), name='department_groups_sections'),
+    path('designations/', views.DesignationsView.as_view(), name='designations'),
+    path('designations/create/', views.DesignationCreateView.as_view(), name='designation_create'),
+    path('locations/', views.LocationsView.as_view(), name='locations')
 ]

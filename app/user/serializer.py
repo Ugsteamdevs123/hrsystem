@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from collections import OrderedDict
-from .models import IncrementDetailsSummary
+from .models import IncrementDetailsSummary, DepartmentGroups, Section, Designation, Location
 
 class IncrementDetailsSummarySerializer(serializers.ModelSerializer):
     department = serializers.CharField(source="department_team.name", read_only=True)
@@ -21,6 +21,7 @@ class IncrementDetailsSummarySerializer(serializers.ModelSerializer):
 
         # define the order explicitly
         field_order = [
+            "id",
             "department",
             "total_employees",
             "eligible_for_increment",
@@ -45,3 +46,42 @@ class IncrementDetailsSummarySerializer(serializers.ModelSerializer):
                     ordered[field.replace("_", " ")] = rep[field]
 
         return ordered
+
+
+class SectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Section
+        fields = ['id', 'name']
+
+
+class DepartmentGroupsSerializer(serializers.ModelSerializer):
+    sections = SectionSerializer(many=True, read_only=True, source='section_set')
+
+    class Meta:
+        model = DepartmentGroups
+        fields = ['id', 'name', 'sections']
+
+
+class DesignationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Designation
+        fields = ['id', 'title']
+
+class DesignationCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Designation
+        fields = ['title', 'company']
+
+    def validate_company(self, value):
+        # Ensure company matches the department's company (passed in context)
+        department_company_id = self.context.get('department_company_id')
+        if department_company_id and value.id != department_company_id:
+            raise serializers.ValidationError("Designation must belong to the same company as the department.")
+        return value
+
+
+class LocationsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Location
+        fields = '__all__'

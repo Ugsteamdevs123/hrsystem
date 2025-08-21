@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}My Site{% endblock %}</title>
+    <title>{% block title %}HR Portal{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <!-- Bootstrap 5 CSS -->
@@ -15,14 +15,36 @@
         <div class="bg-light border-end" style="width: 250px; min-height: 100vh;">
             <div class="p-3">
                 <h4 class="mb-3">HR Portal</h4>
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'user:hr_dashboard' %}">HR Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'user:department_team' %}">Add Department</a>
-                    </li>
-                </ul>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{% url 'user:hr_dashboard' %}">Dashboard</a>
+                    <a class="nav-link" href="{% url 'user:department_team' %}">Add Department</a>
+                    <!-- Companies dropdown -->
+                    <div class="accordion" id="companiesAccordion">
+                        {% for company in company_data %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="companyHeading{{ company.company_id }}">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#companyCollapse{{ company.company_id }}" aria-expanded="false" aria-controls="companyCollapse{{ company.company_id }}">
+                                        {{ company.company_name }}
+                                    </button>
+                                </h2>
+                                <div id="companyCollapse{{ company.company_id }}" class="accordion-collapse collapse" aria-labelledby="companyHeading{{ company.company_id }}">
+                                    <div class="accordion-body p-0">
+                                        <ul class="nav flex-column">
+                                            <li class="nav-item">
+                                                <a class="nav-link" href="{% url 'user:company_summary' company.company_id %}">Summary</a>
+                                            </li>
+                                            {% for department in company.departments %}
+                                                <li class="nav-item ms-3">
+                                                    <a class="nav-link" href="{% url 'user:department_table' department.id %}">{{ department.name }}</a>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </nav>
             </div>
         </div>
         <!-- Main content -->

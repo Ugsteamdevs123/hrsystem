@@ -1,3 +1,4 @@
+from venv import logger
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages import success as messages_success
@@ -11,10 +12,28 @@ from django.contrib.sessions.models import Session
 
 from permissions import GroupOrSuperuserPermission, PermissionRequiredMixin
 
-from .models import hr_assigned_companies, DepartmentTeams, IncrementDetailsSummary, Company
+from .models import (
+    hr_assigned_companies,
+    DepartmentTeams,
+    IncrementDetailsSummary,
+    Company,
+    Employee,
+    CurrentPackageDetails,
+    ProposedPackageDetails,
+    FinancialImpactPerMonth,
+    DepartmentGroups,
+    Designation,
+    Location)
 
-from .serializer import IncrementDetailsSummarySerializer
+from .utils import get_companies_and_department_teams
+from .serializer import (
+    IncrementDetailsSummarySerializer,
+    DepartmentGroupsSerializer,
+    DesignationSerializer,
+    DesignationCreateSerializer,
+    LocationsSerializer
 
+)
 from collections import defaultdict
 import json
 
@@ -91,15 +110,18 @@ class HrDashboardView(PermissionRequiredMixin, View):
         view = super().as_view(**initkwargs)
         view = login_required(view)
         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
         return view
     
     def get(self, request):
         # Fetch companies assigned to the logged-in HR
-        assigned_companies = hr_assigned_companies.objects.filter(hr=request.user)
-        company_data = [
-            {'company_id': ac.company.id, 'company_name': ac.company.name}
-            for ac in assigned_companies
-        ]
+        # assigned_companies = hr_assigned_companies.objects.filter(hr=request.user)
+        # company_data = [
+        #     {'company_id': ac.company.id, 'company_name': ac.company.name}
+        #     for ac in assigned_companies
+        # ]
+
+        company_data = get_companies_and_department_teams(request.user)
 
         # Handle AJAX request for employee data
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -128,8 +150,10 @@ class HrDashboardView(PermissionRequiredMixin, View):
         # Handle AJAX PATCH request to update eligible_for_increment
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
-                summary_id = request.POST.get('id')
-                eligible_for_increment = request.POST.get('eligible_for_increment')
+                data = json.loads(request.body)
+                print(data)
+                summary_id = data.get('id')
+                eligible_for_increment = data.get('eligible_for_increment')
                 if not summary_id or not eligible_for_increment:
                     return JsonResponse({'error': 'Invalid data'}, status=400)
                 summary = IncrementDetailsSummary.objects.get(id=summary_id, company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company'))
@@ -151,7 +175,15 @@ class DepartmentTeamView(View):
         return view
 
     def get(self, request):
-        return render(request, 'department_team.html')
+        # assigned_companies = hr_assigned_companies.objects.filter(hr=request.user)
+        # company_data = [
+        #     {'company_id': ac.company.id, 'company_name': ac.company.name}
+        #     for ac in assigned_companies
+        # ]
+
+        company_data = get_companies_and_department_teams(request.user)
+
+        return render(request, 'department_team.html', {'company_data': company_data})
 
     def post(self, request):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -171,7 +203,6 @@ class DepartmentTeamView(View):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)
-                print(data)
                 department_id = data.get('id')
                 name = data.get('name').strip()
                 if not department_id or not name:
@@ -221,32 +252,331 @@ class GetCompaniesAndDepartmentTeamsView(PermissionRequiredMixin, View):
     
     def get(self, request):
         try:
-            assigned_companies = (
-                hr_assigned_companies.objects
-                .filter(hr=request.user)
-                .select_related("company")
-                .prefetch_related(
-                    Prefetch(
-                        "company__departmentteams_set",  # reverse relation from Company → DepartmentTeams
-                        queryset=DepartmentTeams.objects.all(),
-                        to_attr="prefetched_departments"
-                    )
-                )
-            )
-
-            data = [
-                {
-                    "company_id": ac.company.id,
-                    "company": ac.company.name,
-                    "departments": [
-                        {"id": dept.id, "name": dept.name}
-                        for dept in getattr(ac.company, "prefetched_departments", [])
-                    ]
-                }
-                for ac in assigned_companies
-            ]
-            # return data
+            data = get_companies_and_department_teams(request.user)
 
             return JsonResponse({'data': data})  # Return companies for add_department.html
         except Exception as e:
             print(e)
+
+
+
+
+
+
+
+
+
+class CompanySummaryView(View):
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
+        return view
+
+    def get(self, request, company_id):
+        if not hr_assigned_companies.objects.filter(hr=request.user, company_id=company_id).exists():
+            return render(request, 'error.html', {'error': 'Invalid company'}, status=400)
+
+        company_data = get_companies_and_department_teams(request.user)
+
+        company = Company.objects.get(id=company_id)
+        increment_details_summary = IncrementDetailsSummary.objects.filter(company_id=company_id)
+        if increment_details_summary.exists():
+            data = IncrementDetailsSummarySerializer(increment_details_summary, many=True).data
+            table_html = '<table class="table table-bordered custom-table">'
+            table_html += '<thead><tr>'
+            # Use serializer field names (with spaces) for headers, exclude 'id'
+            headers = [key for key in data[0].keys() if key != 'id']
+            for header in headers:
+                table_html += f'<th class="font-weight-bold border-end">{header.title()}</th>'
+            table_html += '<th class="font-weight-bold border-end">Actions</th></tr></thead><tbody>'
+            for row in data:
+                table_html += f'<tr data-id="{row["id"]}" data-eligible="{row["eligible for increment"] if row["eligible for increment"] is not None else ""}">'
+                for header in headers:
+                    table_html += f'<td class="border-end">{row[header] if row[header] is not None else ""}</td>'
+                table_html += '<td class="border-end"><button class="btn btn-sm btn-primary edit-btn">Edit</button></td>'
+                table_html += '</tr>'
+            table_html += '</tbody></table>'
+        else:
+            table_html = '<p>No summary data available for this company.</p>'
+        # logger.info(f"User {request.user.username} accessed summary for company {company_id}")
+        return render(request, 'company_summary.html', {'company_data': company_data, 'company': company, 'table_html': table_html})
+
+    def patch(self, request, company_id):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                # logger.debug(f"PATCH received: {request.POST}")
+                data = json.loads(request.body)
+                summary_id = data.get('id')
+                eligible_for_increment = data.get('eligible_for_increment')
+                if not summary_id or not eligible_for_increment:
+                    return JsonResponse({'error': 'Invalid data'}, status=400)
+                summary = IncrementDetailsSummary.objects.get(
+                    id=summary_id,
+                    company_id=company_id,
+                    company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+                )
+                summary.eligible_for_increment = int(eligible_for_increment)
+                summary.save()
+                # logger.debug(f"Updated summary {summary_id}: eligible_for_increment={eligible_for_increment}")
+                return JsonResponse({'message': 'Updated successfully'})
+            except (IncrementDetailsSummary.DoesNotExist, ValueError):
+                # logger.error(f"Error updating summary: {request.POST}")
+                return JsonResponse({'error': 'Invalid ID or value'}, status=400)
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+class DepartmentTableView(View):
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
+        return view
+
+    def get(self, request, department_id):
+        department = DepartmentTeams.objects.filter(
+            id=department_id,
+            company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+        ).first()
+        if not department:
+            return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
+
+        company_data = get_companies_and_department_teams(request.user)
+
+        employees = Employee.objects.filter(department_team=department)
+        joined_data = []
+        for employee in employees:
+            current_package = CurrentPackageDetails.objects.filter(employee=employee).first() or {}
+            proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first() or {}
+            financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first() or {}
+            joined_data.append({
+                'employee_id': employee.emp_id,
+                'fullname': employee.fullname,
+                'company': employee.company.name,
+                'department_team': employee.department_team.name if employee.department_team else '',
+                'department_group': employee.department_group.name if employee.department_group else '',
+                'section': employee.section.name if employee.section else '',
+                'designation': employee.designation.title if employee.designation else '',
+                'location': employee.location.location if employee.location else '',
+                'date_of_joining': employee.date_of_joining or '',
+                'resign': employee.resign,
+                'date_of_resignation': employee.date_of_resignation or '',
+                'remarks': employee.remarks or '',
+                'image': employee.image.url if employee.image else '',
+                'gross_salary': current_package.gross_salary if current_package else '',
+                'vehicle': current_package.vehicle if current_package else '',
+                'fuel_limit': current_package.fuel_limit if current_package else '',
+                'mobile_allowance_current': current_package.mobile_allowance if current_package else '',
+                'increment_percentage': proposed_package.increment_percentage if proposed_package else '',
+                'increased_amount': proposed_package.increased_amount.formula if proposed_package and proposed_package.increased_amount else '',
+                'revised_salary': proposed_package.revised_salary.formula if proposed_package and proposed_package.revised_salary else '',
+                'increased_fuel_amount': proposed_package.increased_fuel_amount if proposed_package else '',
+                'revised_fuel_allowance': proposed_package.revised_fuel_allowance.formula if proposed_package and proposed_package.revised_fuel_allowance else '',
+                'mobile_allowance_proposed': proposed_package.mobile_allowance if proposed_package else '',
+                'vehicle_proposed': proposed_package.vehicle if proposed_package else '',
+                'emp_status': financial_impact.emp_status.name if financial_impact and financial_impact.emp_status else '',
+                'serving_years': financial_impact.serving_years if financial_impact else '',
+                'salary': financial_impact.salary if financial_impact else '',
+                'gratuity': financial_impact.gratuity.formula if financial_impact and financial_impact.gratuity else '',
+                'bonus': financial_impact.bonus.formula if financial_impact and financial_impact.bonus else '',
+                'leave_encashment': financial_impact.leave_encashment.formula if financial_impact and financial_impact.leave_encashment else '',
+                'mobile_allowance_financial': financial_impact.mobile_allowance.formula if financial_impact and financial_impact.mobile_allowance else '',
+                'fuel': financial_impact.fuel if financial_impact else '',
+                'total': financial_impact.total.formula if financial_impact and financial_impact.total else '',
+            })
+
+        if joined_data:
+            table_html = '<div class="table-responsive"><table class="table table-striped table-hover">'
+            table_html += '<thead><tr>'
+            for key in joined_data[0].keys():
+                table_html += f'<th>{key.replace("_", " ").title()}</th>'
+            table_html += '<th>Actions</th></tr></thead><tbody>'
+            for row in joined_data:
+                table_html += f'<tr data-employee-id="{row["employee_id"]}">'
+                for value in row.values():
+                    table_html += f'<td>{value if value is not None else ""}</td>'
+                table_html += '<td><button class="btn btn-sm btn-danger delete-employee-btn">Delete</button></td>'
+                table_html += '</tr>'
+            table_html += '</tbody></table></div>'
+        else:
+            table_html = '<p>No data available for this department.</p>'
+
+        return render(request, 'department_table.html', {
+            'department': department,
+            'table_html': table_html,
+            'department_id': department_id,
+            'company_data': company_data
+        })
+
+
+class CreateDataView(View):
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
+        return view
+
+    def get(self, request, department_id):
+        department = DepartmentTeams.objects.filter(
+            id=department_id,
+            company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+        ).first()
+        if not department:
+            return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
+        return render(request, 'create_data.html', {
+            'department_id': department_id,
+            'company_id': department.company.id
+        })
+
+    def post(self, request, department_id):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                print(request.POST)
+                step = request.POST.get('step')
+                department = DepartmentTeams.objects.get(
+                    id=department_id,
+                    company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+                )
+                if step == 'employee':
+                    employee = Employee.objects.create(
+                        fullname=request.POST.get('fullname'),
+                        company=department.company,
+                        department_team=department,
+                        department_group_id=request.POST.get('department_group_id'),
+                        section_id=request.POST.get('section_id'),
+                        designation_id=request.POST.get('designation_id'),
+                        location_id=request.POST.get('location_id'),
+                        date_of_joining=request.POST.get('date_of_joining'),
+                        resign=request.POST.get('resign') == 'true',
+                        date_of_resignation=request.POST.get('date_of_resignation') or None,
+                        remarks=request.POST.get('remarks') or '',
+                        image=request.FILES.get('image') if 'image' in request.FILES else None
+                    )
+                    logger.debug(f"Employee created: {employee.emp_id}")
+                    return JsonResponse({'message': 'Employee created', 'employee_id': employee.emp_id})
+                elif step == 'current_package':
+                    employee_id = request.POST.get('employee_id')
+                    employee = Employee.objects.get(emp_id=employee_id, department_team=department)
+                    current_package = CurrentPackageDetails.objects.create(
+                        employee=employee,
+                        gross_salary=request.POST.get('gross_salary'),
+                        vehicle=request.POST.get('vehicle'),
+                        fuel_limit=request.POST.get('fuel_limit'),
+                        mobile_allowance=request.POST.get('mobile_allowance')
+                    )
+                    logger.debug(f"CurrentPackageDetails created for employee: {employee_id}")
+                    return JsonResponse({'message': 'Current Package created'})
+                elif step == 'proposed_package':
+                    employee_id = request.POST.get('employee_id')
+                    employee = Employee.objects.get(emp_id=employee_id, department_team=department)
+                    proposed_package = ProposedPackageDetails.objects.create(
+                        employee=employee,
+                        increment_percentage=request.POST.get('increment_percentage'),
+                        increased_amount_id=request.POST.get('increased_amount_id'),
+                        revised_salary_id=request.POST.get('revised_salary_id'),
+                        increased_fuel_amount=request.POST.get('increased_fuel_amount'),
+                        revised_fuel_allowance_id=request.POST.get('revised_fuel_allowance_id'),
+                        mobile_allowance=request.POST.get('mobile_allowance'),
+                        vehicle=request.POST.get('vehicle')
+                    )
+                    logger.debug(f"ProposedPackageDetails created for employee: {employee_id}")
+                    return JsonResponse({'message': 'Proposed Package created'})
+                elif step == 'financial_impact':
+                    employee_id = request.POST.get('employee_id')
+                    employee = Employee.objects.get(emp_id=employee_id, department_team=department)
+                    financial_impact = FinancialImpactPerMonth.objects.create(
+                        employee=employee,
+                        emp_status_id=request.POST.get('emp_status_id'),
+                        serving_years=request.POST.get('serving_years'),
+                        salary=request.POST.get('salary'),
+                        gratuity_id=request.POST.get('gratuity_id'),
+                        bonus_id=request.POST.get('bonus_id'),
+                        leave_encashment_id=request.POST.get('leave_encashment_id'),
+                        mobile_allowance_id=request.POST.get('mobile_allowance_id'),
+                        fuel=request.POST.get('fuel'),
+                        total_id=request.POST.get('total_id')
+                    )
+                    logger.debug(f"FinancialImpactPerMonth created for employee: {employee_id}")
+                    return JsonResponse({'message': 'Financial Impact created'})
+                return JsonResponse({'error': 'Invalid step'}, status=400)
+            except (DepartmentTeams.DoesNotExist, Employee.DoesNotExist, ValueError) as e:
+                logger.error(f"Error in CreateDataView: {str(e)}")
+                return JsonResponse({'error': 'Invalid data'}, status=400)
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+class DeleteDataView(View):
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        return view
+
+    def delete(self, request, table, id):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                if table == 'employee':
+                    employee = Employee.objects.filter(
+                        emp_id=id,
+                        department_team__company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+                    ).first()
+                    if not employee:
+                        return JsonResponse({'error': 'Invalid employee'}, status=400)
+                    employee.delete()
+                    logger.debug(f"Employee deleted: {id}")
+                    return JsonResponse({'message': 'Employee deleted successfully'})
+                return JsonResponse({'error': 'Invalid table'}, status=400)
+            except (Employee.DoesNotExist, ValueError):
+                return JsonResponse({'error': 'Invalid data'}, status=400)
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+class DepartmentGroupsSectionsView(View):
+    def get(self, request):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            data = DepartmentGroupsSerializer(DepartmentGroups.objects.all(), many=True).data
+            print(data)
+            return JsonResponse({'data': data})
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+class DesignationsView(View):
+    def get(self, request):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            company_id = request.GET.get('company_id')
+            if not company_id:
+                return JsonResponse({'error': 'company_id required'}, status=400)
+            print(company_id)
+            data = DesignationSerializer(Designation.objects.filter(company_id=company_id), many=True).data
+            return JsonResponse({'data': data})
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+class DesignationCreateView(View):
+    def post(self, request):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            data = json.loads(request.body)
+            serializer = DesignationCreateSerializer(data=data)
+            if serializer.is_valid():
+                designation = serializer.save()
+                return JsonResponse({'id': designation.id, 'title': designation.title})
+            return JsonResponse({'error': serializer.errors}, status=400)
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+
+class LocationsView(View):
+    def get(self, request):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            locations = Location.objects.all()
+            if locations.exists():
+                data = LocationsSerializer(locations, many=True).data
+            else:
+                data = []
+            return JsonResponse({'data': data})
+        return JsonResponse({'error': 'Invalid request'}, status=400)
