@@ -17,6 +17,8 @@ from auditlog.models import AuditlogHistoryField
 class Gender(models.Model):
     gender = models.CharField(max_length=12)
 
+    is_deleted = models.BooleanField(default=False)
+
     history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
@@ -53,6 +55,7 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
+    is_deleted = models.BooleanField(default=False)
 
     USERNAME_FIELD ='email'
     objects = CustomUserManager()
@@ -70,6 +73,7 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
 
 class Company(models.Model):
     name = models.CharField(max_length=255)
+    is_deleted = models.BooleanField(default=False)
 
     history = AuditlogHistoryField()  # Required to store log
 
@@ -80,6 +84,8 @@ class Company(models.Model):
 
 class Designation(models.Model):
     title = models.CharField(max_length=255)
+    is_deleted = models.BooleanField(default=False)
+
 
     history = AuditlogHistoryField()  # Required to store log
 
@@ -91,6 +97,7 @@ class Designation(models.Model):
 class DepartmentTeams(models.Model):
     name = models.CharField(max_length=255)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    is_deleted = models.BooleanField(default=False)
 
     history = AuditlogHistoryField()  # Required to store log
 
@@ -101,6 +108,7 @@ class DepartmentTeams(models.Model):
 
 class DepartmentGroups(models.Model):
     name = models.CharField(max_length=255)
+    is_deleted = models.BooleanField(default=False)
 
     history = AuditlogHistoryField()  # Required to store log
 
@@ -113,6 +121,8 @@ class Section(models.Model):
     name = models.CharField(max_length=255)
     department_group = models.ForeignKey(DepartmentGroups, on_delete=models.CASCADE, null=True)
 
+    is_deleted = models.BooleanField(default=False)
+
     history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
@@ -121,6 +131,7 @@ class Section(models.Model):
 
 class EmployeeStatus(models.Model):
     status = models.CharField(max_length=255)
+    is_deleted = models.BooleanField(default=False)
 
     history = AuditlogHistoryField()  # Required to store log
 
@@ -131,6 +142,8 @@ class Formula(models.Model):
     formula_name = models.CharField(max_length=255)
     formula_expression = models.CharField(max_length=255)
 
+    is_deleted = models.BooleanField(default=False)
+
     history = AuditlogHistoryField()  # Required to store log
 
 
@@ -140,6 +153,8 @@ class Formula(models.Model):
 class Location(models.Model):
     location = models.CharField(max_length=122)
     code = models.CharField(max_length=50) 
+
+    is_deleted = models.BooleanField(default=False)
 
     history = AuditlogHistoryField()  # Required to store log
 
@@ -163,6 +178,8 @@ class Employee (models.Model):
     remarks = models.TextField(blank=True)
     image = models.FileField(upload_to='employee_images/', blank=True, null=True)
 
+    is_deleted = models.BooleanField(default=False)
+
     history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
@@ -175,6 +192,8 @@ class CurrentPackageDetails(models.Model):
     vehicle = models.DecimalField(max_digits=10, decimal_places=2)
     fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
+
+    is_deleted = models.BooleanField(default=False)
 
     history = AuditlogHistoryField()  # Required to store log
 
@@ -192,6 +211,8 @@ class ProposedPackageDetails(models.Model):
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
     vehicle = models.DecimalField(max_digits=10, decimal_places=2)
 
+    is_deleted = models.BooleanField(default=False)
+
     history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
@@ -208,6 +229,8 @@ class FinancialImpactPerMonth(models.Model):
     mobile_allowance = models.ForeignKey(Formula, related_name='mobile_allowance', on_delete=models.SET_NULL, null=True)
     fuel = models.DecimalField(max_digits=10, decimal_places=2)
     total = models.ForeignKey(Formula, related_name='total', on_delete=models.SET_NULL, null=True)
+
+    is_deleted = models.BooleanField(default=False)
 
     history = AuditlogHistoryField()  # Required to store log
 

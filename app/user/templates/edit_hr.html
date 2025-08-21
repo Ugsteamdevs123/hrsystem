@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Edit HR{% endblock %}
+
+{% block content %}
+<h2>Edit HR User</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="message">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<form method="POST">
+    {% csrf_token %}
+
+    <!-- Form fields -->
+    <div class="form-field">
+        {{ form.full_name.label_tag }}
+        {{ form.full_name }}
+    </div>
+
+    <div class="form-field">
+        {{ form.email.label_tag }}
+        {{ form.email }}
+    </div>
+
+    <!-- Don’t show password here unless you want reset/change option -->
+    <div class="form-field">
+        {{ form.gender.label_tag }}
+        {{ form.gender }}
+    </div>
+
+    <div class="form-field">
+        {{ form.contact.label_tag }}
+        {{ form.contact }}
+    </div>
+
+    <button type="submit" class="form-btn btn-submit">Update HR</button>
+    <button type="button" class="form-btn btn-back" onclick="window.location.href='{% url 'dashboard' %}'">Back to Dashboard</button>
+</form>
+
+<style>
+    .form-field { margin-bottom: 15px; text-align: left; }
+    .form-field input, .form-field select {
+        width: 100%; padding: 10px; border: 1px solid #ccc;
+        border-radius: 5px; font-size: 14px; box-sizing: border-box;
+    }
+    .btn-submit { background-color: #28a745; color: #fff; margin-top: 10px; }
+    .btn-submit:hover { background-color: #218838; }
+    .btn-back { background-color: #6c757d; color: #fff; margin-top: 10px; }
+    .btn-back:hover { background-color: #5a6268; }
+</style>
+{% endblock %}
