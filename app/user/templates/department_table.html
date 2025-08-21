@@ -6,7 +6,7 @@
         <div class="card shadow-sm p-4 bg-light">
             <div class="d-flex justify-content-between mb-3">
                 <h5>Employee Data</h5>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">Create New Record</button>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal" data-mode="create">Create New Record</button>
             </div>
             <div class="table-responsive">
                 {{ table_html | safe }}
@@ -14,7 +14,7 @@
         </div>
     </div>
 
-    <!-- Modal for creating new record -->
+    <!-- Modal for creating/editing record -->
     <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true" data-company-id="{{ department.company.id }}">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
@@ -195,26 +195,31 @@
 
     <style>
         .custom-table {
-            border-collapse: collapse;
+            border-collapse: collapse !important;
+            width: 100% !important;
+            outline: 1px solid red; /* Temporary debug outline */
         }
         .custom-table th, .custom-table td {
             min-width: 120px;
             max-width: 300px;
             text-align: left !important;
-            padding: 12px;
-            border-end: 1px solid #dee2e6;
+            padding: 12px !important;
+            border: 2px solid #dee2e6 !important;
+            box-shadow: inset 0 0 0 1px #dee2e6 !important; /* Fallback for visibility */
         }
         .custom-table th {
-            background-color: #e9ecef;
+            background-color: #e9ecef !important;
+            font-weight: bold;
         }
         .custom-table tr:nth-child(even) {
-            background-color: #f8f9fa;
+            background-color: #f8f9fa !important;
         }
         .custom-table tr:nth-child(odd) {
-            background-color: #ffffff;
+            background-color: #ffffff !important;
         }
         .custom-table .btn-sm {
-            padding: 4px 8px;
+            padding: 4px 8px !important;
+            margin-right: 4px;
         }
         .form-select {
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
@@ -227,23 +232,50 @@
             font-size: 0.875rem;
             display: none;
         }
+        /* Model-specific column styling */
+        .employee-col {
+            background-color: #b3d7ff !important; /* Bolder blue */
+        }
+        .current-package-col {
+            background-color: #b8e4b8 !important; /* Bolder green */
+        }
+        .proposed-package-col {
+            background-color: #ffd699 !important; /* Bolder orange */
+        }
+        .financial-impact-col {
+            background-color: #d8b8f0 !important; /* Bolder purple */
+        }
+        /* Thick border between model sections */
+        .employee-col:last-of-type,
+        .current-package-col:last-of-type,
+        .proposed-package-col:last-of-type {
+            border-right: 5px solid #6c757d !important; /* Thicker border */
+        }
+        /* Subheader styling */
+        .subheader {
+            background-color: #6c757d !important;
+            color: #ffffff !important;
+            text-align: center !important;
+            font-weight: bold;
+        }
     </style>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const modal = new bootstrap.Modal(document.getElementById('createModal'));
+            console.log('DOM loaded, initializing modal and table');
+            const modal = document.getElementById('createModal');
+            const modalInstance = new bootstrap.Modal(modal);
+            const modalTitle = document.getElementById('createModalLabel');
+            const form = document.getElementById('createForm');
+            console.log('Modal initialized:', modal);
 
-            // Fetch Department Groups, Sections, Designations, and Locations
+            // Fetch Dropdown Data
             async function fetchDropdownData() {
-                const companyId = document.getElementById('createModal').dataset.companyId;
-
-                // Fetch Department Groups and Sections
+                const companyId = modal.dataset.companyId;
                 try {
                     const response = await fetch('/pyroll/department-groups-sections/', {
                         method: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     if (!response.ok) throw new Error('Failed to fetch dropdown data');
                     const data = await response.json();
@@ -252,14 +284,10 @@
                     console.error('Error fetching dropdown data:', error);
                     alert('Error fetching dropdown data');
                 }
-
-                // Fetch Designations
                 try {
                     const response = await fetch(`/pyroll/designations/?company_id=${companyId}`, {
                         method: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     if (!response.ok) throw new Error('Failed to fetch designations');
                     const data = await response.json();
@@ -268,14 +296,10 @@
                     console.error('Error fetching designations:', error);
                     alert('Error fetching designations');
                 }
-
-                // Fetch Locations
                 try {
                     const response = await fetch('/pyroll/locations/', {
                         method: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     if (!response.ok) throw new Error('Failed to fetch locations');
                     const data = await response.json();
@@ -295,7 +319,7 @@
                     option.textContent = group.name;
                     select.appendChild(option);
                 });
-                window.departmentGroups = data; // Store for section filtering
+                window.departmentGroups = data;
             }
 
             function populateDesignations(data) {
@@ -337,16 +361,11 @@
             }
 
             // Toggle date of resignation input
-            const resign_dropdown = document.getElementById('resign');
-            const resignation_input = document.getElementById('date_of_resignation');
-            resign_dropdown.addEventListener('change', function () {
-                if (resign_dropdown.value === 'false') {
-                    resignation_input.disabled = true;
-                    resignation_input.value = '';
-                }
-                else {
-                    resignation_input.disabled = false;
-                }
+            const resignDropdown = document.getElementById('resign');
+            const resignationInput = document.getElementById('date_of_resignation');
+            resignDropdown.addEventListener('change', function () {
+                resignationInput.disabled = this.value === 'false';
+                if (this.value === 'false') resignationInput.value = '';
             });
 
             // Toggle new designation input
@@ -365,7 +384,7 @@
             // Create new designation
             async function createNewDesignation() {
                 const title = newDesignationInput.value.trim();
-                const companyId = document.getElementById('createModal').dataset.companyId;
+                const companyId = modal.dataset.companyId;
                 if (!title) {
                     alert('Please enter a designation title');
                     return null;
@@ -396,27 +415,24 @@
 
             // Validate form fields for the employee step
             function validateEmployeeStep() {
-                const form = document.getElementById('createForm');
                 const errors = [];
-
-                // Check required fields
                 if (!form.querySelector('#fullname').value.trim()) {
                     errors.push('Full Name is required');
                 }
                 if (!form.querySelector('#department_group_id').value) {
-                    errors.push('Department is required');
+                    errors.push('Department Group is required');
                 }
                 if (!form.querySelector('#section_id').value) {
                     errors.push('Section is required');
                 }
                 if (!form.querySelector('#location_id').value) {
-                    errors.push("Location is required");
+                    errors.push('Location is required');
                 }
                 if (!form.querySelector('#date_of_joining').value) {
-                    errors.push('Date of joining is required')
+                    errors.push('Date of Joining is required');
                 }
                 if (form.querySelector('#resign').value === 'true' && !form.querySelector('#date_of_resignation').value.trim()) {
-                    errors.push('Date of resignation is required')
+                    errors.push('Date of Resignation is required');
                 }
                 if (addNewDesignationCheckbox.checked && !newDesignationInput.value.trim()) {
                     errors.push('New Designation Title is required when adding a new designation');
@@ -424,8 +440,70 @@
                 if (!addNewDesignationCheckbox.checked && !designationSelect.value) {
                     errors.push('Designation is required');
                 }
-
                 return errors;
+            }
+
+            // Fetch employee data for editing
+            async function fetchEmployeeData(employeeId) {
+                console.log('Fetching data for employee:', employeeId);
+                try {
+                    const response = await fetch(`/pyroll/get-data/employee/${employeeId}/`, {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!response.ok) throw new Error('Failed to fetch employee data');
+                    const data = await response.json();
+                    if (data.error) {
+                        alert(data.error);
+                        return null;
+                    }
+                    console.log('Employee data fetched:', data);
+                    return data;
+                } catch (error) {
+                    console.error('Error fetching employee data:', error);
+                    alert('Error fetching employee data');
+                    return null;
+                }
+            }
+
+            // Populate form for editing
+            function populateForm(data) {
+                console.log('Populating form with data:', data);
+                form.querySelector('#fullname').value = data.employee.fullname || '';
+                form.querySelector('#department_group_id').value = data.employee.department_group_id || '';
+                populateSections(data.employee.department_group_id);
+                form.querySelector('#section_id').value = data.employee.section_id || '';
+                form.querySelector('#designation_id').value = data.employee.designation_id || '';
+                addNewDesignationCheckbox.checked = false;
+                newDesignationInput.disabled = true;
+                designationSelect.disabled = false;
+                newDesignationInput.value = '';
+                form.querySelector('#location_id').value = data.employee.location_id || '';
+                form.querySelector('#date_of_joining').value = data.employee.date_of_joining || '';
+                form.querySelector('#resign').value = data.employee.resign ? 'true' : 'false';
+                resignationInput.disabled = !data.employee.resign;
+                form.querySelector('#date_of_resignation').value = data.employee.date_of_resignation || '';
+                form.querySelector('#remarks').value = data.employee.remarks || '';
+                form.querySelector('#gross_salary').value = data.current_package.gross_salary || '';
+                form.querySelector('#vehicle').value = data.current_package.vehicle || '';
+                form.querySelector('#fuel_limit').value = data.current_package.fuel_limit || '';
+                form.querySelector('#mobile_allowance').value = data.current_package.mobile_allowance || '';
+                form.querySelector('#increment_percentage').value = data.proposed_package.increment_percentage || '';
+                form.querySelector('#increased_amount_id').value = data.proposed_package.increased_amount_id || '';
+                form.querySelector('#revised_salary_id').value = data.proposed_package.revised_salary_id || '';
+                form.querySelector('#increased_fuel_amount').value = data.proposed_package.increased_fuel_amount || '';
+                form.querySelector('#revised_fuel_allowance_id').value = data.proposed_package.revised_fuel_allowance_id || '';
+                form.querySelector('#mobile_allowance_proposed').value = data.proposed_package.mobile_allowance || '';
+                form.querySelector('#vehicle_proposed').value = data.proposed_package.vehicle || '';
+                form.querySelector('#emp_status_id').value = data.financial_impact.emp_status_id || '';
+                form.querySelector('#serving_years').value = data.financial_impact.serving_years || '';
+                form.querySelector('#salary').value = data.financial_impact.salary || '';
+                form.querySelector('#gratuity_id').value = data.financial_impact.gratuity_id || '';
+                form.querySelector('#bonus_id').value = data.financial_impact.bonus_id || '';
+                form.querySelector('#leave_encashment_id').value = data.financial_impact.leave_encashment_id || '';
+                form.querySelector('#mobile_allowance_financial').value = data.financial_impact.mobile_allowance_id || '';
+                form.querySelector('#fuel').value = data.financial_impact.fuel || '';
+                form.querySelector('#total_id').value = data.financial_impact.total_id || '';
             }
 
             // Update sections when department group changes
@@ -433,7 +511,7 @@
                 populateSections(this.value);
             });
 
-            // Intercept form submission to handle validation and new designation
+            // Handle form submission
             async function handleFormSubmission(formData, step) {
                 if (step === 'employee') {
                     const errors = validateEmployeeStep();
@@ -445,14 +523,11 @@
                         const newDesignation = await createNewDesignation();
                         if (newDesignation) {
                             formData.set('designation_id', newDesignation.id);
-                            // Refresh designations dropdown
-                            const companyId = document.getElementById('createModal').dataset.companyId;
+                            const companyId = modal.dataset.companyId;
                             try {
                                 const response = await fetch(`/pyroll/designations/?company_id=${companyId}`, {
                                     method: 'GET',
-                                    headers: {
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    }
+                                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
                                 });
                                 if (!response.ok) throw new Error('Failed to fetch designations');
                                 const data = await response.json();
@@ -462,7 +537,7 @@
                                 console.error('Error refreshing designations:', error);
                             }
                         } else {
-                            return null; // Stop submission if designation creation fails
+                            return null;
                         }
                     }
                 }
@@ -473,6 +548,7 @@
             document.querySelectorAll('.delete-employee-btn').forEach(button => {
                 button.addEventListener('click', async function () {
                     const employeeId = this.closest('tr').dataset.employeeId;
+                    console.log('Delete button clicked for employee:', employeeId);
                     if (!employeeId) {
                         alert('Invalid employee ID');
                         return;
@@ -500,6 +576,27 @@
                 });
             });
 
+            // Edit button listeners with inline onclick
+            document.querySelectorAll('.edit-employee-btn').forEach(button => {
+                button.onclick = async function() {
+                    const employeeId = this.closest('tr').dataset.employeeId;
+                    console.log('Edit button clicked for employee:', employeeId);
+                    if (!employeeId) {
+                        alert('Invalid employee ID');
+                        return;
+                    }
+                    const data = await fetchEmployeeData(employeeId);
+                    if (data) {
+                        modal.dataset.mode = 'edit';
+                        modal.dataset.employeeId = employeeId;
+                        modalTitle.textContent = 'Edit Record';
+                        populateForm(data);
+                        modalInstance.show();
+                        console.log('Modal shown for edit, employeeId:', employeeId);
+                    }
+                };
+            });
+
             // Multi-step form logic
             const steps = ['employee', 'current_package', 'proposed_package', 'financial_impact'];
             let currentStep = 0;
@@ -512,20 +609,20 @@
                 document.getElementById('prevBtn').classList.toggle('d-none', stepIndex === 0);
                 document.getElementById('nextBtn').classList.toggle('d-none', stepIndex === steps.length - 1);
                 document.getElementById('submitBtn').classList.toggle('d-none', stepIndex !== steps.length - 1);
-                document.getElementById('createModalLabel').textContent = `Create New Record - Step ${stepIndex + 1}`;
+                modalTitle.textContent = modal.dataset.mode === 'edit' ? `Edit Record - Step ${stepIndex + 1}` : `Create New Record - Step ${stepIndex + 1}`;
             };
 
             document.getElementById('nextBtn').addEventListener('click', async function () {
-                const form = document.getElementById('createForm');
                 let formData = new FormData(form);
                 formData = await handleFormSubmission(formData, steps[currentStep]);
-                if (!formData) return; // Stop if validation or designation creation failed
+                if (!formData) return;
+                const isEditMode = modal.dataset.mode === 'edit';
+                const url = isEditMode ? `/pyroll/update-data/{{ department_id }}/` : `/pyroll/create-data/{{ department_id }}/`;
+                if (isEditMode) formData.append('employee_id', modal.dataset.employeeId);
                 try {
-                    const response = await fetch(`/pyroll/create-data/{{ department_id }}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
+                    const response = await fetch(url, {
+                        method: isEditMode ? 'PATCH' : 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
                         body: formData
                     });
                     if (!response.ok) throw new Error('Failed to save step');
@@ -540,14 +637,16 @@
                     currentStep++;
                     if (currentStep < steps.length) {
                         showStep(currentStep);
-                        form.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
-                            if (input.id !== 'employee_id' && input.id !== 'step' && input.id !== 'csrfmiddlewaretoken') {
-                                input.value = '';
-                            }
-                        });
-                        addNewDesignationCheckbox.checked = false;
-                        newDesignationInput.disabled = true;
-                        designationSelect.disabled = false;
+                        if (!isEditMode) {
+                            form.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
+                                if (input.id !== 'employee_id' && input.id !== 'step' && input.id !== 'csrfmiddlewaretoken') {
+                                    input.value = '';
+                                }
+                            });
+                            addNewDesignationCheckbox.checked = false;
+                            newDesignationInput.disabled = true;
+                            designationSelect.disabled = false;
+                        }
                     }
                 } catch (error) {
                     console.error('Error saving step:', error);
@@ -556,16 +655,16 @@
             });
 
             document.getElementById('submitBtn').addEventListener('click', async function () {
-                const form = document.getElementById('createForm');
                 let formData = new FormData(form);
                 formData = await handleFormSubmission(formData, steps[currentStep]);
-                if (!formData) return; // Stop if validation or designation creation failed
+                if (!formData) return;
+                const isEditMode = modal.dataset.mode === 'edit';
+                const url = isEditMode ? `/pyroll/update-data/{{ department_id }}/` : `/pyroll/create-data/{{ department_id }}/`;
+                if (isEditMode) formData.append('employee_id', modal.dataset.employeeId);
                 try {
-                    const response = await fetch(`/pyroll/create-data/{{ department_id }}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
+                    const response = await fetch(url, {
+                        method: isEditMode ? 'PATCH' : 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
                         body: formData
                     });
                     if (!response.ok) throw new Error('Failed to save final step');
@@ -573,7 +672,7 @@
                     if (result.error) {
                         alert(result.error);
                     } else {
-                        modal.hide();
+                        modalInstance.hide();
                         window.location.reload();
                     }
                 } catch (error) {
@@ -589,15 +688,34 @@
                 }
             });
 
-            document.getElementById('createModal').addEventListener('show.bs.modal', function () {
+            modal.addEventListener('show.bs.modal', function () {
                 currentStep = 0;
+                if (modal.dataset.mode !== 'edit') {
+                    modal.dataset.mode = 'create';
+                    modalTitle.textContent = 'Create New Record';
+                    form.reset();
+                    document.getElementById('employee_id').value = '';
+                    addNewDesignationCheckbox.checked = false;
+                    newDesignationInput.disabled = true;
+                    resignationInput.disabled = true;
+                    designationSelect.disabled = false;
+                }
+                fetchDropdownData();
                 showStep(currentStep);
-                document.getElementById('createForm').reset();
+            });
+
+            modal.addEventListener('hidden.bs.modal', function () {
+                modal.dataset.mode = 'create';
+                modalTitle.textContent = 'Create New Record';
+                delete modal.dataset.employeeId;
+                form.reset();
                 document.getElementById('employee_id').value = '';
                 addNewDesignationCheckbox.checked = false;
                 newDesignationInput.disabled = true;
+                resignationInput.disabled = true;
                 designationSelect.disabled = false;
-                fetchDropdownData();
+                currentStep = 0;
+                showStep(currentStep);
             });
         });
     </script>

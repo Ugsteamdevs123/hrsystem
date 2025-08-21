@@ -281,7 +281,7 @@ class CompanySummaryView(View):
 
         company_data = get_companies_and_department_teams(request.user)
 
-        company = Company.objects.get(id=company_id)
+        company = Company.objects.get(id=company_id)   
         increment_details_summary = IncrementDetailsSummary.objects.filter(company_id=company_id)
         if increment_details_summary.exists():
             data = IncrementDetailsSummarySerializer(increment_details_summary, many=True).data
