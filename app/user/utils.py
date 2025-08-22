@@ -108,3 +108,56 @@ def get_companies_and_department_teams(hr_id):
         ]
     except Exception as e:
         print(f"Error in fetching hr assigned companies and their respective deparment teams: {e}")
+
+
+
+
+
+
+
+
+
+# In app/utils.py
+import re
+from decimal import Decimal
+from .models import FieldReference
+
+def get_variables_from_expression(expression):
+    """Extract field references like [CurrentPackageDetails: Gross Salary]."""
+    pattern = r'\[(.*?): (.*?)\]'
+    return re.findall(pattern, expression)  # Returns list of (model_name, display_name) tuples
+
+def get_field_path(model_name, display_name):
+    """Map display name to Django path."""
+    try:
+        ref = FieldReference.objects.get(model_name=model_name, display_name=display_name)
+        return ref.path
+    except FieldReference.DoesNotExist:
+        raise ValueError(f"Field {model_name}: {display_name} not found")
+
+def evaluate_formula(instance, expression):
+    """Evaluate formula, replacing [Model: Field] with actual values."""
+    variables = get_variables_from_expression(expression)
+    context = {}
+    for model_name, display_name in variables:
+        path = get_field_path(model_name, display_name)
+        try:
+            value = get_nested_attr(instance, path)
+            if isinstance(value, Decimal):
+                value = float(value)  # For math ops
+            context[f'[{model_name}: {display_name}]'] = value
+        except AttributeError:
+            raise ValueError(f"Invalid path for {model_name}: {display_name}")
+
+    try:
+        result = eval(expression, {"__builtins__": {}}, context)
+        return Decimal(result)
+    except Exception as e:
+        raise ValueError(f"Formula evaluation failed: {e}")
+
+def get_nested_attr(instance, path):
+    parts = path.split('__')
+    obj = instance
+    for part in parts:
+        obj = getattr(obj, part)
+    return obj

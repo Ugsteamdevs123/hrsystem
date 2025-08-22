@@ -269,3 +269,47 @@ class configurations(models.Model):
 
     def __str__(self):
         return f"{self.fuel_rate} - {self.as_of_date}"
+    
+
+
+
+
+
+
+
+
+
+
+# In app/models.py
+class FieldFormula(models.Model):
+    target_model = models.CharField(max_length=255)  # e.g., 'ProposedPackageDetails'
+    target_field = models.CharField(max_length=255)  # e.g., 'revised_salary'
+    formula = models.ForeignKey(Formula, on_delete=models.CASCADE, null=True, blank=True, default=None)
+    description = models.TextField(blank=True)  # Optional help text
+
+    class Meta:
+        unique_together = ('target_model', 'target_field')
+
+    def __str__(self):
+        return f"Formula for {self.target_model}.{self.target_field}"
+
+
+class FieldReference(models.Model):
+    MODEL_CHOICES = [
+        ('CurrentPackageDetails', 'Current Package Details'),
+        ('ProposedPackageDetails', 'Proposed Package Details'),
+        ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
+        ('IncrementDetailsSummary', 'Increment Details Summary'),
+        ('Employee', 'Employee'),
+    ]
+
+    model_name = models.CharField(max_length=255, choices=MODEL_CHOICES)
+    field_name = models.CharField(max_length=255)
+    display_name = models.CharField(max_length=255)
+    path = models.CharField(max_length=255)
+
+    class Meta:
+        unique_together = ('model_name', 'field_name')
+
+    def __str__(self):
+        return f"{self.model_name}: {self.display_name}"

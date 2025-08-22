@@ -20,4 +20,7 @@ urlpatterns = [
     path('designations/create/', views.DesignationCreateView.as_view(), name='designation_create'),
     path('locations/', views.LocationsView.as_view(), name='locations'),
     path('employee-status-choices/', views.EmployeeStatusView.as_view(), name='employee_status_choices'),
+
+    path('manage-formulas/', views.manage_formulas, name='manage_formulas'),
+    path('create-formula/', views.create_formula, name='create_formula'),
 ]

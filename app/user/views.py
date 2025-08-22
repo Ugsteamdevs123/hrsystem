@@ -754,3 +754,40 @@ class EmployeeStatusView(View):
             return JsonResponse({'data': []})
         
         return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+
+
+
+
+
+
+# In app/views.py
+from django.shortcuts import render, redirect
+from .models import FieldFormula, Formula, FieldReference
+from .forms import FieldFormulaForm, FormulaForm
+
+def manage_formulas(request):
+    field_formulas = FieldFormula.objects.all()
+    field_references = FieldReference.objects.all()
+    if request.method == 'POST':
+        form = FieldFormulaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('user:manage_formulas')
+    else:
+        form = FieldFormulaForm()
+    return render(request, 'manage_formulas.html', {
+        'form': form,
+        'field_formulas': field_formulas,
+        'field_references': field_references
+    })
+
+def create_formula(request):
+    if request.method == 'POST':
+        form = FormulaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('user:manage_formulas')
+    else:
+        form = FormulaForm()
+    return render(request, 'create_formula.html', {'form': form})
