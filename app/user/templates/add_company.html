@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Add Company{% endblock %}
+
+{% block content %}
+<h2>Add Company</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="message">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<form method="POST">
+    {% csrf_token %}
+
+    <!-- Style form fields -->
+    <div class="form-field">
+        {{ form.name.label_tag }}
+        {{ form.name }}
+    </div>
+
+    <button type="submit" class="form-btn btn-submit">Save Company</button>
+    <button type="button" class="form-btn btn-back" onclick="window.location.href='{% url 'dashboard' %}'">Back to Dashboard</button>
+</form>
+
+<style>
+    /* Style form fields */
+    .form-field {
+        margin-bottom: 15px;
+        text-align: left;
+    }
+
+    .form-field input, 
+    .form-field select, 
+    .form-field textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+
+    /* Submit button */
+    .btn-submit {
+        background-color: #28a745;
+        color: #fff;
+        margin-top: 10px;
+    }
+    .btn-submit:hover {
+        background-color: #218838;
+    }
+
+    /* Back button */
+    .btn-back {
+        background-color: #6c757d;
+        color: #fff;
+        margin-top: 10px;
+    }
+    .btn-back:hover {
+        background-color: #5a6268;
+    }
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+

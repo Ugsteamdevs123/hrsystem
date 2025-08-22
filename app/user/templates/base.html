@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}HR Portal{% endblock %}</title>
+    {% comment %} <title>{% block title %}HR Portal{% endblock %}</title> {% endcomment %}
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <!-- Bootstrap 5 CSS -->
@@ -49,10 +49,239 @@
         </div>
         <!-- Main content -->
         <div class="flex-grow-1 p-3">
-            {% block content %}{% endblock %}
+            {% comment %} {% block content %}{% endblock %} {% endcomment %}
         </div>
     </div>
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 </body>
 </html>
+    {% comment %} <title>{% block title %}HR Payroll{% endblock %}</title> {% endcomment %}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f2f2f2;
+            min-height: 100vh;
+        }
+
+        /* Header bar */
+        header {
+            background-color: #343a40;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .logout-btn {
+            padding: 8px 15px;
+            background: #dc3545;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 500px; /* smaller for forms */
+            margin: 80px auto 50px; /* top margin to avoid header overlap */
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        /* Form buttons */
+        .form-btn {
+            padding: 12px;
+            width: 100%;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn-company { background-color: #28a745; color: #fff; }
+        .btn-other { background-color: #007bff; color: #fff; }
+        .btn-submit { background-color: #28a745; color: #fff; }
+        .btn-submit:hover { opacity: 0.85; }
+
+        /* Message styling */
+        .message { color: green; margin-bottom: 15px; }
+
+        /* Responsive adjustments */
+        @media screen and (max-width: 500px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .container {
+                margin: 100px 10px 30px;
+                padding: 15px;
+            }
+            .form-btn { font-size: 14px; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>HR Payroll System</h1>
+    <form method="get" action="{% url 'logout' %}">
+        <button type="submit" class="logout-btn">Logout</button>
+    </form>
+</header>
+
+<div class="container">
+    {% comment %} {% block content %}{% endblock %} {% endcomment %}
+</div>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}HR Payroll{% endblock %}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f2f2f2;
+            min-height: 100vh;
+        }
+
+        /* Header bar */
+        header {
+            background-color: #343a40;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .logout-btn {
+            padding: 8px 15px;
+            background: #dc3545;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 500px; /* smaller for forms */
+            margin: 80px auto 50px; /* top margin to avoid header overlap */
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        /* Form buttons */
+        .form-btn {
+            padding: 12px;
+            width: 100%;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn-company { background-color: #28a745; color: #fff; }
+        .btn-other { background-color: #007bff; color: #fff; }
+        .btn-submit { background-color: #28a745; color: #fff; }
+        .btn-submit:hover { opacity: 0.85; }
+
+        /* Message styling */
+        .message { color: green; margin-bottom: 15px; }
+
+        /* Responsive adjustments */
+        @media screen and (max-width: 500px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .container {
+                margin: 100px 10px 30px;
+                padding: 15px;
+            }
+            .form-btn { font-size: 14px; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>HR Payroll System</h1>
+    <form method="get" action="{% url 'logout' %}">
+        <button type="submit" class="logout-btn">Logout</button>
+    </form>
+</header>
+
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>
+
+
+
+
+

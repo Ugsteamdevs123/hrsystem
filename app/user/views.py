@@ -37,62 +37,8 @@ from .serializer import (
 from collections import defaultdict
 import json
 
-# # Original function-based decorator (kept for reference)
-# def group_or_superuser_required(group_name):
-#     def decorator(view_func):
-#         def wrapper(request, *args, **kwargs):
-#             if not request.user.is_authenticated:
-#                 return redirect('login')
-#             if request.user.is_superuser or request.user.groups.filter(name=group_name).exists():
-#                 return view_func(request, *args, **kwargs)
-#             return HttpResponseForbidden(f'You Must Be {group_name} or Admin')
-#         return wrapper
-#     return decorator
 
-# Class-based mixin equivalent
-# class GroupOrSuperuserRequiredMixin:
-#     """
-#     Mixin to restrict access to users who are either superusers or belong to a specific group.
-#     """
-#     group_name = None  # Must be set in the view
 
-#     def dispatch(self, request, *args, **kwargs):
-#         if not request.user.is_authenticated:
-#             return redirect('login')
-#         if request.user.is_superuser or request.user.groups.filter(name=self.group_name).exists():
-#             return super().dispatch(request, *args, **kwargs)
-#         return HttpResponseForbidden(f'You Must Be {self.group_name} or Admin')
-
-# # Example usage with the CustomerServiceLogoutView
-# class CustomerServiceLogoutView(View):
-#     permission_classes = [GroupOrSuperuserRequiredMixin]
-#     """
-#     Class-based logout view for customer service representatives.
-#     Handles POST requests to log out the user, clear sessions, and redirect to the login page.
-#     Renders a confirmation page for GET requests.
-#     """
-#     group_name = 'Customer Service'  # Set the group name for the mixin
-
-#     @classmethod
-#     def as_view(cls, **initkwargs):
-#         view = super().as_view(**initkwargs)
-#         view = login_required(view)
-#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
-#         view = csrf_protect(view)
-#         return view
-
-#     def post(self, request):
-#         user = request.user
-#         token = request.session.get('access_token', '')  # Optional: Retrieve JWT token from session
-#         Session.objects.filter(user=user).delete()  # Clear active session
-#         user.logged = False
-#         user.save()
-#         logout(request)  # Clear Django session
-#         messages_success(request, 'You have been logged out successfully.')
-#         return redirect('login')
-
-#     def get(self, request):
-#         return render(request, 'logout.html')
 
 
 
@@ -115,11 +61,6 @@ class HrDashboardView(PermissionRequiredMixin, View):
     
     def get(self, request):
         # Fetch companies assigned to the logged-in HR
-        # assigned_companies = hr_assigned_companies.objects.filter(hr=request.user)
-        # company_data = [
-        #     {'company_id': ac.company.id, 'company_name': ac.company.name}
-        #     for ac in assigned_companies
-        # ]
 
         company_data = get_companies_and_department_teams(request.user)
 
@@ -175,11 +116,6 @@ class DepartmentTeamView(View):
         return view
 
     def get(self, request):
-        # assigned_companies = hr_assigned_companies.objects.filter(hr=request.user)
-        # company_data = [
-        #     {'company_id': ac.company.id, 'company_name': ac.company.name}
-        #     for ac in assigned_companies
-        # ]
 
         company_data = get_companies_and_department_teams(request.user)
 
@@ -580,3 +516,233 @@ class LocationsView(View):
                 data = []
             return JsonResponse({'data': data})
         return JsonResponse({'error': 'Invalid request'}, status=400)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+
+from .serializers import (
+    UserLoginSerializer,
+)
+from .models import (
+    CustomUser,
+    Company
+)
+
+from django.contrib.auth import login, logout
+from rest_framework import status
+from django.middleware.csrf import get_token
+from rest_framework.permissions import AllowAny , IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+
+
+from django.views import View
+from django.shortcuts import render, redirect , get_object_or_404
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from .forms import (
+    CompanyForm , 
+    CustomUserForm,
+    CustomUserUpdateForm,
+
+)
+
+# Create your views here.
+
+
+class LoginView(View):
+    template_name = "login.html"
+
+    def get(self, request):
+        """Handles GET requests and renders the login form."""
+        return render(request, self.template_name)
+
+    def post(self, request):
+        """Handles POST requests and authenticates only superusers."""
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+
+        user = authenticate(username=email, password=password)
+        if user is not None:
+            if user.is_active and user.is_superuser:  # ✅ check superuser
+                login(request, user)
+                return redirect("dashboard")  # Replace with your dashboard URL
+            elif not user.is_active:
+                messages.error(request, "Your account is disabled.")
+            else:
+                messages.error(request, "You are not authorized to access this panel.")
+        else:
+            messages.error(request, "Invalid email or password.")
+
+        return render(request, self.template_name)
+
+
+
+class DashboardView(View):
+    template_name = "dashboard.html"
+
+    def get(self, request):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            return redirect("login")
+
+        companies = Company.objects.filter(is_deleted=False).order_by("name")
+        hr_users = CustomUser.objects.filter(
+            is_deleted=False,
+            is_staff=True,
+            is_superuser=False
+        ).order_by("full_name")
+
+        return render(request, self.template_name, {
+            "companies": companies,
+            "hr_users": hr_users
+        })
+
+
+class AddCompanyView(View):
+    template_name = "add_company.html"
+
+    def get(self, request):
+        form = CompanyForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CompanyForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Company added successfully!")
+            return redirect("dashboard")
+        return render(request, self.template_name, {"form": form})
+    
+
+class EditCompanyView(View):
+    template_name = "edit_company.html"
+
+    def get(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        form = CompanyForm(instance=company)
+        return render(request, self.template_name, {"form": form, "company": company})
+
+    def post(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        form = CompanyForm(request.POST, instance=company)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Company updated successfully!")
+            return redirect("dashboard")
+        return render(request, self.template_name, {"form": form, "company": company})
+
+
+class DeleteCompanyView(View):
+    def get(self, request, pk):
+        company = get_object_or_404(Company, pk=pk)
+        company.is_deleted = True  # soft delete
+        company.save()
+        messages.success(request, "Company deleted successfully ")
+        return redirect("dashboard")
+
+
+
+# --- CREATE HR ---
+class AddHRView(View):
+    template_name = "add_hr.html"
+
+    def get(self, request):
+        form = CustomUserForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CustomUserForm(request.POST)
+        if form.is_valid():
+            hr = form.save(commit=False)
+            hr.is_staff = True
+            # Make sure HR is not admin/superuser
+            hr.is_superuser = False
+            hr.save()
+            messages.success(request, "HR user added successfully!")
+            return redirect("dashboard")
+        return render(request, self.template_name, {"form": form})
+
+
+# --- UPDATE HR ---
+class EditHRView(View):
+    template_name = "edit_hr.html"
+
+    def get(self, request, pk):
+        hr = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_deleted=False,
+            is_staff=True,
+            is_superuser=False,   # exclude superuser
+        )
+
+        print("Editing HR:", hr)
+
+        form = CustomUserUpdateForm(instance=hr)
+        return render(request, self.template_name, {"form": form, "hr": hr})
+
+    def post(self, request, pk):
+        hr = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_deleted=False,
+            is_staff=True,
+            is_superuser=False,
+        )
+
+        print("Updating HR:", hr)
+
+        form = CustomUserUpdateForm(request.POST, instance=hr)
+        if form.is_valid():
+            hr = form.save(commit=False)
+            hr.is_staff = True
+            hr.is_superuser = False
+            hr.save()
+            messages.success(request, "HR user updated successfully!")
+            return redirect("dashboard")
+        
+        else:
+            print("Form errors:", form.errors)   # 👈 add this
+            return render(request, self.template_name, {"form": form, "hr": hr})
+
+
+# --- DELETE HR (soft delete) ---
+class DeleteHRView(View):
+    def get(self, request, pk):
+        hr = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_staff=True,
+            is_superuser=False,  # don’t delete superuser
+        )
+        hr.is_deleted = True   # soft delete
+        hr.save()
+        messages.success(request, "HR user deleted successfully")
+        return redirect("dashboard")
+
+
+
+
+
+class LogoutView(View):
+    def get(self, request):
+        logout(request)
+        return redirect("login")  # Replace with your login URL name
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
