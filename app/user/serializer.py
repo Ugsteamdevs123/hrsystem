@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from collections import OrderedDict
-from .models import IncrementDetailsSummary, DepartmentGroups, Section, Designation, Location
+from .models import IncrementDetailsSummary, DepartmentGroups, Section, Designation, Location, EmployeeStatus
 
 class IncrementDetailsSummarySerializer(serializers.ModelSerializer):
     department = serializers.CharField(source="department_team.name", read_only=True)
@@ -84,4 +84,10 @@ class LocationsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Location
+        fields = '__all__'
+
+
+class EmployeeStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmployeeStatus
         fields = '__all__'

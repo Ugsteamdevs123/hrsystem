@@ -113,39 +113,42 @@
                                 <label for="increment_percentage" class="form-label">Increment Percentage</label>
                                 <input type="number" class="form-control" id="increment_percentage" name="increment_percentage" step="0.01">
                             </div>
-                            <div class="mb-3">
+                            <!-- <div class="mb-3">
                                 <label for="increased_amount_id" class="form-label">Increased Amount ID</label>
                                 <input type="number" class="form-control" id="increased_amount_id" name="increased_amount_id">
                             </div>
                             <div class="mb-3">
                                 <label for="revised_salary_id" class="form-label">Revised Salary ID</label>
                                 <input type="number" class="form-control" id="revised_salary_id" name="revised_salary_id">
-                            </div>
+                            </div> -->
                             <div class="mb-3">
                                 <label for="increased_fuel_amount" class="form-label">Increased Fuel Amount</label>
                                 <input type="number" class="form-control" id="increased_fuel_amount" name="increased_fuel_amount" step="0.01">
                             </div>
-                            <div class="mb-3">
+                            <!-- <div class="mb-3">
                                 <label for="revised_fuel_allowance_id" class="form-label">Revised Fuel Allowance ID</label>
                                 <input type="number" class="form-control" id="revised_fuel_allowance_id" name="revised_fuel_allowance_id">
-                            </div>
+                            </div> -->
                             <div class="mb-3">
                                 <label for="mobile_allowance_proposed" class="form-label">Mobile Allowance</label>
                                 <input type="number" class="form-control" id="mobile_allowance_proposed" name="mobile_allowance" step="0.01">
                             </div>
                             <div class="mb-3">
                                 <label for="vehicle_proposed" class="form-label">Vehicle</label>
-                                <input type="text" class="form-control" id="vehicle_proposed" name="vehicle">
+                                <input type="text" class="form-control" id="vehicle_proposed" name="vehicle_proposed">
                             </div>
                         </div>
                         <!-- Step 4: Financial Impact -->
                         <div class="step d-none" id="step-financial_impact">
                             <h6>Step 4: Financial Impact Details</h6>
                             <div class="mb-3">
-                                <label for="emp_status_id" class="form-label">Employee Status ID</label>
-                                <input type="number" class="form-control" id="emp_status_id" name="emp_status_id">
+                                <label for="emp_status_id" class="form-label">Employee Status</label>
+                                <select class="form-select" id="emp_status_id" name="emp_status_id">
+                                    <option value="P">P</option>
+                                    <option value="C">C</option>
+                                </select>
                             </div>
-                            <div class="mb-3">
+                            <!-- <div class="mb-3">
                                 <label for="serving_years" class="form-label">Serving Years</label>
                                 <input type="number" class="form-control" id="serving_years" name="serving_years" step="0.1">
                             </div>
@@ -176,7 +179,7 @@
                             <div class="mb-3">
                                 <label for="total_id" class="form-label">Total ID</label>
                                 <input type="number" class="form-control" id="total_id" name="total_id">
-                            </div>
+                            </div> -->
                         </div>
                         <input type="hidden" name="step" id="step">
                         <input type="hidden" name="employee_id" id="employee_id">
@@ -269,57 +272,133 @@
             const form = document.getElementById('createForm');
             console.log('Modal initialized:', modal);
 
+            // Fetch Dropdown Data on page load
+            fetchDropdownData();
+
             // Fetch Dropdown Data
             async function fetchDropdownData() {
                 const companyId = modal.dataset.companyId;
+                console.log('Fetching dropdown data for company:', companyId);
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
                     const response = await fetch('/pyroll/department-groups-sections/', {
                         method: 'GET',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        signal: controller.signal
                     });
-                    if (!response.ok) throw new Error('Failed to fetch dropdown data');
-                    const data = await response.json();
-                    populateDepartmentGroups(data.data);
+                    clearTimeout(timeoutId);
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    const rawData = await response.json();
+                    console.log('Raw dropdown data response:', rawData); // Log raw response
+                    if (!rawData.data || !Array.isArray(rawData.data)) {
+                        console.error('Invalid dropdown data: data is missing or not an array', rawData);
+                        alert(rawData.error || 'No department groups available');
+                        window.departmentGroups = [];
+                        return;
+                    }
+                    populateDepartmentGroups(rawData.data);
+                    populateDesignationsAndLocations(companyId);
                 } catch (error) {
                     console.error('Error fetching dropdown data:', error);
-                    alert('Error fetching dropdown data');
+                    alert('Error fetching dropdown data: ' + error.message);
+                    window.departmentGroups = []; // Fallback
                 }
+            }
+            
+            fetchEmployeeStatusChoices()
+
+            // Fetch Dropdown Data
+            async function fetchEmployeeStatusChoices() {
+                console.log('Fetching employee status choices');
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+                    const response = await fetch('/pyroll/employee-status-choices/', {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    if (!response.ok) throw new Error(`HTTP error (employee status choices)! Status: ${response.status}`);
+                    const rawData = await response.json();
+                    console.log('Raw employee status dropdown choices response:', rawData); // Log raw response
+                    if (!rawData.data || !Array.isArray(rawData.data)) {
+                        console.error('Invalid employee status dropdown choices: data is missing or not an array', rawData);
+                        alert(rawData.error || 'No employee status choice available');
+                        window.employeeStatusChoices = [];
+                        return;
+                    }
+                    populateEmployeeStatusDropdown(rawData.data);
+                } catch (error) {
+                    console.error('Error fetching employee status dropdown choices:', error);
+                    alert('Error employee status dropdown choices: ' + error.message);
+                    window.departmentGroups = []; // Fallback
+                }
+            }
+
+            async function populateDesignationsAndLocations(companyId) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
                     const response = await fetch(`/pyroll/designations/?company_id=${companyId}`, {
                         method: 'GET',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        signal: controller.signal
                     });
+                    clearTimeout(timeoutId);
                     if (!response.ok) throw new Error('Failed to fetch designations');
                     const data = await response.json();
+                    console.log('Designations response:', data);
+                    if (data.error || !data.data) {
+                        console.error('Invalid designations data:', data);
+                        alert(data.error || 'Invalid designations data received');
+                        return;
+                    }
                     populateDesignations(data.data);
                 } catch (error) {
                     console.error('Error fetching designations:', error);
-                    alert('Error fetching designations');
+                    alert('Error fetching designations: ' + error.message);
                 }
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
                     const response = await fetch('/pyroll/locations/', {
                         method: 'GET',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        signal: controller.signal
                     });
+                    clearTimeout(timeoutId);
                     if (!response.ok) throw new Error('Failed to fetch locations');
                     const data = await response.json();
+                    console.log('Locations response:', data);
+                    if (data.error || !data.data) {
+                        console.error('Invalid locations data:', data);
+                        alert(data.error || 'Invalid locations data received');
+                        return;
+                    }
                     populateLocations(data.data);
                 } catch (error) {
                     console.error('Error fetching locations:', error);
-                    alert('Error fetching locations');
+                    alert('Error fetching locations: ' + error.message);
                 }
             }
 
             function populateDepartmentGroups(data) {
                 const select = document.getElementById('department_group_id');
                 select.innerHTML = '<option value="">Select Department Group</option>';
-                data.forEach(group => {
+                window.departmentGroups = []; // Reset
+                if (!data || !Array.isArray(data)) {
+                    console.error('populateDepartmentGroups: data is not an array', data);
+                    return;
+                }
+                data.forEach(dept => {
                     const option = document.createElement('option');
-                    option.value = group.id;
-                    option.textContent = group.name;
+                    option.value = dept.id;
+                    option.textContent = dept.name;
                     select.appendChild(option);
+                    window.departmentGroups.push({ id: dept.id, name: dept.name, sections: dept.sections || [] });
                 });
-                window.departmentGroups = data;
             }
 
             function populateDesignations(data) {
@@ -347,6 +426,12 @@
             function populateSections(departmentGroupId) {
                 const select = document.getElementById('section_id');
                 select.innerHTML = '<option value="">Select Section</option>';
+                console.log('Populating sections for departmentGroupId:', departmentGroupId);
+                if (!window.departmentGroups) {
+                    console.error('window.departmentGroups is undefined');
+                    alert('Department groups not loaded. Please try again.');
+                    return;
+                }
                 if (departmentGroupId) {
                     const group = window.departmentGroups.find(g => g.id === parseInt(departmentGroupId));
                     if (group && group.sections) {
@@ -356,8 +441,27 @@
                             option.textContent = section.name;
                             select.appendChild(option);
                         });
+                    } else {
+                        console.warn('No group or sections found for departmentGroupId:', departmentGroupId);
                     }
                 }
+            }
+
+            function populateEmployeeStatusDropdown(data) {
+                const select = document.getElementById('emp_status_id');
+                select.innerHTML = '<option value="">Select Employee Status</option>';
+                window.employeeStatusChoices = []; // Reset
+                if (!data || !Array.isArray(data)) {
+                    console.error('populateEmployeeStatusDropdown: data is not an array', data);
+                    return;
+                }
+                data.forEach(choice => {
+                    const option = document.createElement('option');
+                    option.value = choice.id;
+                    option.textContent = choice.status;
+                    select.appendChild(option);
+                    window.employeeStatusChoices.push({ id: choice.id, status: choice.status});
+                });
             }
 
             // Toggle date of resignation input
@@ -390,6 +494,8 @@
                     return null;
                 }
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
                     const response = await fetch('/pyroll/designations/create/', {
                         method: 'POST',
                         headers: {
@@ -397,8 +503,10 @@
                             'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
                         },
-                        body: JSON.stringify({ title, company: companyId })
+                        body: JSON.stringify({ title, company: companyId }),
+                        signal: controller.signal
                     });
+                    clearTimeout(timeoutId);
                     if (!response.ok) throw new Error('Failed to create designation');
                     const result = await response.json();
                     if (result.error) {
@@ -408,7 +516,7 @@
                     return result;
                 } catch (error) {
                     console.error('Error creating designation:', error);
-                    alert('Error creating designation');
+                    alert('Error creating designation: ' + error.message);
                     return null;
                 }
             }
@@ -447,21 +555,27 @@
             async function fetchEmployeeData(employeeId) {
                 console.log('Fetching data for employee:', employeeId);
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
                     const response = await fetch(`/pyroll/get-data/employee/${employeeId}/`, {
                         method: 'GET',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        signal: controller.signal
                     });
-                    if (!response.ok) throw new Error('Failed to fetch employee data');
+                    clearTimeout(timeoutId);
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                     const data = await response.json();
-                    if (data.error) {
-                        alert(data.error);
+                    console.log('Raw server response:', data);
+                    if (data.error || !data.data || !data.data.employee) {
+                        console.error('Invalid response structure or error:', data);
+                        alert(data.error || 'Invalid employee data received');
                         return null;
                     }
-                    console.log('Employee data fetched:', data);
-                    return data;
+                    console.log('Employee data fetched:', data.data);
+                    return data.data;
                 } catch (error) {
                     console.error('Error fetching employee data:', error);
-                    alert('Error fetching employee data');
+                    alert('Error fetching employee data: ' + error.message);
                     return null;
                 }
             }
@@ -469,6 +583,11 @@
             // Populate form for editing
             function populateForm(data) {
                 console.log('Populating form with data:', data);
+                if (!data || !data.employee) {
+                    console.error('No employee data provided to populateForm');
+                    alert('No employee data available');
+                    return;
+                }
                 form.querySelector('#fullname').value = data.employee.fullname || '';
                 form.querySelector('#department_group_id').value = data.employee.department_group_id || '';
                 populateSections(data.employee.department_group_id);
@@ -489,21 +608,21 @@
                 form.querySelector('#fuel_limit').value = data.current_package.fuel_limit || '';
                 form.querySelector('#mobile_allowance').value = data.current_package.mobile_allowance || '';
                 form.querySelector('#increment_percentage').value = data.proposed_package.increment_percentage || '';
-                form.querySelector('#increased_amount_id').value = data.proposed_package.increased_amount_id || '';
-                form.querySelector('#revised_salary_id').value = data.proposed_package.revised_salary_id || '';
+                // form.querySelector('#increased_amount_id').value = data.proposed_package.increased_amount_id || '';
+                // form.querySelector('#revised_salary_id').value = data.proposed_package.revised_salary_id || '';
                 form.querySelector('#increased_fuel_amount').value = data.proposed_package.increased_fuel_amount || '';
-                form.querySelector('#revised_fuel_allowance_id').value = data.proposed_package.revised_fuel_allowance_id || '';
+                // form.querySelector('#revised_fuel_allowance_id').value = data.proposed_package.revised_fuel_allowance_id || '';
                 form.querySelector('#mobile_allowance_proposed').value = data.proposed_package.mobile_allowance || '';
                 form.querySelector('#vehicle_proposed').value = data.proposed_package.vehicle || '';
                 form.querySelector('#emp_status_id').value = data.financial_impact.emp_status_id || '';
-                form.querySelector('#serving_years').value = data.financial_impact.serving_years || '';
-                form.querySelector('#salary').value = data.financial_impact.salary || '';
-                form.querySelector('#gratuity_id').value = data.financial_impact.gratuity_id || '';
-                form.querySelector('#bonus_id').value = data.financial_impact.bonus_id || '';
-                form.querySelector('#leave_encashment_id').value = data.financial_impact.leave_encashment_id || '';
-                form.querySelector('#mobile_allowance_financial').value = data.financial_impact.mobile_allowance_id || '';
-                form.querySelector('#fuel').value = data.financial_impact.fuel || '';
-                form.querySelector('#total_id').value = data.financial_impact.total_id || '';
+                // form.querySelector('#serving_years').value = data.financial_impact.serving_years || '';
+                // form.querySelector('#salary').value = data.financial_impact.salary || '';
+                // form.querySelector('#gratuity_id').value = data.financial_impact.gratuity_id || '';
+                // form.querySelector('#bonus_id').value = data.financial_impact.bonus_id || '';
+                // form.querySelector('#leave_encashment_id').value = data.financial_impact.leave_encashment_id || '';
+                // form.querySelector('#mobile_allowance_financial').value = data.financial_impact.mobile_allowance_id || '';
+                // form.querySelector('#fuel').value = data.financial_impact.fuel || '';
+                // form.querySelector('#total_id').value = data.financial_impact.total_id || '';
             }
 
             // Update sections when department group changes
@@ -525,10 +644,14 @@
                             formData.set('designation_id', newDesignation.id);
                             const companyId = modal.dataset.companyId;
                             try {
+                                const controller = new AbortController();
+                                const timeoutId = setTimeout(() => controller.abort(), 5000);
                                 const response = await fetch(`/pyroll/designations/?company_id=${companyId}`, {
                                     method: 'GET',
-                                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                                    signal: controller.signal
                                 });
+                                clearTimeout(timeoutId);
                                 if (!response.ok) throw new Error('Failed to fetch designations');
                                 const data = await response.json();
                                 populateDesignations(data.data);
@@ -555,13 +678,17 @@
                     }
                     if (!confirm('Are you sure you want to delete this employee?')) return;
                     try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 5000);
                         const response = await fetch(`/pyroll/delete-data/employee/${employeeId}/`, {
                             method: 'DELETE',
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
-                            }
+                            },
+                            signal: controller.signal
                         });
+                        clearTimeout(timeoutId);
                         if (!response.ok) throw new Error('Failed to delete employee');
                         const result = await response.json();
                         if (result.error) {
@@ -571,12 +698,12 @@
                         }
                     } catch (error) {
                         console.error('Error deleting employee:', error);
-                        alert('Error deleting employee');
+                        alert('Error deleting employee: ' + error.message);
                     }
                 });
             });
 
-            // Edit button listeners with inline onclick
+            // Edit button listeners
             document.querySelectorAll('.edit-employee-btn').forEach(button => {
                 button.onclick = async function() {
                     const employeeId = this.closest('tr').dataset.employeeId;
@@ -584,6 +711,11 @@
                     if (!employeeId) {
                         alert('Invalid employee ID');
                         return;
+                    }
+                    // Ensure dropdown data is loaded before fetching employee data
+                    if (!window.departmentGroups) {
+                        console.log('Dropdown data not loaded, fetching now');
+                        await fetchDropdownData();
                     }
                     const data = await fetchEmployeeData(employeeId);
                     if (data) {
@@ -620,11 +752,43 @@
                 const url = isEditMode ? `/pyroll/update-data/{{ department_id }}/` : `/pyroll/create-data/{{ department_id }}/`;
                 if (isEditMode) formData.append('employee_id', modal.dataset.employeeId);
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                    let headers = { 
+                        'X-Requested-With': 'XMLHttpRequest'
+                    };
+
+                    let message_body;
+
+                    if (isEditMode) {
+                        headers['X-CSRFToken'] = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+                        headers['Content-Type'] = 'application/json';
+
+                        const entries = {};
+                        for (const [key, value] of formData.entries()) {
+                            if (key === 'csrfmiddlewaretoken') {
+                                // csrfToken = value;
+                                continue;
+                            }
+                            entries[key] = value;
+                        }
+                        
+                        message_body = JSON.stringify(entries, null, 2);
+                    }
+
+                    else {
+                        message_body = formData;
+                    }
+
                     const response = await fetch(url, {
                         method: isEditMode ? 'PATCH' : 'POST',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        body: formData
+                        headers,
+                        body: message_body,
+                        signal: controller.signal
                     });
+
+                    clearTimeout(timeoutId);
                     if (!response.ok) throw new Error('Failed to save step');
                     const result = await response.json();
                     if (result.error) {
@@ -650,7 +814,7 @@
                     }
                 } catch (error) {
                     console.error('Error saving step:', error);
-                    alert('Error saving step');
+                    alert('Error saving step: ' + error.message);
                 }
             });
 
@@ -662,11 +826,43 @@
                 const url = isEditMode ? `/pyroll/update-data/{{ department_id }}/` : `/pyroll/create-data/{{ department_id }}/`;
                 if (isEditMode) formData.append('employee_id', modal.dataset.employeeId);
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    
+                    let headers = { 
+                        'X-Requested-With': 'XMLHttpRequest'
+                    };
+
+                    let message_body;
+                    
+                    if (isEditMode) {
+                        headers['X-CSRFToken'] = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+                        headers['Content-Type'] = 'application/json';
+
+                        const entries = {};
+                        for (const [key, value] of formData.entries()) {
+                            if (key === 'csrfmiddlewaretoken') {
+                                // csrfToken = value;
+                                continue;
+                            }
+                            entries[key] = value;
+                        }
+                        
+                        message_body = JSON.stringify(entries, null, 2);
+                    }
+
+                    else {
+                        message_body = formData;
+                    }
+
                     const response = await fetch(url, {
                         method: isEditMode ? 'PATCH' : 'POST',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        body: formData
+                        headers,
+                        body: message_body,
+                        signal: controller.signal
                     });
+
+                    clearTimeout(timeoutId);
                     if (!response.ok) throw new Error('Failed to save final step');
                     const result = await response.json();
                     if (result.error) {
@@ -677,7 +873,7 @@
                     }
                 } catch (error) {
                     console.error('Error saving final step:', error);
-                    alert('Error saving final step');
+                    alert('Error saving final step: ' + error.message);
                 }
             });
 
@@ -700,7 +896,6 @@
                     resignationInput.disabled = true;
                     designationSelect.disabled = false;
                 }
-                fetchDropdownData();
                 showStep(currentStep);
             });
 

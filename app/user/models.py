@@ -4,7 +4,10 @@ from django.contrib.auth.models import (
     PermissionsMixin ,
     Group
 )
+
 from .managers import  CustomUserManager
+
+from decimal import Decimal, InvalidOperation
 
 # Create your models here.
 
@@ -103,6 +106,10 @@ class Section(models.Model):
 
 
 class EmployeeStatus(models.Model):
+    # STATUS_CHOICES = (
+    #     ('PERMANENT', 'P'),
+    #     ('CONTRACT', 'C'),
+    # )
     status = models.CharField(max_length=255)
 
     def __str__(self):
@@ -149,8 +156,8 @@ class Employee(models.Model):
     emp_id = models.AutoField(primary_key=True)
     fullname = models.CharField(max_length=255)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
-    department_team = models.ForeignKey(DepartmentTeams, on_delete=models.CASCADE, null=True)
-    department_group = models.ForeignKey(DepartmentGroups, on_delete=models.CASCADE, null=True)
+    department_team = models.ForeignKey(DepartmentTeams, on_delete=models.CASCADE)
+    department_group = models.ForeignKey(DepartmentGroups, on_delete=models.CASCADE)
     section = models.ForeignKey(Section, on_delete=models.CASCADE)
     designation = models.ForeignKey(Designation, on_delete=models.CASCADE)
     
@@ -169,10 +176,26 @@ class Employee(models.Model):
 
 class CurrentPackageDetails(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
-    gross_salary = models.DecimalField(max_digits=10, decimal_places=2)
-    vehicle = models.CharField(max_length=40)
-    fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
-    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
+    gross_salary = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    vehicle = models.CharField(max_length=40, blank=True, null=True)
+    fuel_limit = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        # Handle only DecimalFields
+        for field in self._meta.get_fields():
+            if isinstance(field, models.DecimalField):
+                val = getattr(self, field.name)
+                if val == '' or val is None:  # empty string or None → store as 0
+                    setattr(self, field.name, Decimal("0"))
+                else:  # try converting to Decimal
+                    try:
+                        setattr(self, field.name, Decimal(val))
+                    except (InvalidOperation, TypeError, ValueError):
+                        setattr(self, field.name, Decimal("0"))
+
+        # Everything else (CharField, ForeignKey, etc.) is saved as-is
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Package for {self.employee.fullname}"
@@ -180,13 +203,29 @@ class CurrentPackageDetails(models.Model):
 
 class ProposedPackageDetails(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
-    increment_percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    increment_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     increased_amount = models.ForeignKey(Formula, related_name='increased_amount', on_delete=models.SET_NULL, null=True)
     revised_salary = models.ForeignKey(Formula, related_name='revised_salary', on_delete=models.SET_NULL, null=True)
-    increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     revised_fuel_allowance = models.ForeignKey(Formula, related_name='revised_fuel_allowance', on_delete=models.SET_NULL, null=True)
-    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
-    vehicle = models.DecimalField(max_digits=10, decimal_places=2)
+    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vehicle = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # Handle only DecimalFields
+        for field in self._meta.get_fields():
+            if isinstance(field, models.DecimalField):
+                val = getattr(self, field.name)
+                if val == '' or val is None:  # empty string or None → store as 0
+                    setattr(self, field.name, Decimal("0"))
+                else:  # try converting to Decimal
+                    try:
+                        setattr(self, field.name, Decimal(val))
+                    except (InvalidOperation, TypeError, ValueError):
+                        setattr(self, field.name, Decimal("0"))
+
+        # Everything else (CharField, ForeignKey, etc.) is saved as-is
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Proposed Package for {self.employee.fullname}"
@@ -194,16 +233,32 @@ class ProposedPackageDetails(models.Model):
 
 class FinancialImpactPerMonth(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
-    emp_status = models.ForeignKey(EmployeeStatus, on_delete=models.CASCADE)
-    serving_years = models.IntegerField()
-    salary = models.DecimalField(max_digits=10, decimal_places=2)
+    emp_status = models.ForeignKey(EmployeeStatus, on_delete=models.CASCADE, null=True, blank=True)
+    serving_years = models.IntegerField(null=True, blank=True)
+    salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     gratuity = models.ForeignKey(Formula, related_name='gratuity', on_delete=models.SET_NULL, null=True)
     bonus = models.ForeignKey(Formula, related_name='bonus', on_delete=models.SET_NULL, null=True)
     leave_encashment = models.ForeignKey(Formula, related_name='le', on_delete=models.SET_NULL, null=True)
     mobile_allowance = models.ForeignKey(Formula, related_name='mobile_allowance', on_delete=models.SET_NULL, null=True)
-    fuel = models.DecimalField(max_digits=10, decimal_places=2)
+    fuel = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.ForeignKey(Formula, related_name='total', on_delete=models.SET_NULL, null=True)
 
+    def save(self, *args, **kwargs):
+        # Handle only DecimalFields
+        for field in self._meta.get_fields():
+            if isinstance(field, models.DecimalField):
+                val = getattr(self, field.name)
+                if val == '' or val is None:  # empty string or None → store as 0
+                    setattr(self, field.name, Decimal("0"))
+                else:  # try converting to Decimal
+                    try:
+                        setattr(self, field.name, Decimal(val))
+                    except (InvalidOperation, TypeError, ValueError):
+                        setattr(self, field.name, Decimal("0"))
+
+        # Everything else (CharField, ForeignKey, etc.) is saved as-is
+        super().save(*args, **kwargs)
+        
     def __str__(self):
         return f"Final Impact for {self.employee.fullname}"
 
