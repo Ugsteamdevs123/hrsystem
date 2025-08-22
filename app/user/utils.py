@@ -1,5 +1,6 @@
 from .models import CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, configurations, Employee, hr_assigned_companies, DepartmentTeams
 from django.db.models import Sum, Prefetch
+from datetime import date
 
 
 def update_department_team_increment_summary(sender, instance, company, department_team):
@@ -50,6 +51,11 @@ def update_department_team_increment_summary(sender, instance, company, departme
         proposed_package = ProposedPackageDetails.objects.get(employee=instance.employee)
         configuration = configurations.objects.first()
         if proposed_package:
+            years = configuration.as_of_date.year - instance.employee.date_of_joining.year
+            if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee.date_of_joining.month, instance.employee.date_of_joining.day):
+                years -= 1
+                
+            instance.serving_years = years
             instance.salary = proposed_package.increased_amount
             instance.gratuity = instance.salary/12
             instance.bonus = (instance.salary*1.7)/12

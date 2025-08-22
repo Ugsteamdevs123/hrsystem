@@ -2,13 +2,14 @@ from venv import logger
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages import success as messages_success
-from django.db.models import Prefetch
-from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.http import JsonResponse, HttpResponseRedirect
+from django.shortcuts import render
 from django.views.decorators.cache import cache_control
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import View
-from django.contrib.sessions.models import Session
+
+# from django.views import View
+from django.core.exceptions import ObjectDoesNotExist
 
 from permissions import GroupOrSuperuserPermission, PermissionRequiredMixin
 
@@ -23,7 +24,9 @@ from .models import (
     FinancialImpactPerMonth,
     DepartmentGroups,
     Designation,
-    Location)
+    Location,
+    EmployeeStatus,
+    Formula)
 
 from .utils import get_companies_and_department_teams
 from .serializer import (
@@ -31,10 +34,10 @@ from .serializer import (
     DepartmentGroupsSerializer,
     DesignationSerializer,
     DesignationCreateSerializer,
-    LocationsSerializer
-
+    LocationsSerializer,
+    EmployeeStatusSerializer
 )
-from collections import defaultdict
+
 import json
 
 # # Original function-based decorator (kept for reference)
@@ -281,7 +284,7 @@ class CompanySummaryView(View):
 
         company_data = get_companies_and_department_teams(request.user)
 
-        company = Company.objects.get(id=company_id)
+        company = Company.objects.get(id=company_id)   
         increment_details_summary = IncrementDetailsSummary.objects.filter(company_id=company_id)
         if increment_details_summary.exists():
             data = IncrementDetailsSummarySerializer(increment_details_summary, many=True).data
@@ -328,6 +331,12 @@ class CompanySummaryView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
+
+# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
 class DepartmentTableView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -353,6 +362,7 @@ class DepartmentTableView(View):
             current_package = CurrentPackageDetails.objects.filter(employee=employee).first() or {}
             proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first() or {}
             financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first() or {}
+            
             joined_data.append({
                 'employee_id': employee.emp_id,
                 'fullname': employee.fullname,
@@ -378,7 +388,7 @@ class DepartmentTableView(View):
                 'revised_fuel_allowance': proposed_package.revised_fuel_allowance.formula if proposed_package and proposed_package.revised_fuel_allowance else '',
                 'mobile_allowance_proposed': proposed_package.mobile_allowance if proposed_package else '',
                 'vehicle_proposed': proposed_package.vehicle if proposed_package else '',
-                'emp_status': financial_impact.emp_status.name if financial_impact and financial_impact.emp_status else '',
+                'emp_status': financial_impact.emp_status.status if financial_impact and financial_impact.emp_status else '',
                 'serving_years': financial_impact.serving_years if financial_impact else '',
                 'salary': financial_impact.salary if financial_impact else '',
                 'gratuity': financial_impact.gratuity.formula if financial_impact and financial_impact.gratuity else '',
@@ -399,7 +409,7 @@ class DepartmentTableView(View):
                 table_html += f'<tr data-employee-id="{row["employee_id"]}">'
                 for value in row.values():
                     table_html += f'<td>{value if value is not None else ""}</td>'
-                table_html += '<td><button class="btn btn-sm btn-danger delete-employee-btn">Delete</button></td>'
+                table_html += f'<td><button class="btn btn-sm btn-primary edit-employee-btn" onclick="console.log(\'Edit button clicked for employee: {row["employee_id"]}\')">Edit</button> <button class="btn btn-sm btn-danger delete-employee-btn" onclick="console.log(\'Delete button clicked for employee: {row["employee_id"]}\')">Delete</button></td>'
                 table_html += '</tr>'
             table_html += '</tbody></table></div>'
         else:
@@ -478,10 +488,10 @@ class CreateDataView(View):
                     proposed_package = ProposedPackageDetails.objects.create(
                         employee=employee,
                         increment_percentage=request.POST.get('increment_percentage'),
-                        increased_amount_id=request.POST.get('increased_amount_id'),
-                        revised_salary_id=request.POST.get('revised_salary_id'),
+                        # increased_amount_id=request.POST.get('increased_amount_id'),
+                        # revised_salary_id=request.POST.get('revised_salary_id'),
                         increased_fuel_amount=request.POST.get('increased_fuel_amount'),
-                        revised_fuel_allowance_id=request.POST.get('revised_fuel_allowance_id'),
+                        # revised_fuel_allowance_id=request.POST.get('revised_fuel_allowance_id'),
                         mobile_allowance=request.POST.get('mobile_allowance'),
                         vehicle=request.POST.get('vehicle')
                     )
@@ -493,14 +503,14 @@ class CreateDataView(View):
                     financial_impact = FinancialImpactPerMonth.objects.create(
                         employee=employee,
                         emp_status_id=request.POST.get('emp_status_id'),
-                        serving_years=request.POST.get('serving_years'),
-                        salary=request.POST.get('salary'),
-                        gratuity_id=request.POST.get('gratuity_id'),
-                        bonus_id=request.POST.get('bonus_id'),
-                        leave_encashment_id=request.POST.get('leave_encashment_id'),
-                        mobile_allowance_id=request.POST.get('mobile_allowance_id'),
-                        fuel=request.POST.get('fuel'),
-                        total_id=request.POST.get('total_id')
+                        # serving_years=request.POST.get('serving_years'),
+                        # salary=request.POST.get('salary'),
+                        # gratuity_id=request.POST.get('gratuity_id'),
+                        # bonus_id=request.POST.get('bonus_id'),
+                        # leave_encashment_id=request.POST.get('leave_encashment_id'),
+                        # mobile_allowance_id=request.POST.get('mobile_allowance_id'),
+                        # fuel=request.POST.get('fuel'),
+                        # total_id=request.POST.get('total_id')
                     )
                     logger.debug(f"FinancialImpactPerMonth created for employee: {employee_id}")
                     return JsonResponse({'message': 'Financial Impact created'})
@@ -509,6 +519,157 @@ class CreateDataView(View):
                 logger.error(f"Error in CreateDataView: {str(e)}")
                 return JsonResponse({'error': 'Invalid data'}, status=400)
         return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+class GetDataView(View):
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        return view
+
+    def get(self, request, table, id):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                if table == 'employee':
+                    logger.debug(f"Fetching employee with emp_id: {id}")
+                    employee = Employee.objects.filter(
+                        emp_id=id,
+                        department_team__company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+                    ).first()
+                    if not employee:
+                        logger.error(f"Employee with emp_id {id} not found or not authorized")
+                        return JsonResponse({'error': f'Employee with ID {id} not found'}, status=404)
+                    current_package = CurrentPackageDetails.objects.filter(employee=employee).first() or {}
+                    proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first() or {}
+                    financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first() or {}
+                    data = {
+                        'employee': {
+                            'fullname': employee.fullname,
+                            'department_group_id': employee.department_group_id,
+                            'section_id': employee.section_id,
+                            'designation_id': employee.designation_id,
+                            'location_id': employee.location_id,
+                            'date_of_joining': employee.date_of_joining.isoformat() if employee.date_of_joining else '',
+                            'resign': employee.resign,
+                            'date_of_resignation': employee.date_of_resignation.isoformat() if employee.date_of_resignation else '',
+                            'remarks': employee.remarks or '',
+                            'image': employee.image.url if employee.image else ''
+                        },
+                        'current_package': {
+                            'gross_salary': str(current_package.gross_salary) if current_package and current_package.gross_salary else '',
+                            'vehicle': current_package.vehicle if current_package else '',
+                            'fuel_limit': str(current_package.fuel_limit) if current_package and current_package.fuel_limit else '',
+                            'mobile_allowance': str(current_package.mobile_allowance) if current_package and current_package.mobile_allowance else ''
+                        },
+                        'proposed_package': {
+                            'increment_percentage': str(proposed_package.increment_percentage) if proposed_package and proposed_package.increment_percentage else '',
+                            'increased_amount_id': str(proposed_package.increased_amount_id) if proposed_package and proposed_package.increased_amount_id else '',
+                            'revised_salary_id': str(proposed_package.revised_salary_id) if proposed_package and proposed_package.revised_salary_id else '',
+                            'increased_fuel_amount': str(proposed_package.increased_fuel_amount) if proposed_package and proposed_package.increased_fuel_amount else '',
+                            'revised_fuel_allowance_id': str(proposed_package.revised_fuel_allowance_id) if proposed_package and proposed_package.revised_fuel_allowance_id else '',
+                            'mobile_allowance': str(proposed_package.mobile_allowance) if proposed_package and proposed_package.mobile_allowance else '',
+                            'vehicle': proposed_package.vehicle if proposed_package else ''
+                        },
+                        'financial_impact': {
+                            'emp_status_id': str(financial_impact.emp_status_id) if financial_impact and financial_impact.emp_status_id else '',
+                            'serving_years': str(financial_impact.serving_years) if financial_impact and financial_impact.serving_years else '',
+                            'salary': str(financial_impact.salary) if financial_impact and financial_impact.salary else '',
+                            'gratuity_id': str(financial_impact.gratuity_id) if financial_impact and financial_impact.gratuity_id else '',
+                            'bonus_id': str(financial_impact.bonus_id) if financial_impact and financial_impact.bonus_id else '',
+                            'leave_encashment_id': str(financial_impact.leave_encashment_id) if financial_impact and financial_impact.leave_encashment_id else '',
+                            'mobile_allowance_id': str(financial_impact.mobile_allowance_id) if financial_impact and financial_impact.mobile_allowance_id else '',
+                            'fuel': str(financial_impact.fuel) if financial_impact and financial_impact.fuel else '',
+                            'total_id': str(financial_impact.total_id) if financial_impact and financial_impact.total_id else ''
+                        }
+                    }
+                    logger.debug(f"Fetched data for employee {id}: {data}")
+                    return JsonResponse({'data': data})
+                return JsonResponse({'error': 'Invalid table'}, status=400)
+            except (Employee.DoesNotExist, ValueError) as e:
+                logger.error(f"Error fetching employee {id}: {str(e)}")
+                return JsonResponse({'error': f'Invalid data: {str(e)}'}, status=400)
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+
+class UpdateDataView(View):
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
+        return view
+
+    def patch(self, request, department_id):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                data = json.loads(request.body)
+                print(data)
+                step = data.get('step')
+                employee_id = data.get('employee_id')
+                department = DepartmentTeams.objects.get(
+                    id=department_id,
+                    company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+                )
+                employee = Employee.objects.get(emp_id=employee_id, department_team=department)
+                if step == 'employee':
+                    employee.fullname = data.get('fullname')
+                    employee.department_group_id = data.get('department_group_id')
+                    employee.section_id = data.get('section_id')
+                    employee.designation_id = data.get('designation_id')
+                    employee.location_id = data.get('location_id')
+                    employee.date_of_joining = data.get('date_of_joining')
+                    employee.resign = data.get('resign') == 'true'
+                    employee.date_of_resignation = data.get('date_of_resignation') or None
+                    employee.remarks = data.get('remarks') or ''
+                    if 'image' in request.FILES:
+                        employee.image = request.FILES.get('image')
+                    employee.save()
+                    logger.debug(f"Employee updated: {employee_id}")
+                    return JsonResponse({'message': 'Employee updated', 'employee_id': employee_id})
+                elif step == 'current_package':
+                    current_package, created = CurrentPackageDetails.objects.get_or_create(employee=employee)
+                    current_package.gross_salary = data.get('gross_salary')
+                    current_package.vehicle = data.get('vehicle')
+                    current_package.fuel_limit = data.get('fuel_limit', None)
+                    current_package.mobile_allowance = data.get('mobile_allowance', None)
+                    current_package.save()
+                    logger.debug(f"CurrentPackageDetails updated for employee: {employee_id}")
+                    return JsonResponse({'message': 'Current Package updated'})
+                elif step == 'proposed_package':
+                    proposed_package, created = ProposedPackageDetails.objects.get_or_create(employee=employee)
+                    proposed_package.increment_percentage = data.get('increment_percentage')
+                    # proposed_package.increased_amount_id = data.get('increased_amount_id')
+                    # proposed_package.revised_salary_id = data.get('revised_salary_id')
+                    proposed_package.increased_fuel_amount = data.get('increased_fuel_amount')
+                    # proposed_package.revised_fuel_allowance_id = data.get('revised_fuel_allowance_id')
+                    proposed_package.mobile_allowance = data.get('mobile_allowance')
+                    proposed_package.vehicle = data.get('vehicle')
+                    proposed_package.save()
+                    logger.debug(f"ProposedPackageDetails updated for employee: {employee_id}")
+                    return JsonResponse({'message': 'Proposed Package updated'})
+                elif step == 'financial_impact':
+                    financial_impact, created = FinancialImpactPerMonth.objects.get_or_create(employee=employee)
+                    financial_impact.emp_status_id = data.get('emp_status_id')
+                    # financial_impact.serving_years = data.get('serving_years')
+                    # financial_impact.salary = data.get('salary')
+                    # financial_impact.gratuity_id = data.get('gratuity_id')
+                    # financial_impact.bonus_id = data.get('bonus_id')
+                    # financial_impact.leave_encashment_id = data.get('leave_encashment_id')
+                    # financial_impact.mobile_allowance_id = data.get('mobile_allowance_id')
+                    # financial_impact.fuel = data.get('fuel')
+                    # financial_impact.total_id = data.get('total_id')
+                    financial_impact.save()
+                    logger.debug(f"FinancialImpactPerMonth updated for employee: {employee_id}")
+                    return JsonResponse({'message': 'Financial Impact updated'})
+                return JsonResponse({'error': 'Invalid step'}, status=400)
+            except (DepartmentTeams.DoesNotExist, Employee.DoesNotExist, ValueError) as e:
+                logger.error(f"Error in UpdateDataView: {str(e)}")
+                return JsonResponse({'error': 'Invalid data'}, status=400)
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
 
 class DeleteDataView(View):
     @classmethod
@@ -541,7 +702,6 @@ class DepartmentGroupsSectionsView(View):
     def get(self, request):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             data = DepartmentGroupsSerializer(DepartmentGroups.objects.all(), many=True).data
-            print(data)
             return JsonResponse({'data': data})
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
@@ -579,4 +739,18 @@ class LocationsView(View):
             else:
                 data = []
             return JsonResponse({'data': data})
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+class EmployeeStatusView(View):
+    def get(self, request):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            employee_status = EmployeeStatus.objects.all()
+            
+            if employee_status.exists():
+                data = EmployeeStatusSerializer(EmployeeStatus.objects.all(), many=True).data
+                return JsonResponse({'data': data})
+            
+            return JsonResponse({'data': []})
+        
         return JsonResponse({'error': 'Invalid request'}, status=400)

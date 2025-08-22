@@ -42,3 +42,23 @@ def add_new_increment_details_summary_record(sender, instance, created, **kwargs
     except Exception as e:
         print(f"Error in adding new increment details summary record: {e}")
         # logger.error(f"Error in checking driver wallet balance: {e}", extra={'id': instance.id})
+
+
+# @receiver(post_save, sender=CurrentPackageDetails)
+# @receiver(post_save, sender=ProposedPackageDetails)
+# @receiver(post_save, sender=FinancialImpactPerMonth)
+# def update_formula_fields(sender, instance, **kwargs):
+#     """Update formula-based fields when related models are saved."""
+#     employee = instance.employee
+#     for model in [ProposedPackageDetails, FinancialImpactPerMonth]:
+#         try:
+#             obj = model.objects.get(employee=employee)
+#             for field in obj._meta.get_fields():
+#                 if isinstance(field, models.ForeignKey) and field.related_model == Formula:
+#                     formula = getattr(obj, field.name)
+#                     if formula:
+#                         value = formula.evaluate(employee)
+#                         setattr(obj, f"{field.name}_value", value)
+#             obj.save()
+#         except model.DoesNotExist:
+#             pass

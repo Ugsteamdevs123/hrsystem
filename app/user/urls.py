@@ -11,10 +11,13 @@ urlpatterns = [
     path('company-summary/<int:company_id>/', views.CompanySummaryView.as_view(), name='company_summary'),
     path('department-table/<int:department_id>/', views.DepartmentTableView.as_view(), name='department_table'),
     path('create-data/<int:department_id>/', views.CreateDataView.as_view(), name='create_data'),
+    path('get-data/<str:table>/<str:id>/', views.GetDataView.as_view(), name='get_data'),
+    path('update-data/<int:department_id>/', views.UpdateDataView.as_view(), name='update_data'),
     path('delete-data/<str:table>/<int:id>/', views.DeleteDataView.as_view(), name='delete_data'),
 
     path('department-groups-sections/', views.DepartmentGroupsSectionsView.as_view(), name='department_groups_sections'),
     path('designations/', views.DesignationsView.as_view(), name='designations'),
     path('designations/create/', views.DesignationCreateView.as_view(), name='designation_create'),
-    path('locations/', views.LocationsView.as_view(), name='locations')
+    path('locations/', views.LocationsView.as_view(), name='locations'),
+    path('employee-status-choices/', views.EmployeeStatusView.as_view(), name='employee_status_choices'),
 ]
