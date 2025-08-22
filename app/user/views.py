@@ -558,23 +558,143 @@ class LoginView(View):
         return render(request, self.template_name)
 
     def post(self, request):
-        """Handles POST requests and authenticates only superusers."""
+        """Handles POST requests and authenticates users."""
         email = request.POST.get("email")
         password = request.POST.get("password")
 
         user = authenticate(username=email, password=password)
         if user is not None:
-            if user.is_active and user.is_superuser:  # ✅ check superuser
+            if user.is_active:
                 login(request, user)
-                return redirect("dashboard")  # Replace with your dashboard URL
-            elif not user.is_active:
-                messages.error(request, "Your account is disabled.")
+                if user.is_superuser:
+                    # Redirect superuser to view users page
+                    return redirect("view_users")
+                else:
+                    # Placeholder for normal users (empty page for now)
+                    return render(request, "normal_user_home.html")
             else:
-                messages.error(request, "You are not authorized to access this panel.")
+                messages.error(request, "Your account is disabled.")
         else:
             messages.error(request, "Invalid email or password.")
 
         return render(request, self.template_name)
+
+
+
+# class LoginView(View):
+#     template_name = "login.html"
+
+#     def get(self, request):
+#         """Handles GET requests and renders the login form."""
+#         return render(request, self.template_name)
+
+#     def post(self, request):
+#         """Handles POST requests and authenticates only superusers."""
+#         email = request.POST.get("email")
+#         password = request.POST.get("password")
+
+#         user = authenticate(username=email, password=password)
+#         if user is not None:
+#             if user.is_active and user.is_superuser:  # ✅ check superuser
+#                 login(request, user)
+#                 return redirect("dashboard")  # Replace with your dashboard URL
+#             elif not user.is_active:
+#                 messages.error(request, "Your account is disabled.")
+#             else:
+#                 messages.error(request, "You are not authorized to access this panel.")
+#         else:
+#             messages.error(request, "Invalid email or password.")
+
+#         return render(request, self.template_name)
+
+
+
+# --- CREATE USER ---
+class AddUserView(View):
+    template_name = "add_user.html"
+
+    def get(self, request):
+        form = CustomUserForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CustomUserForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_staff = True
+            user.is_superuser = False
+            user.save()
+            messages.success(request, "User added successfully!")
+            return redirect("view_users")  # Redirect to user listing
+        return render(request, self.template_name, {"form": form})
+
+# --- UPDATE USER ---
+class UpdateUserView(View):
+    template_name = "update_user.html"
+
+    def get(self, request, pk):
+        user = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_deleted=False,
+            is_staff=True,
+            is_superuser=False,
+        )
+        form = CustomUserUpdateForm(instance=user)
+        return render(request, self.template_name, {"form": form, "user": user})
+
+    def post(self, request, pk):
+        user = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_deleted=False,
+            is_staff=True,
+            is_superuser=False,
+        )
+        form = CustomUserUpdateForm(request.POST, instance=user)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_staff = True
+            user.is_superuser = False
+            user.save()
+            messages.success(request, "User updated successfully!")
+            return redirect("view_users")
+        return render(request, self.template_name, {"form": form, "user": user})
+
+# --- DELETE USER (soft delete) ---
+class DeleteUserView(View):
+    def get(self, request, pk):
+        user = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_staff=True,
+            is_superuser=False,
+        )
+        user.is_deleted = True
+        user.save()
+        messages.success(request, "User deleted successfully")
+        return redirect("view_users")
+
+# --- VIEW USERS ---
+class ViewUsersView(View):
+    template_name = "view_users.html"
+
+    def get(self, request):
+        users = CustomUser.objects.filter(
+            is_staff=True, 
+            is_deleted=False, 
+            is_superuser=False
+        ).select_related('gender')  # fetch gender relation
+
+        return render(request, self.template_name, {"users": users})
+
+
+
+
+
+
+
+
 
 
 
@@ -642,83 +762,83 @@ class DeleteCompanyView(View):
 
 
 
-# --- CREATE HR ---
-class AddHRView(View):
-    template_name = "add_hr.html"
+# # --- CREATE HR ---
+# class AddHRView(View):
+#     template_name = "add_hr.html"
 
-    def get(self, request):
-        form = CustomUserForm()
-        return render(request, self.template_name, {"form": form})
+#     def get(self, request):
+#         form = CustomUserForm()
+#         return render(request, self.template_name, {"form": form})
 
-    def post(self, request):
-        form = CustomUserForm(request.POST)
-        if form.is_valid():
-            hr = form.save(commit=False)
-            hr.is_staff = True
-            # Make sure HR is not admin/superuser
-            hr.is_superuser = False
-            hr.save()
-            messages.success(request, "HR user added successfully!")
-            return redirect("dashboard")
-        return render(request, self.template_name, {"form": form})
+#     def post(self, request):
+#         form = CustomUserForm(request.POST)
+#         if form.is_valid():
+#             hr = form.save(commit=False)
+#             hr.is_staff = True
+#             # Make sure HR is not admin/superuser
+#             hr.is_superuser = False
+#             hr.save()
+#             messages.success(request, "HR user added successfully!")
+#             return redirect("dashboard")
+#         return render(request, self.template_name, {"form": form})
 
 
-# --- UPDATE HR ---
-class EditHRView(View):
-    template_name = "edit_hr.html"
+# # --- UPDATE HR ---
+# class EditHRView(View):
+#     template_name = "edit_hr.html"
 
-    def get(self, request, pk):
-        hr = get_object_or_404(
-            CustomUser,
-            pk=pk,
-            is_deleted=False,
-            is_staff=True,
-            is_superuser=False,   # exclude superuser
-        )
+#     def get(self, request, pk):
+#         hr = get_object_or_404(
+#             CustomUser,
+#             pk=pk,
+#             is_deleted=False,
+#             is_staff=True,
+#             is_superuser=False,   # exclude superuser
+#         )
 
-        print("Editing HR:", hr)
+#         print("Editing HR:", hr)
 
-        form = CustomUserUpdateForm(instance=hr)
-        return render(request, self.template_name, {"form": form, "hr": hr})
+#         form = CustomUserUpdateForm(instance=hr)
+#         return render(request, self.template_name, {"form": form, "hr": hr})
 
-    def post(self, request, pk):
-        hr = get_object_or_404(
-            CustomUser,
-            pk=pk,
-            is_deleted=False,
-            is_staff=True,
-            is_superuser=False,
-        )
+#     def post(self, request, pk):
+#         hr = get_object_or_404(
+#             CustomUser,
+#             pk=pk,
+#             is_deleted=False,
+#             is_staff=True,
+#             is_superuser=False,
+#         )
 
-        print("Updating HR:", hr)
+#         print("Updating HR:", hr)
 
-        form = CustomUserUpdateForm(request.POST, instance=hr)
-        if form.is_valid():
-            hr = form.save(commit=False)
-            hr.is_staff = True
-            hr.is_superuser = False
-            hr.save()
-            messages.success(request, "HR user updated successfully!")
-            return redirect("dashboard")
+#         form = CustomUserUpdateForm(request.POST, instance=hr)
+#         if form.is_valid():
+#             hr = form.save(commit=False)
+#             hr.is_staff = True
+#             hr.is_superuser = False
+#             hr.save()
+#             messages.success(request, "HR user updated successfully!")
+#             return redirect("dashboard")
         
-        else:
-            print("Form errors:", form.errors)   # 👈 add this
-            return render(request, self.template_name, {"form": form, "hr": hr})
+#         else:
+#             print("Form errors:", form.errors)   # 👈 add this
+#             return render(request, self.template_name, {"form": form, "hr": hr})
 
 
-# --- DELETE HR (soft delete) ---
-class DeleteHRView(View):
-    def get(self, request, pk):
-        hr = get_object_or_404(
-            CustomUser,
-            pk=pk,
-            is_staff=True,
-            is_superuser=False,  # don’t delete superuser
-        )
-        hr.is_deleted = True   # soft delete
-        hr.save()
-        messages.success(request, "HR user deleted successfully")
-        return redirect("dashboard")
+# # --- DELETE HR (soft delete) ---
+# class DeleteHRView(View):
+#     def get(self, request, pk):
+#         hr = get_object_or_404(
+#             CustomUser,
+#             pk=pk,
+#             is_staff=True,
+#             is_superuser=False,  # don’t delete superuser
+#         )
+#         hr.is_deleted = True   # soft delete
+#         hr.save()
+#         messages.success(request, "HR user deleted successfully")
+#         return redirect("dashboard")
 
 
 

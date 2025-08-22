@@ -2,61 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% comment %} <title>{% block title %}HR Portal{% endblock %}</title> {% endcomment %}
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-</head>
-<body>
-    <div class="d-flex">
-        <!-- Sidebar -->
-        <div class="bg-light border-end" style="width: 250px; min-height: 100vh;">
-            <div class="p-3">
-                <h4 class="mb-3">HR Portal</h4>
-                <nav class="nav flex-column">
-                    <a class="nav-link" href="{% url 'user:hr_dashboard' %}">Dashboard</a>
-                    <a class="nav-link" href="{% url 'user:department_team' %}">Add Department</a>
-                    <!-- Companies dropdown -->
-                    <div class="accordion" id="companiesAccordion">
-                        {% for company in company_data %}
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="companyHeading{{ company.company_id }}">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#companyCollapse{{ company.company_id }}" aria-expanded="false" aria-controls="companyCollapse{{ company.company_id }}">
-                                        {{ company.company_name }}
-                                    </button>
-                                </h2>
-                                <div id="companyCollapse{{ company.company_id }}" class="accordion-collapse collapse" aria-labelledby="companyHeading{{ company.company_id }}">
-                                    <div class="accordion-body p-0">
-                                        <ul class="nav flex-column">
-                                            <li class="nav-item">
-                                                <a class="nav-link" href="{% url 'user:company_summary' company.company_id %}">Summary</a>
-                                            </li>
-                                            {% for department in company.departments %}
-                                                <li class="nav-item ms-3">
-                                                    <a class="nav-link" href="{% url 'user:department_table' department.id %}">{{ department.name }}</a>
-                                                </li>
-                                            {% endfor %}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </nav>
-            </div>
-        </div>
-        <!-- Main content -->
-        <div class="flex-grow-1 p-3">
-            {% comment %} {% block content %}{% endblock %} {% endcomment %}
-        </div>
-    </div>
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
-</body>
-</html>
-    {% comment %} <title>{% block title %}HR Payroll{% endblock %}</title> {% endcomment %}
+    <title>{% block title %}HR Payroll{% endblock %}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -64,14 +10,15 @@
             padding: 0;
             background: #f2f2f2;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* Header bar */
+        /* Header */
         header {
             background-color: #343a40;
             color: #fff;
             display: flex;
-            justify-content: space-between;
             align-items: center;
             padding: 15px 30px;
             position: sticky;
@@ -79,80 +26,200 @@
             z-index: 1000;
         }
 
-        header h1 {
-            margin: 0;
-            font-size: 20px;
+        header h1 { margin: 0; font-size: 20px; }
+
+        /* Layout */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            min-height: calc(100vh - 60px);
         }
 
-        .logout-btn {
-            padding: 8px 15px;
-            background: #dc3545;
+        /* Sidebar */
+        .sidebar {
+            width: 220px;
+            background-color: #343a40;
             color: #fff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .logout-btn:hover {
-            background: #c82333;
-        }
-
-        /* Main container */
-        .container {
-            max-width: 500px; /* smaller for forms */
-            margin: 80px auto 50px; /* top margin to avoid header overlap */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; 
             padding: 20px;
-            background: #fff;
-            border-radius: 8px;
+        }
+
+        .sidebar .menu { display: flex; flex-direction: column; gap: 10px; }
+        .sidebar a {
+            color: #fff; text-decoration: none; padding: 10px; border-radius: 5px;
+            display: block; font-size: 14px; transition: 0.2s;
+        }
+        .sidebar a:hover { background-color: #495057; }
+
+        /* Logout button */
+        .sidebar .logout-btn {
+            background-color: #dc3545; color: #fff; border: none;
+            border-radius: 5px; padding: 10px; cursor: pointer; font-size: 14px; transition: 0.2s;
+        }
+        .sidebar .logout-btn:hover { background-color: #c82333; }
+
+        /* Content area */
+        .content {
+            flex: 1; padding: 20px; background: #fff;
+            border-radius: 8px; margin: 20px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            text-align: center;
         }
 
-        /* Form buttons */
-        .form-btn {
-            padding: 12px;
-            width: 100%;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
+        /* Confirmation popup */
+        .popup-overlay {
+            display: none; position: fixed; top:0; left:0; right:0; bottom:0;
+            background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
+            z-index: 1000;
         }
-
-        .btn-company { background-color: #28a745; color: #fff; }
-        .btn-other { background-color: #007bff; color: #fff; }
-        .btn-submit { background-color: #28a745; color: #fff; }
-        .btn-submit:hover { opacity: 0.85; }
-
-        /* Message styling */
-        .message { color: green; margin-bottom: 15px; }
+        .popup-content {
+            background: #fff; padding: 25px 30px; border-radius: 8px;
+            text-align: center; width: 300px; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        .popup-btn {
+            padding: 10px 20px; border-radius: 6px; border: none;
+            margin: 10px; cursor: pointer; font-size: 14px;
+        }
+        .yes-btn { background-color: #28a745; color: #fff; }
+        .yes-btn:hover { background-color: #218838; }
+        .no-btn { background-color: #dc3545; color: #fff; }
+        .no-btn:hover { background-color: #c82333; }
 
         /* Responsive adjustments */
-        @media screen and (max-width: 500px) {
-            header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .container {
-                margin: 100px 10px 30px;
-                padding: 15px;
-            }
-            .form-btn { font-size: 14px; padding: 10px; }
+        @media screen and (max-width: 768px) {
+            .main-layout { flex-direction: column; }
+            .sidebar { width: 100%; flex-direction: row; justify-content: flex-start; overflow-x: auto; }
+            .sidebar .menu { flex-direction: row; }
+            .sidebar a, .sidebar .logout-btn { flex: 1; text-align: center; }
+            .content { margin: 10px; }
         }
+
+        /* Snackbar css */
+
+        #snackbar {
+            visibility: hidden; /* Hidden by default */
+            min-width: 250px;
+            background-color: #28a745; /* Green for success */
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 12px;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            z-index: 2000;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        /* Show the snackbar */
+        #snackbar.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 3s;
+        }
+
+        /* Animations */
+        @keyframes fadein {
+            from { top: 0; opacity: 0; }
+            to { top: 20px; opacity: 1; }
+        }
+        @keyframes fadeout {
+            from { top: 20px; opacity: 1; }
+            to { top: 0; opacity: 0; }
+        }
+
     </style>
 </head>
 <body>
 
 <header>
     <h1>HR Payroll System</h1>
-    <form method="get" action="{% url 'logout' %}">
-        <button type="submit" class="logout-btn">Logout</button>
-    </form>
 </header>
 
-<div class="container">
-    {% comment %} {% block content %}{% endblock %} {% endcomment %}
+<div class="main-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="menu">
+            {% if user.is_superuser %}
+                <a href="{% url 'view_users' %}">User Management</a>
+                <a href="{% url 'add_company' %}">Company</a>
+                <a href="#">Reports</a>
+            {% else %}
+                <a href="#">Profile</a>
+                <a href="#">My Tasks</a>
+            {% endif %}
+        </div>
+
+        <form method="get" action="{% url 'logout' %}">
+            <button type="submit" class="logout-btn">Logout</button>
+        </form>
+    </div>
+
+    <!-- Main content -->
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
 </div>
+
+<!-- Reusable Confirmation Popup -->
+<div id="confirmPopup" class="popup-overlay">
+    <div class="popup-content">
+        <p id="confirmPopupMessage">Are you sure?</p>
+        <button class="popup-btn yes-btn" id="confirmYesBtn">Yes</button>
+        <button class="popup-btn no-btn" onclick="closePopup()">No</button>
+    </div>
+</div>
+
+<!-- Snackbar container -->
+<div id="snackbar"></div>
+
+
+<script>
+let popupCallback = null;
+
+function showConfirmPopup(message, callback){
+    document.getElementById('confirmPopupMessage').innerText = message;
+    popupCallback = callback;
+    document.getElementById('confirmPopup').style.display = 'flex';
+}
+
+function closePopup(){
+    popupCallback = null;
+    document.getElementById('confirmPopup').style.display = 'none';
+}
+
+document.getElementById('confirmYesBtn').addEventListener('click', function(){
+    if(popupCallback){
+        popupCallback();
+    }
+    closePopup();
+});
+
+// Snackbar js 
+
+function showSnackbar(message, bgColor = '#28a745') {
+    const snackbar = document.getElementById('snackbar');
+    snackbar.innerText = message;
+    snackbar.style.backgroundColor = bgColor;
+    snackbar.className = 'show';
+    setTimeout(() => {
+        snackbar.className = snackbar.className.replace('show', '');
+    }, 3500);
+}
+
+// Automatically show messages from Django
+{% if messages %}
+    {% for message in messages %}
+        showSnackbar("{{ message|escapejs }}", "{% if message.tags == 'error' %}#dc3545{% else %}#28a745{% endif %}");
+    {% endfor %}
+{% endif %}
+
+
+
+
+</script>
 
 </body>
 </html>
@@ -172,11 +239,7 @@
 
 
 
-
-
-
-
-<!DOCTYPE html>
+{% comment %} <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -188,14 +251,15 @@
             padding: 0;
             background: #f2f2f2;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* Header bar */
+        /* Header */
         header {
             background-color: #343a40;
             color: #fff;
             display: flex;
-            justify-content: space-between;
             align-items: center;
             padding: 15px 30px;
             position: sticky;
@@ -208,60 +272,91 @@
             font-size: 20px;
         }
 
-        .logout-btn {
-            padding: 8px 15px;
-            background: #dc3545;
+        /* Layout */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 220px;
+            background-color: #343a40;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Push logout to bottom */
+            padding: 20px;
+        }
+
+        .sidebar .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar a {
+            color: #fff;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 5px;
+            display: block;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+
+        /* Footer logout button */
+        .sidebar .logout-btn {
+            background-color: #dc3545;
             color: #fff;
             border: none;
             border-radius: 5px;
+            padding: 10px;
             cursor: pointer;
             font-size: 14px;
+            transition: 0.2s;
         }
 
-        .logout-btn:hover {
-            background: #c82333;
+        .sidebar .logout-btn:hover {
+            background-color: #c82333;
         }
 
-        /* Main container */
-        .container {
-            max-width: 500px; /* smaller for forms */
-            margin: 80px auto 50px; /* top margin to avoid header overlap */
+        /* Content area */
+        .content {
+            flex: 1;
             padding: 20px;
             background: #fff;
             border-radius: 8px;
+            margin: 20px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            text-align: center;
         }
-
-        /* Form buttons */
-        .form-btn {
-            padding: 12px;
-            width: 100%;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .btn-company { background-color: #28a745; color: #fff; }
-        .btn-other { background-color: #007bff; color: #fff; }
-        .btn-submit { background-color: #28a745; color: #fff; }
-        .btn-submit:hover { opacity: 0.85; }
-
-        /* Message styling */
-        .message { color: green; margin-bottom: 15px; }
 
         /* Responsive adjustments */
-        @media screen and (max-width: 500px) {
-            header {
+        @media screen and (max-width: 768px) {
+            .main-layout {
                 flex-direction: column;
-                align-items: flex-start;
             }
-            .container {
-                margin: 100px 10px 30px;
-                padding: 15px;
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                justify-content: flex-start;
+                overflow-x: auto;
             }
-            .form-btn { font-size: 14px; padding: 10px; }
+            .sidebar .menu {
+                flex-direction: row;
+            }
+            .sidebar a, .sidebar .logout-btn {
+                flex: 1;
+                text-align: center;
+            }
+            .content {
+                margin: 10px;
+            }
         }
     </style>
 </head>
@@ -269,13 +364,34 @@
 
 <header>
     <h1>HR Payroll System</h1>
-    <form method="get" action="{% url 'logout' %}">
-        <button type="submit" class="logout-btn">Logout</button>
-    </form>
 </header>
 
-<div class="container">
-    {% block content %}{% endblock %}
+<div class="main-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="menu">
+            {% if user.is_superuser %}
+                <!-- Admin links -->
+                <a href="{% url 'view_user' %}">User Management</a>
+                <a href="{% url 'add_company' %}">Company</a>
+                <a href="#">Reports</a>
+            {% else %}
+                <!-- Normal user links -->
+                <a href="#">Profile</a>
+                <a href="#">My Tasks</a>
+            {% endif %}
+        </div>
+
+        <!-- Logout button at bottom -->
+        <form method="get" action="{% url 'logout' %}">
+            <button type="submit" class="logout-btn">Logout</button>
+        </form>
+    </div>
+
+    <!-- Main content -->
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
 </div>
 
 </body>
@@ -285,3 +401,12 @@
 
 
 
+
+
+
+
+
+
+
+
+ {% endcomment %}
