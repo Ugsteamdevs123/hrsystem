@@ -39,7 +39,7 @@ urlpatterns = [
     
     
 
-    path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
+    # path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
 
     
 

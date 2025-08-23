@@ -1,3 +1,255 @@
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+
+from .serializers import (
+    UserLoginSerializer,
+)
+from .models import (
+    CustomUser,
+    Company
+)
+
+from django.contrib.auth import login, logout
+from rest_framework import status
+from django.middleware.csrf import get_token
+from rest_framework.permissions import AllowAny , IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+
+from django.contrib.auth.mixins import PermissionRequiredMixin
+
+
+
+from django.views import View
+from django.shortcuts import render, redirect , get_object_or_404
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from .forms import (
+    CompanyForm , 
+    CustomUserForm,
+    CustomUserUpdateForm,
+
+)
+
+# Create your views here.
+
+class LoginView(View):
+    template_name = "login.html"
+
+    def get(self, request):
+        """Handles GET requests and renders the login form."""
+        return render(request, self.template_name)
+
+    def post(self, request):
+        """Handles POST requests and authenticates users."""
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+
+        user = authenticate(username=email, password=password)
+        if user is not None:
+            if user.is_active:
+                login(request, user)
+                if user.is_superuser:
+                    # Redirect superuser to view users page
+                    return redirect("view_users")
+                else:
+                    # Placeholder for normal users (empty page for now)
+                    return render(request, "normal_user_home.html")
+            else:
+                messages.error(request, "Your account is disabled.")
+        else:
+            messages.error(request, "Invalid email or password.")
+
+        return render(request, self.template_name)
+
+
+
+# --- CREATE USER ---
+class AddUserView(PermissionRequiredMixin, View):
+    permission_required = "user.add_customuser"
+    template_name = "add_user.html"
+
+    def get(self, request):
+        form = CustomUserForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CustomUserForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            user.is_staff = True
+            user.is_superuser = False
+            user.save()
+            messages.success(request, "User added successfully!")
+            return redirect("view_users")
+        return render(request, self.template_name, {"form": form})
+
+
+
+# --- UPDATE USER ---
+class UpdateUserView(PermissionRequiredMixin, View):
+    permission_required = "user.change_customuser"
+    template_name = "update_user.html"
+
+    def get(self, request, pk):
+        user = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_deleted=False,
+            is_staff=True,
+            is_superuser=False,
+        )
+        form = CustomUserUpdateForm(instance=user)
+        return render(request, self.template_name, {"form": form, "user": user})
+
+    def post(self, request, pk):
+        user = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_deleted=False,
+            is_staff=True,
+            is_superuser=False,
+        )
+        form = CustomUserUpdateForm(request.POST, instance=user)
+        if form.is_valid():
+            user = form.save()
+            user.is_staff = True
+            user.is_superuser = False
+            user.save()
+            messages.success(request, "User updated successfully!")
+            return redirect("view_users")
+        return render(request, self.template_name, {"form": form, "user": user})
+
+
+
+# --- DELETE USER (soft delete) ---
+class DeleteUserView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_customuser"
+
+    def get(self, request, pk):
+        user = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_staff=True,
+            is_superuser=False,
+        )
+        user.is_deleted = True
+        user.save()
+        messages.success(request, "User deleted successfully")
+        return redirect("view_users")
+
+
+
+
+# --- VIEW USERS ---
+class ViewUsersView(PermissionRequiredMixin, View):
+    permission_required = "user.view_customuser"
+    template_name = "view_users.html"
+
+    def get(self, request):
+        users = CustomUser.objects.filter(
+            is_staff=True,
+            is_deleted=False,
+            is_superuser=False
+        ).select_related("gender").prefetch_related("groups")  # ✅ fetch groups too
+
+        # attach a selected_group attribute to each user
+        for user in users:
+            user.selected_group = user.groups.first()  # None if no group
+
+        return render(request, self.template_name, {"users": users})
+
+
+# --- VIEW COMPANIES ---
+class ViewCompaniesView(PermissionRequiredMixin, View):
+    permission_required = "app.view_company"  # replace 'app' with your app name
+    template_name = "view_company.html"
+
+    def get(self, request):
+        companies = Company.objects.filter(is_deleted=False)
+        return render(request, self.template_name, {"companies": companies})
+
+
+# --- ADD COMPANY ---
+class AddCompanyView(PermissionRequiredMixin, View):
+    permission_required = "app.add_company"  # 🔑 change 'app' to your app name
+    template_name = "add_company.html"
+
+    def get(self, request):
+        form = CompanyForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CompanyForm(request.POST)
+        if form.is_valid():
+            company = form.save(commit=False)
+            company.is_deleted = False
+            company.save()
+            messages.success(request, "Company added successfully!")
+            return redirect("view_company")  # 🔄 go to companies list
+        return render(request, self.template_name, {"form": form})
+
+
+
+# --- UPDATE COMPANY ---
+class UpdateCompanyView(PermissionRequiredMixin, View):
+    permission_required = "app.change_company"
+    template_name = "update_company.html"
+
+    def get(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        form = CompanyForm(instance=company)
+        return render(request, self.template_name, {"form": form, "company": company})
+
+    def post(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        form = CompanyForm(request.POST, instance=company)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Company updated successfully!")
+            return redirect("view_company")
+        return render(request, self.template_name, {"form": form, "company": company})
+
+
+
+# --- DELETE COMPANY ---
+class DeleteCompanyView(PermissionRequiredMixin, View):
+    permission_required = "app.delete_company"
+
+    def get(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        company.is_deleted = True  # ✅ soft delete only active companies
+        company.save()
+        messages.success(request, "Company deleted successfully!")
+        return redirect("view_company")
+
+
+
+class LogoutView(View):
+    def get(self, request):
+        logout(request)
+        return redirect("login")  # Replace with your login URL name
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 from venv import logger
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
@@ -517,67 +769,9 @@ class LocationsView(View):
             return JsonResponse({'data': data})
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
 
 
-from .serializers import (
-    UserLoginSerializer,
-)
-from .models import (
-    CustomUser,
-    Company
-)
 
-from django.contrib.auth import login, logout
-from rest_framework import status
-from django.middleware.csrf import get_token
-from rest_framework.permissions import AllowAny , IsAuthenticated
-from rest_framework.authentication import SessionAuthentication
-
-
-from django.views import View
-from django.shortcuts import render, redirect , get_object_or_404
-from django.contrib.auth import authenticate, login, logout
-from django.contrib import messages
-from .forms import (
-    CompanyForm , 
-    CustomUserForm,
-    CustomUserUpdateForm,
-
-)
-
-# Create your views here.
-
-
-class LoginView(View):
-    template_name = "login.html"
-
-    def get(self, request):
-        """Handles GET requests and renders the login form."""
-        return render(request, self.template_name)
-
-    def post(self, request):
-        """Handles POST requests and authenticates users."""
-        email = request.POST.get("email")
-        password = request.POST.get("password")
-
-        user = authenticate(username=email, password=password)
-        if user is not None:
-            if user.is_active:
-                login(request, user)
-                if user.is_superuser:
-                    # Redirect superuser to view users page
-                    return redirect("view_users")
-                else:
-                    # Placeholder for normal users (empty page for now)
-                    return render(request, "normal_user_home.html")
-            else:
-                messages.error(request, "Your account is disabled.")
-        else:
-            messages.error(request, "Invalid email or password.")
-
-        return render(request, self.template_name)
 
 
 
@@ -610,165 +804,6 @@ class LoginView(View):
 
 
 
-# --- CREATE USER ---
-class AddUserView(PermissionRequiredMixin, View):
-    permission_required = "user.add_customuser"
-    template_name = "add_user.html"
-
-    def get(self, request):
-        form = CustomUserForm()
-        return render(request, self.template_name, {"form": form})
-
-    def post(self, request):
-        form = CustomUserForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            user.is_staff = True
-            user.is_superuser = False
-            user.save()
-            messages.success(request, "User added successfully!")
-            return redirect("view_users")
-        return render(request, self.template_name, {"form": form})
-
-
-
-# --- UPDATE USER ---
-class UpdateUserView(PermissionRequiredMixin, View):
-    permission_required = "user.change_customuser"
-    template_name = "update_user.html"
-
-    def get(self, request, pk):
-        user = get_object_or_404(
-            CustomUser,
-            pk=pk,
-            is_deleted=False,
-            is_staff=True,
-            is_superuser=False,
-        )
-        form = CustomUserUpdateForm(instance=user)
-        return render(request, self.template_name, {"form": form, "user": user})
-
-    def post(self, request, pk):
-        user = get_object_or_404(
-            CustomUser,
-            pk=pk,
-            is_deleted=False,
-            is_staff=True,
-            is_superuser=False,
-        )
-        form = CustomUserUpdateForm(request.POST, instance=user)
-        if form.is_valid():
-            user = form.save()
-            user.is_staff = True
-            user.is_superuser = False
-            user.save()
-            messages.success(request, "User updated successfully!")
-            return redirect("view_users")
-        return render(request, self.template_name, {"form": form, "user": user})
-
-
-
-# --- DELETE USER (soft delete) ---
-class DeleteUserView(PermissionRequiredMixin, View):
-    permission_required = "user.delete_customuser"
-
-    def get(self, request, pk):
-        user = get_object_or_404(
-            CustomUser,
-            pk=pk,
-            is_staff=True,
-            is_superuser=False,
-        )
-        user.is_deleted = True
-        user.save()
-        messages.success(request, "User deleted successfully")
-        return redirect("view_users")
-
-
-
-
-# --- VIEW USERS ---
-class ViewUsersView(PermissionRequiredMixin, View):
-    permission_required = "user.view_customuser"
-    template_name = "view_users.html"
-
-    def get(self, request):
-        users = CustomUser.objects.filter(
-            is_staff=True,
-            is_deleted=False,
-            is_superuser=False
-        ).select_related("gender").prefetch_related("groups")  # ✅ fetch groups too
-
-        # attach a selected_group attribute to each user
-        for user in users:
-            user.selected_group = user.groups.first()  # None if no group
-
-        return render(request, self.template_name, {"users": users})
-
-
-
-# --- VIEW COMPANIES ---
-class ViewCompaniesView(PermissionRequiredMixin, View):
-    permission_required = "app.view_company"  # replace 'app' with your app name
-    template_name = "view_company.html"
-
-    def get(self, request):
-        companies = Company.objects.filter(is_deleted=False)
-        return render(request, self.template_name, {"companies": companies})
-
-
-# --- ADD COMPANY ---
-class AddCompanyView(PermissionRequiredMixin, View):
-    permission_required = "app.add_company"  # 🔑 change 'app' to your app name
-    template_name = "add_company.html"
-
-    def get(self, request):
-        form = CompanyForm()
-        return render(request, self.template_name, {"form": form})
-
-    def post(self, request):
-        form = CompanyForm(request.POST)
-        if form.is_valid():
-            company = form.save(commit=False)
-            company.is_deleted = False
-            company.save()
-            messages.success(request, "Company added successfully!")
-            return redirect("view_company")  # 🔄 go to companies list
-        return render(request, self.template_name, {"form": form})
-
-
-
-# --- UPDATE COMPANY ---
-class UpdateCompanyView(PermissionRequiredMixin, View):
-    permission_required = "app.change_company"
-    template_name = "update_company.html"
-
-    def get(self, request, pk):
-        company = get_object_or_404(Company, pk=pk, is_deleted=False)
-        form = CompanyForm(instance=company)
-        return render(request, self.template_name, {"form": form, "company": company})
-
-    def post(self, request, pk):
-        company = get_object_or_404(Company, pk=pk, is_deleted=False)
-        form = CompanyForm(request.POST, instance=company)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Company updated successfully!")
-            return redirect("view_company")
-        return render(request, self.template_name, {"form": form, "company": company})
-
-
-
-# --- DELETE COMPANY ---
-class DeleteCompanyView(PermissionRequiredMixin, View):
-    permission_required = "app.delete_company"
-
-    def get(self, request, pk):
-        company = get_object_or_404(Company, pk=pk, is_deleted=False)
-        company.is_deleted = True  # ✅ soft delete only active companies
-        company.save()
-        messages.success(request, "Company deleted successfully!")
-        return redirect("view_company")
 
 
 
@@ -777,24 +812,24 @@ class DeleteCompanyView(PermissionRequiredMixin, View):
 
 
 
-class DashboardView(View):
-    template_name = "dashboard.html"
+# class DashboardView(View):
+#     template_name = "dashboard.html"
 
-    def get(self, request):
-        if not request.user.is_authenticated or not request.user.is_superuser:
-            return redirect("login")
+#     def get(self, request):
+#         if not request.user.is_authenticated or not request.user.is_superuser:
+#             return redirect("login")
 
-        companies = Company.objects.filter(is_deleted=False).order_by("name")
-        hr_users = CustomUser.objects.filter(
-            is_deleted=False,
-            is_staff=True,
-            is_superuser=False
-        ).order_by("full_name")
+#         companies = Company.objects.filter(is_deleted=False).order_by("name")
+#         hr_users = CustomUser.objects.filter(
+#             is_deleted=False,
+#             is_staff=True,
+#             is_superuser=False
+#         ).order_by("full_name")
 
-        return render(request, self.template_name, {
-            "companies": companies,
-            "hr_users": hr_users
-        })
+#         return render(request, self.template_name, {
+#             "companies": companies,
+#             "hr_users": hr_users
+#         })
 
 
 # class AddCompanyView(View):
@@ -921,12 +956,6 @@ class DashboardView(View):
 
 
 
-
-
-class LogoutView(View):
-    def get(self, request):
-        logout(request)
-        return redirect("login")  # Replace with your login URL name
 
 
 
