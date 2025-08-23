@@ -4,74 +4,64 @@
 {% block content %}
 <h2>Add Company</h2>
 
-{% if messages %}
-    {% for message in messages %}
-        <div class="message">{{ message }}</div>
-    {% endfor %}
-{% endif %}
-
-<form method="POST">
+<form id="addCompanyForm" method="POST">
     {% csrf_token %}
 
-    <!-- Style form fields -->
+    <!-- Company Name -->
     <div class="form-field">
         {{ form.name.label_tag }}
         {{ form.name }}
     </div>
 
-    <button type="submit" class="form-btn btn-submit">Save Company</button>
-    <button type="button" class="form-btn btn-back" onclick="window.location.href='{% url 'dashboard' %}'">Back to Dashboard</button>
+    <!-- Buttons -->
+    <div class="button-group">
+        <button type="button" class="form-btn btn-submit"
+            onclick="showConfirmPopup('Are you sure you want to add this company?', function(){ 
+                document.getElementById('addCompanyForm').submit(); 
+            })">
+            Add Company
+        </button>
+        <button type="button" class="form-btn btn-back" 
+            onclick="window.location.href='{% url 'view_company' %}'">
+            Back
+        </button>
+    </div>
 </form>
 
 <style>
-    /* Style form fields */
-    .form-field {
-        margin-bottom: 15px;
-        text-align: left;
-    }
+/* Form fields styling (consistent with add_user.html) */
+.form-field {
+    margin-bottom: 15px;
+    text-align: left;
+}
+.form-field input, .form-field select, .form-field textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
 
-    .form-field input, 
-    .form-field select, 
-    .form-field textarea {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        font-size: 14px;
-        box-sizing: border-box;
-    }
+/* Buttons */
+.form-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+}
+.btn-submit { background-color: #28a745; color: #fff; }
+.btn-submit:hover { background-color: #218838; }
+.btn-back { background-color: #6c757d; color: #fff; }
+.btn-back:hover { background-color: #5a6268; }
 
-    /* Submit button */
-    .btn-submit {
-        background-color: #28a745;
-        color: #fff;
-        margin-top: 10px;
-    }
-    .btn-submit:hover {
-        background-color: #218838;
-    }
-
-    /* Back button */
-    .btn-back {
-        background-color: #6c757d;
-        color: #fff;
-        margin-top: 10px;
-    }
-    .btn-back:hover {
-        background-color: #5a6268;
-    }
+/* Responsive */
+@media screen and (max-width: 500px) {
+    .form-btn { font-size: 12px; padding: 10px; }
+    .form-field input, .form-field select, .form-field textarea { font-size: 14px; padding: 10px; }
+}
 </style>
+
 {% endblock %}
-
-
-
-
-
-
-
-
-
-
-
-
-

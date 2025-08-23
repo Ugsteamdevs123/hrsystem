@@ -609,8 +609,10 @@ class LoginView(View):
 
 
 
+
 # --- CREATE USER ---
-class AddUserView(View):
+class AddUserView(PermissionRequiredMixin, View):
+    permission_required = "user.add_customuser"
     template_name = "add_user.html"
 
     def get(self, request):
@@ -620,16 +622,19 @@ class AddUserView(View):
     def post(self, request):
         form = CustomUserForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
+            user = form.save()
             user.is_staff = True
             user.is_superuser = False
             user.save()
             messages.success(request, "User added successfully!")
-            return redirect("view_users")  # Redirect to user listing
+            return redirect("view_users")
         return render(request, self.template_name, {"form": form})
 
+
+
 # --- UPDATE USER ---
-class UpdateUserView(View):
+class UpdateUserView(PermissionRequiredMixin, View):
+    permission_required = "user.change_customuser"
     template_name = "update_user.html"
 
     def get(self, request, pk):
@@ -653,7 +658,7 @@ class UpdateUserView(View):
         )
         form = CustomUserUpdateForm(request.POST, instance=user)
         if form.is_valid():
-            user = form.save(commit=False)
+            user = form.save()
             user.is_staff = True
             user.is_superuser = False
             user.save()
@@ -661,8 +666,12 @@ class UpdateUserView(View):
             return redirect("view_users")
         return render(request, self.template_name, {"form": form, "user": user})
 
+
+
 # --- DELETE USER (soft delete) ---
-class DeleteUserView(View):
+class DeleteUserView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_customuser"
+
     def get(self, request, pk):
         user = get_object_or_404(
             CustomUser,
@@ -675,21 +684,91 @@ class DeleteUserView(View):
         messages.success(request, "User deleted successfully")
         return redirect("view_users")
 
+
+
+
 # --- VIEW USERS ---
-class ViewUsersView(View):
+class ViewUsersView(PermissionRequiredMixin, View):
+    permission_required = "user.view_customuser"
     template_name = "view_users.html"
 
     def get(self, request):
         users = CustomUser.objects.filter(
-            is_staff=True, 
-            is_deleted=False, 
+            is_staff=True,
+            is_deleted=False,
             is_superuser=False
-        ).select_related('gender')  # fetch gender relation
+        ).select_related("gender").prefetch_related("groups")  # ✅ fetch groups too
+
+        # attach a selected_group attribute to each user
+        for user in users:
+            user.selected_group = user.groups.first()  # None if no group
 
         return render(request, self.template_name, {"users": users})
 
 
 
+# --- VIEW COMPANIES ---
+class ViewCompaniesView(PermissionRequiredMixin, View):
+    permission_required = "app.view_company"  # replace 'app' with your app name
+    template_name = "view_company.html"
+
+    def get(self, request):
+        companies = Company.objects.filter(is_deleted=False)
+        return render(request, self.template_name, {"companies": companies})
+
+
+# --- ADD COMPANY ---
+class AddCompanyView(PermissionRequiredMixin, View):
+    permission_required = "app.add_company"  # 🔑 change 'app' to your app name
+    template_name = "add_company.html"
+
+    def get(self, request):
+        form = CompanyForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CompanyForm(request.POST)
+        if form.is_valid():
+            company = form.save(commit=False)
+            company.is_deleted = False
+            company.save()
+            messages.success(request, "Company added successfully!")
+            return redirect("view_company")  # 🔄 go to companies list
+        return render(request, self.template_name, {"form": form})
+
+
+
+# --- UPDATE COMPANY ---
+class UpdateCompanyView(PermissionRequiredMixin, View):
+    permission_required = "app.change_company"
+    template_name = "update_company.html"
+
+    def get(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        form = CompanyForm(instance=company)
+        return render(request, self.template_name, {"form": form, "company": company})
+
+    def post(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        form = CompanyForm(request.POST, instance=company)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Company updated successfully!")
+            return redirect("view_company")
+        return render(request, self.template_name, {"form": form, "company": company})
+
+
+
+# --- DELETE COMPANY ---
+class DeleteCompanyView(PermissionRequiredMixin, View):
+    permission_required = "app.delete_company"
+
+    def get(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        company.is_deleted = True  # ✅ soft delete only active companies
+        company.save()
+        messages.success(request, "Company deleted successfully!")
+        return redirect("view_company")
 
 
 
@@ -718,47 +797,47 @@ class DashboardView(View):
         })
 
 
-class AddCompanyView(View):
-    template_name = "add_company.html"
+# class AddCompanyView(View):
+#     template_name = "add_company.html"
 
-    def get(self, request):
-        form = CompanyForm()
-        return render(request, self.template_name, {"form": form})
+#     def get(self, request):
+#         form = CompanyForm()
+#         return render(request, self.template_name, {"form": form})
 
-    def post(self, request):
-        form = CompanyForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Company added successfully!")
-            return redirect("dashboard")
-        return render(request, self.template_name, {"form": form})
+#     def post(self, request):
+#         form = CompanyForm(request.POST)
+#         if form.is_valid():
+#             form.save()
+#             messages.success(request, "Company added successfully!")
+#             return redirect("dashboard")
+#         return render(request, self.template_name, {"form": form})
     
 
-class EditCompanyView(View):
-    template_name = "edit_company.html"
+# class EditCompanyView(View):
+#     template_name = "edit_company.html"
 
-    def get(self, request, pk):
-        company = get_object_or_404(Company, pk=pk, is_deleted=False)
-        form = CompanyForm(instance=company)
-        return render(request, self.template_name, {"form": form, "company": company})
+#     def get(self, request, pk):
+#         company = get_object_or_404(Company, pk=pk, is_deleted=False)
+#         form = CompanyForm(instance=company)
+#         return render(request, self.template_name, {"form": form, "company": company})
 
-    def post(self, request, pk):
-        company = get_object_or_404(Company, pk=pk, is_deleted=False)
-        form = CompanyForm(request.POST, instance=company)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Company updated successfully!")
-            return redirect("dashboard")
-        return render(request, self.template_name, {"form": form, "company": company})
+#     def post(self, request, pk):
+#         company = get_object_or_404(Company, pk=pk, is_deleted=False)
+#         form = CompanyForm(request.POST, instance=company)
+#         if form.is_valid():
+#             form.save()
+#             messages.success(request, "Company updated successfully!")
+#             return redirect("dashboard")
+#         return render(request, self.template_name, {"form": form, "company": company})
 
 
-class DeleteCompanyView(View):
-    def get(self, request, pk):
-        company = get_object_or_404(Company, pk=pk)
-        company.is_deleted = True  # soft delete
-        company.save()
-        messages.success(request, "Company deleted successfully ")
-        return redirect("dashboard")
+# class DeleteCompanyView(View):
+#     def get(self, request, pk):
+#         company = get_object_or_404(Company, pk=pk)
+#         company.is_deleted = True  # soft delete
+#         company.save()
+#         messages.success(request, "Company deleted successfully ")
+#         return redirect("dashboard")
 
 
 

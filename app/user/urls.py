@@ -14,6 +14,11 @@ urlpatterns = [
     path("user/<int:pk>/delete/", views.DeleteUserView.as_view(), name="delete_user"),
 
 
+    # company crud
+    path('company/' , views.ViewCompaniesView.as_view() , name='view_company'),
+    path("add-company/", views.AddCompanyView.as_view(), name="add_company"),
+    path("company/<int:pk>/edit/", views.UpdateCompanyView.as_view(), name="update_company"),
+    path("company/<int:pk>/delete/", views.DeleteCompanyView.as_view(), name="delete_company"),
 
 
 
@@ -36,10 +41,7 @@ urlpatterns = [
 
     path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
 
-    # company crud
-    path("add-company/", views.AddCompanyView.as_view(), name="add_company"),
-    path("company/<int:pk>/edit/", views.EditCompanyView.as_view(), name="edit_company"),
-    path("company/<int:pk>/delete/", views.DeleteCompanyView.as_view(), name="delete_company"),
+    
 
     
 

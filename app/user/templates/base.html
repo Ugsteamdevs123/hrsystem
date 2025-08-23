@@ -139,6 +139,37 @@
 </header>
 
 <div class="main-layout">
+
+    <!-- Dynamic Sidebar -->
+
+    <div class="sidebar">
+        <div class="menu">
+
+            {% if perms.user.view_customuser %}
+                <a href="{% url 'view_users' %}">User Management</a>
+            {% endif %}
+
+            {% if perms.user.view_company %}
+                <a href="{% url 'view_company' %}">Company</a>
+            {% endif %}
+
+            {% comment %} {% if request.user.has_perm('user.can_view_reports') %}
+                <a href="#">Reports</a>
+            {% endif %} {% endcomment %}
+
+            <!-- These are safe for all users -->
+            <a href="#">Profile</a>
+            <a href="#">My Tasks</a>
+        </div>
+
+        <form method="get" action="{% url 'logout' %}">
+            <button type="submit" class="logout-btn">Logout</button>
+        </form>
+    </div>
+
+
+
+{% comment %} 
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="menu">
@@ -155,7 +186,7 @@
         <form method="get" action="{% url 'logout' %}">
             <button type="submit" class="logout-btn">Logout</button>
         </form>
-    </div>
+    </div> {% endcomment %}
 
     <!-- Main content -->
     <div class="content">
