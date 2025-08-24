@@ -54,7 +54,7 @@ class LoginView(View):
                     return redirect("view_users")
                 else:
                     # Placeholder for normal users (empty page for now)
-                    return render(request, "normal_user_home.html")
+                    return redirect("hr_dashboard")
             else:
                 messages.error(request, "Your account is disabled.")
         else:
@@ -275,7 +275,8 @@ from .models import (
     FinancialImpactPerMonth,
     DepartmentGroups,
     Designation,
-    Location)
+    Location
+)
 
 from .utils import get_companies_and_department_teams
 from .serializer import (
@@ -293,6 +294,7 @@ import json
 
 
 
+# Hr login then show this dashboard
 
 class HrDashboardView(PermissionRequiredMixin, View):
     """
@@ -300,8 +302,8 @@ class HrDashboardView(PermissionRequiredMixin, View):
     Handles PATCH requests to update 'eligible_for_increment' value.
     Renders HR dashboard page for GET requests.
     """
-    permission_classes = [GroupOrSuperuserPermission]
-    group_name = 'Hr'  # Set the group name for the permission
+    # permission_classes = [GroupOrSuperuserPermission]
+    # group_name = 'Hr'  # Set the group name for the permission
 
     @classmethod
     def as_view(cls, **initkwargs):
@@ -356,6 +358,9 @@ class HrDashboardView(PermissionRequiredMixin, View):
             except (IncrementDetailsSummary.DoesNotExist, ValueError):
                 return JsonResponse({'error': 'Invalid ID or value'}, status=400)
         return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+
 
 
 class DepartmentTeamView(View):
@@ -424,12 +429,15 @@ class DepartmentTeamView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
+
+# show company name with dept in dropdwon 
+
 class GetCompaniesAndDepartmentTeamsView(PermissionRequiredMixin, View):
     """
     Class-based view for fetching companies and departments teams list assigned to HR.
     """
-    permission_classes = [GroupOrSuperuserPermission]
-    group_name = 'Hr'  # Set the group name for the permission
+    # permission_classes = [GroupOrSuperuserPermission]
+    # group_name = 'Hr'  # Set the group name for the permission
 
     @classmethod
     def as_view(cls, **initkwargs):
@@ -445,6 +453,7 @@ class GetCompaniesAndDepartmentTeamsView(PermissionRequiredMixin, View):
             return JsonResponse({'data': data})  # Return companies for add_department.html
         except Exception as e:
             print(e)
+            return JsonResponse({'data': [], 'error': str(e)})
 
 
 
@@ -601,6 +610,8 @@ class DepartmentTableView(View):
         })
 
 
+# View for create employee data
+
 class CreateDataView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -698,6 +709,8 @@ class CreateDataView(View):
                 return JsonResponse({'error': 'Invalid data'}, status=400)
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
+
+
 class DeleteDataView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -723,6 +736,8 @@ class DeleteDataView(View):
             except (Employee.DoesNotExist, ValueError):
                 return JsonResponse({'error': 'Invalid data'}, status=400)
         return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
 
 
 class DepartmentGroupsSectionsView(View):
@@ -770,189 +785,6 @@ class LocationsView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-
-
-
-
-
-# class LoginView(View):
-#     template_name = "login.html"
-
-#     def get(self, request):
-#         """Handles GET requests and renders the login form."""
-#         return render(request, self.template_name)
-
-#     def post(self, request):
-#         """Handles POST requests and authenticates only superusers."""
-#         email = request.POST.get("email")
-#         password = request.POST.get("password")
-
-#         user = authenticate(username=email, password=password)
-#         if user is not None:
-#             if user.is_active and user.is_superuser:  # ✅ check superuser
-#                 login(request, user)
-#                 return redirect("dashboard")  # Replace with your dashboard URL
-#             elif not user.is_active:
-#                 messages.error(request, "Your account is disabled.")
-#             else:
-#                 messages.error(request, "You are not authorized to access this panel.")
-#         else:
-#             messages.error(request, "Invalid email or password.")
-
-#         return render(request, self.template_name)
-
-
-
-
-
-
-
-
-
-
-
-
-# class DashboardView(View):
-#     template_name = "dashboard.html"
-
-#     def get(self, request):
-#         if not request.user.is_authenticated or not request.user.is_superuser:
-#             return redirect("login")
-
-#         companies = Company.objects.filter(is_deleted=False).order_by("name")
-#         hr_users = CustomUser.objects.filter(
-#             is_deleted=False,
-#             is_staff=True,
-#             is_superuser=False
-#         ).order_by("full_name")
-
-#         return render(request, self.template_name, {
-#             "companies": companies,
-#             "hr_users": hr_users
-#         })
-
-
-# class AddCompanyView(View):
-#     template_name = "add_company.html"
-
-#     def get(self, request):
-#         form = CompanyForm()
-#         return render(request, self.template_name, {"form": form})
-
-#     def post(self, request):
-#         form = CompanyForm(request.POST)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, "Company added successfully!")
-#             return redirect("dashboard")
-#         return render(request, self.template_name, {"form": form})
-    
-
-# class EditCompanyView(View):
-#     template_name = "edit_company.html"
-
-#     def get(self, request, pk):
-#         company = get_object_or_404(Company, pk=pk, is_deleted=False)
-#         form = CompanyForm(instance=company)
-#         return render(request, self.template_name, {"form": form, "company": company})
-
-#     def post(self, request, pk):
-#         company = get_object_or_404(Company, pk=pk, is_deleted=False)
-#         form = CompanyForm(request.POST, instance=company)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, "Company updated successfully!")
-#             return redirect("dashboard")
-#         return render(request, self.template_name, {"form": form, "company": company})
-
-
-# class DeleteCompanyView(View):
-#     def get(self, request, pk):
-#         company = get_object_or_404(Company, pk=pk)
-#         company.is_deleted = True  # soft delete
-#         company.save()
-#         messages.success(request, "Company deleted successfully ")
-#         return redirect("dashboard")
-
-
-
-# # --- CREATE HR ---
-# class AddHRView(View):
-#     template_name = "add_hr.html"
-
-#     def get(self, request):
-#         form = CustomUserForm()
-#         return render(request, self.template_name, {"form": form})
-
-#     def post(self, request):
-#         form = CustomUserForm(request.POST)
-#         if form.is_valid():
-#             hr = form.save(commit=False)
-#             hr.is_staff = True
-#             # Make sure HR is not admin/superuser
-#             hr.is_superuser = False
-#             hr.save()
-#             messages.success(request, "HR user added successfully!")
-#             return redirect("dashboard")
-#         return render(request, self.template_name, {"form": form})
-
-
-# # --- UPDATE HR ---
-# class EditHRView(View):
-#     template_name = "edit_hr.html"
-
-#     def get(self, request, pk):
-#         hr = get_object_or_404(
-#             CustomUser,
-#             pk=pk,
-#             is_deleted=False,
-#             is_staff=True,
-#             is_superuser=False,   # exclude superuser
-#         )
-
-#         print("Editing HR:", hr)
-
-#         form = CustomUserUpdateForm(instance=hr)
-#         return render(request, self.template_name, {"form": form, "hr": hr})
-
-#     def post(self, request, pk):
-#         hr = get_object_or_404(
-#             CustomUser,
-#             pk=pk,
-#             is_deleted=False,
-#             is_staff=True,
-#             is_superuser=False,
-#         )
-
-#         print("Updating HR:", hr)
-
-#         form = CustomUserUpdateForm(request.POST, instance=hr)
-#         if form.is_valid():
-#             hr = form.save(commit=False)
-#             hr.is_staff = True
-#             hr.is_superuser = False
-#             hr.save()
-#             messages.success(request, "HR user updated successfully!")
-#             return redirect("dashboard")
-        
-#         else:
-#             print("Form errors:", form.errors)   # 👈 add this
-#             return render(request, self.template_name, {"form": form, "hr": hr})
-
-
-# # --- DELETE HR (soft delete) ---
-# class DeleteHRView(View):
-#     def get(self, request, pk):
-#         hr = get_object_or_404(
-#             CustomUser,
-#             pk=pk,
-#             is_staff=True,
-#             is_superuser=False,  # don’t delete superuser
-#         )
-#         hr.is_deleted = True   # soft delete
-#         hr.save()
-#         messages.success(request, "HR user deleted successfully")
-#         return redirect("dashboard")
 
 
 

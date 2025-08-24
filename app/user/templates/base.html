@@ -130,6 +130,49 @@
             to { top: 0; opacity: 0; }
         }
 
+
+        /* --- Custom accordion/tree styles (no Bootstrap) --- */
+        .company-tree { margin-top: 10px; }
+        .company-item + .company-item { margin-top: 8px; }
+
+        .tree-toggle {
+        all: unset;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        cursor: pointer;
+        padding: 8px 10px;
+        border-radius: 5px;
+        transition: background-color .2s ease;
+        }
+        .tree-toggle:hover { background-color: #495057; }
+
+        .caret {
+        display: inline-block;
+        width: 0; height: 0;
+        border-top: 5px solid transparent;
+        border-bottom: 5px solid transparent;
+        border-left: 6px solid #ffffff;
+        transition: transform .2s ease;
+        }
+        .tree-toggle[aria-expanded="true"] .caret { transform: rotate(90deg); }
+
+        .tree-panel { margin: 6px 0 0 18px; }
+        .tree-list { list-style: none; padding-left: 0; margin: 0; }
+        .tree-list li { margin: 6px 0; }
+        .tree-list li.child { margin-left: 10px; }
+        .tree-list a {
+        display: inline-block;
+        color: #fff;
+        text-decoration: none;
+        padding: 6px 8px;
+        border-radius: 4px;
+        }
+        .tree-list a:hover { background-color: #495057; }
+        .muted { color: #b8b8b8; font-size: 13px; }
+
+
     </style>
 </head>
 <body>
@@ -140,8 +183,69 @@
 
 <div class="main-layout">
 
-    <!-- Dynamic Sidebar -->
+    <div class="sidebar">
+        <div class="menu">
 
+            {# --- Top fixed links with RBAC --- #}
+            {% if perms.user.view_customuser %}
+            <a href="{% url 'view_users' %}">User Management</a>
+            {% endif %}
+
+            {% if perms.user.view_company %}
+            <a href="{% url 'view_company' %}">Company</a>
+            {% endif %}
+
+            {% if perms.user.view_employee %}
+            <a href="{% url 'hr_dashboard' %}">Dashboard</a>
+            {% endif %}
+
+            {% if perms.user.add_departmentteams %}
+            <a href="{% url 'department_team' %}">Add Department</a>
+            {% endif %}
+
+            {# --- Dynamic Companies → Departments (RBAC on Employee) --- #}
+            {% if perms.user.view_employee and company_data %}
+            <div class="company-tree">
+                {% for company in company_data %}
+                <div class="company-item">
+                    <button class="tree-toggle" type="button"
+                            aria-expanded="false"
+                            aria-controls="panel-{{ company.company_id }}">
+                    <span class="caret"></span>
+                    <span class="label">{{ company.company_name }}</span>
+                    </button>
+
+                    <div id="panel-{{ company.company_id }}" class="tree-panel" hidden>
+                    <ul class="tree-list">
+                        <li>
+                        <a href="{% url 'company_summary' company.company_id %}">Summary</a>
+                        </li>
+                        {% for department in company.departments %}
+                        <li class="child">
+                            {# IMPORTANT: pass department.id to avoid NoReverseMatch #}
+                            <a href="{% url 'department_table' department.id %}">
+                            {{ department.name }}
+                            </a>
+                        </li>
+                        {% empty %}
+                        <li class="muted">No departments</li>
+                        {% endfor %}
+                    </ul>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+        </div>
+
+        <form method="get" action="{% url 'logout' %}">
+            <button type="submit" class="logout-btn">Logout</button>
+        </form>
+        </div> 
+
+
+    {% comment %} <!-- Dynamic Sidebar -->
     <div class="sidebar">
         <div class="menu">
 
@@ -153,34 +257,6 @@
                 <a href="{% url 'view_company' %}">Company</a>
             {% endif %}
 
-            {% comment %} {% if request.user.has_perm('user.can_view_reports') %}
-                <a href="#">Reports</a>
-            {% endif %} {% endcomment %}
-
-            <!-- These are safe for all users -->
-            <a href="#">Profile</a>
-            <a href="#">My Tasks</a>
-        </div>
-
-        <form method="get" action="{% url 'logout' %}">
-            <button type="submit" class="logout-btn">Logout</button>
-        </form>
-    </div>
-
-
-
-{% comment %} 
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="menu">
-            {% if user.is_superuser %}
-                <a href="{% url 'view_users' %}">User Management</a>
-                <a href="{% url 'add_company' %}">Company</a>
-                <a href="#">Reports</a>
-            {% else %}
-                <a href="#">Profile</a>
-                <a href="#">My Tasks</a>
-            {% endif %}
         </div>
 
         <form method="get" action="{% url 'logout' %}">
@@ -248,6 +324,28 @@ function showSnackbar(message, bgColor = '#28a745') {
 {% endif %}
 
 
+// --- Simple accordion for company tree (no Bootstrap) ---
+(function initCompanyTree(){
+  const toggles = document.querySelectorAll('.tree-toggle');
+  toggles.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      const panelId = btn.getAttribute('aria-controls');
+      const panel = document.getElementById(panelId);
+      // close others (optional, for "one open at a time")
+      document.querySelectorAll('.tree-toggle[aria-expanded="true"]').forEach(openBtn => {
+        if (openBtn !== btn) {
+          openBtn.setAttribute('aria-expanded', 'false');
+          const pid = openBtn.getAttribute('aria-controls');
+          const p = document.getElementById(pid);
+          if (p) p.hidden = true;
+        }
+      });
+      btn.setAttribute('aria-expanded', String(!expanded));
+      if (panel) panel.hidden = expanded;
+    });
+  });
+})();
 
 
 </script>
@@ -262,182 +360,3 @@ function showSnackbar(message, bgColor = '#28a745') {
 
 
 
-
-
-
-
-
-
-
-
-{% comment %} <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{% block title %}HR Payroll{% endblock %}</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: #f2f2f2;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Header */
-        header {
-            background-color: #343a40;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            padding: 15px 30px;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        header h1 {
-            margin: 0;
-            font-size: 20px;
-        }
-
-        /* Layout */
-        .main-layout {
-            display: flex;
-            flex: 1;
-            min-height: calc(100vh - 60px);
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 220px;
-            background-color: #343a40;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between; /* Push logout to bottom */
-            padding: 20px;
-        }
-
-        .sidebar .menu {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .sidebar a {
-            color: #fff;
-            text-decoration: none;
-            padding: 10px;
-            border-radius: 5px;
-            display: block;
-            font-size: 14px;
-            transition: 0.2s;
-        }
-
-        .sidebar a:hover {
-            background-color: #495057;
-        }
-
-        /* Footer logout button */
-        .sidebar .logout-btn {
-            background-color: #dc3545;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 10px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: 0.2s;
-        }
-
-        .sidebar .logout-btn:hover {
-            background-color: #c82333;
-        }
-
-        /* Content area */
-        .content {
-            flex: 1;
-            padding: 20px;
-            background: #fff;
-            border-radius: 8px;
-            margin: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        /* Responsive adjustments */
-        @media screen and (max-width: 768px) {
-            .main-layout {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-                flex-direction: row;
-                justify-content: flex-start;
-                overflow-x: auto;
-            }
-            .sidebar .menu {
-                flex-direction: row;
-            }
-            .sidebar a, .sidebar .logout-btn {
-                flex: 1;
-                text-align: center;
-            }
-            .content {
-                margin: 10px;
-            }
-        }
-    </style>
-</head>
-<body>
-
-<header>
-    <h1>HR Payroll System</h1>
-</header>
-
-<div class="main-layout">
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="menu">
-            {% if user.is_superuser %}
-                <!-- Admin links -->
-                <a href="{% url 'view_user' %}">User Management</a>
-                <a href="{% url 'add_company' %}">Company</a>
-                <a href="#">Reports</a>
-            {% else %}
-                <!-- Normal user links -->
-                <a href="#">Profile</a>
-                <a href="#">My Tasks</a>
-            {% endif %}
-        </div>
-
-        <!-- Logout button at bottom -->
-        <form method="get" action="{% url 'logout' %}">
-            <button type="submit" class="logout-btn">Logout</button>
-        </form>
-    </div>
-
-    <!-- Main content -->
-    <div class="content">
-        {% block content %}{% endblock %}
-    </div>
-</div>
-
-</body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
-
-
- {% endcomment %}
