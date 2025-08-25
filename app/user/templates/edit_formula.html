@@ -1,0 +1,45 @@
+<!-- In templates/edit_formula.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Edit Formula</h2>
+<form method="post">
+    {% csrf_token %}
+    <label for="formula_name">Formula Name:</label>
+    <input type="text" name="formula_name" value="{{ form.formula_name.value }}" required>
+    <label for="formula-expression">Formula Expression:</label>
+    <textarea id="formula-expression" name="formula_expression" rows="4" style="width: 100%">{{ form.formula_expression.value }}</textarea>
+    <label for="field-selector">Insert Field:</label>
+    <select id="field-selector" style="width: 300px;">
+        <option selected disabled value="[Model: Field]">[Model: Field]</option>
+        {% for ref in field_references %}
+            <option value="[{{ ref.model_name }}: {{ ref.display_name }}]">{{ ref }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Save Changes</button>
+</form>
+
+<!-- <script src="/static/admin/js/jquery.min.js"></script>
+<script src="/static/admin/js/select2.min.js"></script>
+<link rel="stylesheet" href="/static/admin/css/select2.min.css"> -->
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#field-selector').select2();
+        $('#field-selector').on('select2:select', function(e) {
+            var insertText = e.params.data.id;
+            var textarea = $('#formula-expression');
+            var current = textarea.val();
+            var cursorPos = textarea.prop('selectionStart');
+            var newText = current.substring(0, cursorPos) + insertText + current.substring(cursorPos);
+            textarea.val(newText);
+            textarea.focus();
+            textarea[0].setSelectionRange(cursorPos + insertText.length, cursorPos + insertText.length);
+        });
+    });
+</script>
+{% endblock %}

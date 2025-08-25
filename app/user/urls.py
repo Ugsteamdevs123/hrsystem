@@ -22,5 +22,8 @@ urlpatterns = [
     path('employee-status-choices/', views.EmployeeStatusView.as_view(), name='employee_status_choices'),
 
     path('manage-formulas/', views.manage_formulas, name='manage_formulas'),
+    path("get-model-fields/", views.get_model_fields, name="get_model_fields"),
     path('create-formula/', views.create_formula, name='create_formula'),
+    path('edit-formula/<int:pk>/', views.edit_formula, name='edit_formula'),
+    path('edit-field-formula/<int:pk>/', views.edit_field_formula, name='edit_field_formula'),
 ]

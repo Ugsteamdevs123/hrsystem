@@ -1,20 +1,20 @@
 # In app/forms.py
 from django import forms
 from .models import Formula, FieldFormula, FieldReference
-from django.contrib import admin
-from django.apps import apps
 
 
 class FormulaForm(forms.ModelForm):
+
     class Meta:
         model = Formula
-        js = ("admin/js/formula_insert.js")
         fields = ['formula_name', 'formula_expression']
         widgets = {
             'formula_expression': forms.Textarea(attrs={'rows': 4, 'id': 'formula-expression'}),
         }
 
 class FieldFormulaForm(forms.ModelForm):
+    target_field = forms.ChoiceField(choices=[])
+
     class Meta:
         model = FieldFormula
         fields = ['target_model', 'target_field', 'formula', 'description']
@@ -28,36 +28,31 @@ class FieldFormulaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Dynamically populate target_field based on target_model if needed
+        # self.fields['target_field'].choices = []  # will be filled by JS
+        # If editing or form submitted with target_model selected
+        model_name = None
+        if 'target_model' in self.data:
+            model_name = self.data.get('target_model')
+        elif self.instance.pk:
+            model_name = self.instance.target_model
+
+        if model_name:
+            from django.apps import apps
+            try:
+                model = apps.get_model("user", model_name)
+                fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
+                self.fields['target_field'].choices = [(f, f) for f in fields]
+            except LookupError:
+                self.fields['target_field'].choices = []
+            
+            print("self.fields['target_field']: ", self.fields['target_field'].choices)
 
 
 
 
-# ✅ Put your app labels here
-ALLOWED_APPS = ["user"]  # e.g. ["hr"]
 
-def iter_allowed_models():
-    for app_label in ALLOWED_APPS:
-        for m in apps.get_app_config(app_label).get_models():
-            yield app_label, m
 
-def get_model_by_name(model_name: str):
-    for app_label, m in iter_allowed_models():
-        if m.__name__ == model_name:
-            return app_label, m
-    return None, None
-
-def list_fields(model):
-    if not model:
-        return []
-    # include only concrete, non auto-created, non-M2M fields
-    return [
-        f.name for f in model._meta.get_fields()
-        if getattr(f, "concrete", False)
-        and not getattr(f, "auto_created", False)
-        and not getattr(f, "many_to_many", False)
-    ]
-
+from .utils import iter_allowed_models, get_model_by_name, list_fields
 class FieldReferenceAdminForm(forms.ModelForm):
     # keep as ChoiceField so admin shows dropdowns
     model_name = forms.ChoiceField(choices=[], required=True)

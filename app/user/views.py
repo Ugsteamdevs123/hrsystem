@@ -382,21 +382,29 @@ class DepartmentTableView(View):
                 'fuel_limit': current_package.fuel_limit if current_package else '',
                 'mobile_allowance_current': current_package.mobile_allowance if current_package else '',
                 'increment_percentage': proposed_package.increment_percentage if proposed_package else '',
-                'increased_amount': proposed_package.increased_amount.formula if proposed_package and proposed_package.increased_amount else '',
-                'revised_salary': proposed_package.revised_salary.formula if proposed_package and proposed_package.revised_salary else '',
+                # 'increased_amount': proposed_package.increased_amount.formula if proposed_package and proposed_package.increased_amount else '',
+                # 'revised_salary': proposed_package.revised_salary.formula if proposed_package and proposed_package.revised_salary else '',
+                'increased_amount': proposed_package.increased_amount if proposed_package and proposed_package.increased_amount else '',
+                'revised_salary': proposed_package.revised_salary if proposed_package and proposed_package.revised_salary else '',
                 'increased_fuel_amount': proposed_package.increased_fuel_amount if proposed_package else '',
-                'revised_fuel_allowance': proposed_package.revised_fuel_allowance.formula if proposed_package and proposed_package.revised_fuel_allowance else '',
+                # 'revised_fuel_allowance': proposed_package.revised_fuel_allowance.formula if proposed_package and proposed_package.revised_fuel_allowance else '',
+                'revised_fuel_allowance': proposed_package.revised_fuel_allowance if proposed_package and proposed_package.revised_fuel_allowance else '',
                 'mobile_allowance_proposed': proposed_package.mobile_allowance if proposed_package else '',
                 'vehicle_proposed': proposed_package.vehicle if proposed_package else '',
                 'emp_status': financial_impact.emp_status.status if financial_impact and financial_impact.emp_status else '',
                 'serving_years': financial_impact.serving_years if financial_impact else '',
                 'salary': financial_impact.salary if financial_impact else '',
-                'gratuity': financial_impact.gratuity.formula if financial_impact and financial_impact.gratuity else '',
-                'bonus': financial_impact.bonus.formula if financial_impact and financial_impact.bonus else '',
-                'leave_encashment': financial_impact.leave_encashment.formula if financial_impact and financial_impact.leave_encashment else '',
-                'mobile_allowance_financial': financial_impact.mobile_allowance.formula if financial_impact and financial_impact.mobile_allowance else '',
+                # 'gratuity': financial_impact.gratuity.formula if financial_impact and financial_impact.gratuity else '',
+                # 'bonus': financial_impact.bonus.formula if financial_impact and financial_impact.bonus else '',
+                # 'leave_encashment': financial_impact.leave_encashment.formula if financial_impact and financial_impact.leave_encashment else '',
+                # 'mobile_allowance_financial': financial_impact.mobile_allowance.formula if financial_impact and financial_impact.mobile_allowance else '',
+                'gratuity': financial_impact.gratuity if financial_impact and financial_impact.gratuity else '',
+                'bonus': financial_impact.bonus if financial_impact and financial_impact.bonus else '',
+                'leave_encashment': financial_impact.leave_encashment if financial_impact and financial_impact.leave_encashment else '',
+                'mobile_allowance_financial': financial_impact.mobile_allowance if financial_impact and financial_impact.mobile_allowance else '',
                 'fuel': financial_impact.fuel if financial_impact else '',
-                'total': financial_impact.total.formula if financial_impact and financial_impact.total else '',
+                # 'total': financial_impact.total.formula if financial_impact and financial_impact.total else '',
+                'total': financial_impact.total if financial_impact and financial_impact.total else '',
             })
 
         if joined_data:
@@ -432,17 +440,17 @@ class CreateDataView(View):
         view = ensure_csrf_cookie(view)
         return view
 
-    def get(self, request, department_id):
-        department = DepartmentTeams.objects.filter(
-            id=department_id,
-            company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-        ).first()
-        if not department:
-            return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
-        return render(request, 'create_data.html', {
-            'department_id': department_id,
-            'company_id': department.company.id
-        })
+    # def get(self, request, department_id):
+    #     department = DepartmentTeams.objects.filter(
+    #         id=department_id,
+    #         company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+    #     ).first()
+    #     if not department:
+    #         return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
+    #     return render(request, 'create_data.html', {
+    #         'department_id': department_id,
+    #         'company_id': department.company.id
+    #     })
 
     def post(self, request, department_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -565,10 +573,13 @@ class GetDataView(View):
                         },
                         'proposed_package': {
                             'increment_percentage': str(proposed_package.increment_percentage) if proposed_package and proposed_package.increment_percentage else '',
-                            'increased_amount_id': str(proposed_package.increased_amount_id) if proposed_package and proposed_package.increased_amount_id else '',
-                            'revised_salary_id': str(proposed_package.revised_salary_id) if proposed_package and proposed_package.revised_salary_id else '',
+                            # 'increased_amount_id': str(proposed_package.increased_amount_id) if proposed_package and proposed_package.increased_amount_id else '',
+                            # 'revised_salary_id': str(proposed_package.revised_salary_id) if proposed_package and proposed_package.revised_salary_id else '',
+                            'increased_amount': str(proposed_package.increased_amount) if proposed_package and proposed_package.increased_amount else '',
+                            'revised_salary': str(proposed_package.revised_salary) if proposed_package and proposed_package.revised_salary else '',
                             'increased_fuel_amount': str(proposed_package.increased_fuel_amount) if proposed_package and proposed_package.increased_fuel_amount else '',
-                            'revised_fuel_allowance_id': str(proposed_package.revised_fuel_allowance_id) if proposed_package and proposed_package.revised_fuel_allowance_id else '',
+                            # 'revised_fuel_allowance_id': str(proposed_package.revised_fuel_allowance_id) if proposed_package and proposed_package.revised_fuel_allowance_id else '',
+                            'revised_fuel_allowance': str(proposed_package.revised_fuel_allowance) if proposed_package and proposed_package.revised_fuel_allowance else '',
                             'mobile_allowance': str(proposed_package.mobile_allowance) if proposed_package and proposed_package.mobile_allowance else '',
                             'vehicle': proposed_package.vehicle if proposed_package else ''
                         },
@@ -576,12 +587,17 @@ class GetDataView(View):
                             'emp_status_id': str(financial_impact.emp_status_id) if financial_impact and financial_impact.emp_status_id else '',
                             'serving_years': str(financial_impact.serving_years) if financial_impact and financial_impact.serving_years else '',
                             'salary': str(financial_impact.salary) if financial_impact and financial_impact.salary else '',
-                            'gratuity_id': str(financial_impact.gratuity_id) if financial_impact and financial_impact.gratuity_id else '',
-                            'bonus_id': str(financial_impact.bonus_id) if financial_impact and financial_impact.bonus_id else '',
-                            'leave_encashment_id': str(financial_impact.leave_encashment_id) if financial_impact and financial_impact.leave_encashment_id else '',
-                            'mobile_allowance_id': str(financial_impact.mobile_allowance_id) if financial_impact and financial_impact.mobile_allowance_id else '',
+                            # 'gratuity_id': str(financial_impact.gratuity_id) if financial_impact and financial_impact.gratuity_id else '',
+                            'gratuity': str(financial_impact.gratuity) if financial_impact and financial_impact.gratuity else '',
+                            # 'bonus_id': str(financial_impact.bonus_id) if financial_impact and financial_impact.bonus_id else '',
+                            'bonus': str(financial_impact.bonus) if financial_impact and financial_impact.bonus else '',
+                            # 'leave_encashment_id': str(financial_impact.leave_encashment_id) if financial_impact and financial_impact.leave_encashment_id else '',
+                            'leave_encashment': str(financial_impact.leave_encashment) if financial_impact and financial_impact.leave_encashment else '',
+                            # 'mobile_allowance_id': str(financial_impact.mobile_allowance_id) if financial_impact and financial_impact.mobile_allowance_id else '',
+                            'mobile_allowance': str(financial_impact.mobile_allowance) if financial_impact and financial_impact.mobile_allowance else '',
                             'fuel': str(financial_impact.fuel) if financial_impact and financial_impact.fuel else '',
-                            'total_id': str(financial_impact.total_id) if financial_impact and financial_impact.total_id else ''
+                            # 'total_id': str(financial_impact.total_id) if financial_impact and financial_impact.total_id else ''
+                            'total': str(financial_impact.total) if financial_impact and financial_impact.total else ''
                         }
                     }
                     logger.debug(f"Fetched data for employee {id}: {data}")
@@ -763,8 +779,11 @@ class EmployeeStatusView(View):
 
 # In app/views.py
 from django.shortcuts import render, redirect
-from .models import FieldFormula, Formula, FieldReference
+from .models import FieldFormula, FieldReference
 from .forms import FieldFormulaForm, FormulaForm
+from django.apps import apps
+from django.shortcuts import render, redirect, get_object_or_404
+
 
 def manage_formulas(request):
     field_formulas = FieldFormula.objects.all()
@@ -774,6 +793,8 @@ def manage_formulas(request):
         if form.is_valid():
             form.save()
             return redirect('user:manage_formulas')
+        else:
+            print(form.errors)
     else:
         form = FieldFormulaForm()
     return render(request, 'manage_formulas.html', {
@@ -781,6 +802,21 @@ def manage_formulas(request):
         'field_formulas': field_formulas,
         'field_references': field_references
     })
+
+
+def get_model_fields(request):
+    model_name = request.GET.get("model")
+    if not model_name:
+        return JsonResponse({"fields": []})
+
+    try:
+        model = apps.get_model('user', model_name)
+    except LookupError:
+        return JsonResponse({"fields": []})
+
+    fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
+    return JsonResponse({"fields": fields})
+
 
 def create_formula(request):
     if request.method == 'POST':
@@ -791,3 +827,26 @@ def create_formula(request):
     else:
         form = FormulaForm()
     return render(request, 'create_formula.html', {'form': form})
+
+
+def edit_formula(request, pk):
+    formula = get_object_or_404(Formula, pk=pk)
+    if request.method == 'POST':
+        form = FormulaForm(request.POST, instance=formula)
+        if form.is_valid():
+            form.save()
+            return redirect('user:manage_formulas')
+    else:
+        form = FormulaForm(instance=formula)
+    return render(request, 'edit_formula.html', {'form': form, 'field_references': FieldReference.objects.all()})
+
+def edit_field_formula(request, pk):
+    field_formula = get_object_or_404(FieldFormula, pk=pk)
+    if request.method == 'POST':
+        form = FieldFormulaForm(request.POST, instance=field_formula)
+        if form.is_valid():
+            form.save()
+            return redirect('user:manage_formulas')
+    else:
+        form = FieldFormulaForm(instance=field_formula)
+    return render(request, 'edit_field_formula.html', {'form': form})

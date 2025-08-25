@@ -20,38 +20,78 @@
     <label for="formula-expression">Formula Expression:</label>
     <textarea id="formula-expression" name="formula_expression" rows="4" style="width: 100%"></textarea>
     <label for="field-selector">Insert Field:</label>
-    <select id="field-selector" style="width: 300px;">
+    <select id="field-selector" style="width:300px;">
+        <option selected disabled value="[Model: Field]">[Model: Field]</option>
         {% for ref in field_references %}
             <option value="[{{ ref.model_name }}: {{ ref.display_name }}]">{{ ref }}</option>
         {% endfor %}
     </select>
-    <button type="submit">Create Formula</button>
-</form>
 
-<!-- JavaScript for Select2 and field insertion -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <button type="submit">Create Formula</button>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
     $(document).ready(function() {
+        $('#id_target_model').change(function() {
+            var model = $(this).val();
+            $.ajax({
+                url: "{% url 'user:get_model_fields' %}",
+                data: { model: model },
+                success: function(data) {
+                    var fieldSelect = $('#id_target_field');
+                    fieldSelect.empty();
+                    data.fields.forEach(function(field) {
+                        fieldSelect.append(new Option(field, field));
+                    });
+                }
+            });
+        });
+
         $('#field-selector').select2();
         $('#field-selector').on('select2:select', function(e) {
-            var field = e.params.data.text;
+            console.log("Event fired!", e.params.data);
+            var insertText = e.params.data.id;  // or .text depending on what you want
             var textarea = $('#formula-expression');
             var current = textarea.val();
             var cursorPos = textarea.prop('selectionStart');
-            var newText = current.substring(0, cursorPos) + e.params.data.id + current.substring(cursorPos);
+            var newText = current.substring(0, cursorPos) + insertText + current.substring(cursorPos);
             textarea.val(newText);
+            textarea.focus();
+            textarea[0].setSelectionRange(cursorPos + insertText.length, cursorPos + insertText.length);
         });
     });
 </script>
 
+
 <h3>Existing Associations</h3>
-<ul>
-    {% for ff in field_formulas %}
-        <li>{{ ff }}: {{ ff.formula.formula_expression }} <a href="{% url 'user:edit_field_formula' ff.id %}">Edit</a></li>
-    {% endfor %}
-</ul>
+<table border="1" cellpadding="6" cellspacing="0">
+    <thead>
+        <tr>
+            <th>Formula Name</th>
+            <th>Target Model</th>
+            <th>Target Field</th>
+            <th>Formula Expression</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ff in field_formulas %}
+        <tr>
+            <td>{{ ff.formula.formula_name }}</td>
+            <td>{{ ff.target_model }}</td>
+            <td>{{ ff.target_field }}</td>
+            <td>{{ ff.formula.formula_expression }}</td>
+            <td>
+                <a href="{% url 'user:edit_formula' ff.formula.id %}">Edit Formula</a> |
+                <a href="{% url 'user:edit_field_formula' ff.id %}">Edit Association</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 <h3>Example</h3>
 <p>For gratuity: [FinancialImpactPerMonth: Salary] / 12 * 100</p>

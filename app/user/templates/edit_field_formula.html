@@ -1,0 +1,11 @@
+<!-- In templates/edit_field_formula.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Edit Formula Association</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save Changes</button>
+</form>
+{% endblock %}
