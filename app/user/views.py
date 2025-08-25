@@ -7,7 +7,8 @@ from .serializers import (
 )
 from .models import (
     CustomUser,
-    Company
+    Company,
+    Section,
 )
 
 from django.contrib.auth import login, logout
@@ -28,6 +29,9 @@ from .forms import (
     CompanyForm , 
     CustomUserForm,
     CustomUserUpdateForm,
+    SectionForm,
+    DepartmentGroupsForm,
+    HrAssignedCompaniesForm
 
 )
 
@@ -61,6 +65,15 @@ class LoginView(View):
             messages.error(request, "Invalid email or password.")
 
         return render(request, self.template_name)
+
+
+
+class LogoutView(View):
+    def get(self, request):
+        logout(request)
+        return redirect("login")  # Replace with your login URL name
+
+
 
 
 
@@ -225,16 +238,192 @@ class DeleteCompanyView(PermissionRequiredMixin, View):
 
 
 
-class LogoutView(View):
+# --- VIEW SECTIONS ---
+class ViewSectionsView(PermissionRequiredMixin, View):
+    permission_required = "user.view_section"  # replace 'app' with your app name
+    template_name = "view_section.html"
+
     def get(self, request):
-        logout(request)
-        return redirect("login")  # Replace with your login URL name
+        sections = Section.objects.filter(is_deleted=False)
+        return render(request, self.template_name, {"sections": sections})
+
+
+# --- ADD SECTION ---
+class AddSectionView(PermissionRequiredMixin, View):
+    permission_required = "user.add_section"
+    template_name = "add_section.html"
+
+    def get(self, request):
+        form = SectionForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = SectionForm(request.POST)
+        if form.is_valid():
+            section = form.save(commit=False)
+            section.is_deleted = False
+            section.save()
+            messages.success(request, "Section added successfully!")
+            return redirect("view_section")  # 🔄 go to sections list
+        return render(request, self.template_name, {"form": form})
+
+
+# --- UPDATE SECTION ---
+class UpdateSectionView(PermissionRequiredMixin, View):
+    permission_required = "user.change_section"
+    template_name = "update_section.html"
+
+    def get(self, request, pk):
+        section = get_object_or_404(Section, pk=pk, is_deleted=False)
+        form = SectionForm(instance=section)
+        return render(request, self.template_name, {"form": form, "section": section})
+
+    def post(self, request, pk):
+        section = get_object_or_404(Section, pk=pk, is_deleted=False)
+        form = SectionForm(request.POST, instance=section)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Section updated successfully!")
+            return redirect("view_section")
+        return render(request, self.template_name, {"form": form, "section": section})
+
+
+# --- DELETE SECTION ---
+class DeleteSectionView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_section"
+
+    def get(self, request, pk):
+        section = get_object_or_404(Section, pk=pk, is_deleted=False)
+        section.is_deleted = True  # ✅ soft delete only active sections
+        section.save()
+        messages.success(request, "Section deleted successfully!")
+        return redirect("view_section")
 
 
 
 
+# --- VIEW DEPARTMENT GROUPS ---
+class ViewDepartmentGroupsView(PermissionRequiredMixin, View):
+    permission_required = "user.view_departmentgroups"
+    template_name = "view_departmentgroups.html"
+
+    def get(self, request):
+        groups = DepartmentGroups.objects.filter(is_deleted=False)
+        return render(request, self.template_name, {"groups": groups})
 
 
+# --- ADD DEPARTMENT GROUP ---
+class AddDepartmentGroupView(PermissionRequiredMixin, View):
+    permission_required = "user.add_departmentgroups"
+    template_name = "add_departmentgroups.html"
+
+    def get(self, request):
+        form = DepartmentGroupsForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = DepartmentGroupsForm(request.POST)
+        if form.is_valid():
+            group = form.save(commit=False)
+            group.is_deleted = False
+            group.save()
+            messages.success(request, "Department Group added successfully!")
+            return redirect("view_departmentgroups")
+        return render(request, self.template_name, {"form": form})
+
+
+# --- UPDATE DEPARTMENT GROUP ---
+class UpdateDepartmentGroupView(PermissionRequiredMixin, View):
+    permission_required = "user.change_departmentgroups"
+    template_name = "update_departmentgroups.html"
+
+    def get(self, request, pk):
+        group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
+        form = DepartmentGroupsForm(instance=group)
+        return render(request, self.template_name, {"form": form, "group": group})
+
+    def post(self, request, pk):
+        group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
+        form = DepartmentGroupsForm(request.POST, instance=group)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Department Group updated successfully!")
+            return redirect("view_departmentgroups")
+        return render(request, self.template_name, {"form": form, "group": group})
+
+
+# --- DELETE DEPARTMENT GROUP ---
+class DeleteDepartmentGroupView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_departmentgroups"
+
+    def get(self, request, pk):
+        group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
+        group.is_deleted = True  # soft delete
+        group.save()
+        messages.success(request, "Department Group deleted successfully!")
+        return redirect("view_departmentgroups")
+
+
+# --- VIEW HR ASSIGNED COMPANIES ---
+class ViewHrAssignedCompaniesView(PermissionRequiredMixin, View):
+    permission_required = "user.view_hr_assigned_companies"
+    template_name = "view_hr_assigned_companies.html"
+
+    def get(self, request):
+        assignments = hr_assigned_companies.objects.filter(is_deleted=False)
+        return render(request, self.template_name, {"assignments": assignments})
+
+
+# --- ADD HR ASSIGNED COMPANY ---
+class AddHrAssignedCompanyView(PermissionRequiredMixin, View):
+    permission_required = "user.add_hr_assigned_companies"
+    template_name = "add_hr_assigned_company.html"
+
+    def get(self, request):
+        form = HrAssignedCompaniesForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = HrAssignedCompaniesForm(request.POST)
+        if form.is_valid():
+            assignment = form.save(commit=False)
+            assignment.is_deleted = False
+            assignment.save()
+            messages.success(request, "HR assigned company added successfully!")
+            return redirect("view_hr_assigned_companies")
+        return render(request, self.template_name, {"form": form})
+
+
+# --- UPDATE HR ASSIGNED COMPANY ---
+class UpdateHrAssignedCompanyView(PermissionRequiredMixin, View):
+    permission_required = "user.change_hr_assigned_companies"
+    template_name = "update_hr_assigned_company.html"
+
+    def get(self, request, pk):
+        assignment = get_object_or_404(hr_assigned_companies, pk=pk, is_deleted=False)
+        form = HrAssignedCompaniesForm(instance=assignment)
+        return render(request, self.template_name, {"form": form, "assignment": assignment})
+
+    def post(self, request, pk):
+        assignment = get_object_or_404(hr_assigned_companies, pk=pk, is_deleted=False)
+        form = HrAssignedCompaniesForm(request.POST, instance=assignment)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "HR assigned company updated successfully!")
+            return redirect("view_hr_assigned_companies")
+        return render(request, self.template_name, {"form": form, "assignment": assignment})
+
+
+# --- DELETE HR ASSIGNED COMPANY ---
+class DeleteHrAssignedCompanyView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_hr_assigned_companies"
+
+    def get(self, request, pk):
+        assignment = get_object_or_404(hr_assigned_companies, pk=pk, is_deleted=False)
+        assignment.is_deleted = True  # soft delete
+        assignment.save()
+        messages.success(request, "HR assigned company deleted successfully!")
+        return redirect("view_hr_assigned_companies")
 
 
 

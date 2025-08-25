@@ -20,7 +20,23 @@ urlpatterns = [
     path("company/<int:pk>/edit/", views.UpdateCompanyView.as_view(), name="update_company"),
     path("company/<int:pk>/delete/", views.DeleteCompanyView.as_view(), name="delete_company"),
     
+    # Section CRUD
+    path('section/', views.ViewSectionsView.as_view(), name='view_section'),
+    path('add-section/', views.AddSectionView.as_view(), name='add_section'),
+    path('section/<int:pk>/edit/', views.UpdateSectionView.as_view(), name='update_section'),
+    path('section/<int:pk>/delete/', views.DeleteSectionView.as_view(), name='delete_section'),
 
+    # dept groups CRUD
+    path('department-groups/', views.ViewDepartmentGroupsView.as_view(), name='view_departmentgroups'),
+    path('add-department-group/', views.AddDepartmentGroupView.as_view(), name='add_departmentgroups'),
+    path('department-groups/<int:pk>/edit/', views.UpdateDepartmentGroupView.as_view(), name='update_departmentgroups'),
+    path('department-groups/<int:pk>/delete/', views.DeleteDepartmentGroupView.as_view(), name='delete_departmentgroups'),
+
+    # hr assign company crud
+    path('hr-assigned-companies/', views.ViewHrAssignedCompaniesView.as_view(), name='view_hr_assigned_companies'),
+    path('add-hr-assigned-company/', views.AddHrAssignedCompanyView.as_view(), name='add_hr_assigned_company'),
+    path('hr-assigned-companies/<int:pk>/edit/', views.UpdateHrAssignedCompanyView.as_view(), name='update_hr_assigned_company'),
+    path('hr-assigned-companies/<int:pk>/delete/', views.DeleteHrAssignedCompanyView.as_view(), name='delete_hr_assigned_company'),
 
 
 

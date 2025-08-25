@@ -3,18 +3,14 @@ from .models import (
     Company , 
     CustomUser , 
     Gender,
+    Section,
+    DepartmentGroups,
+    hr_assigned_companies
 )
 from django.contrib.auth.models import Group
 
 
 
-class CompanyForm(forms.ModelForm):
-    class Meta:
-        model = Company
-        fields = ['name']
-        widgets = {
-            'name': forms.TextInput(attrs={'placeholder': 'Enter Company Name', 'class': 'form-control'})
-        }
 
 
 class CustomUserForm(forms.ModelForm):
@@ -111,57 +107,65 @@ class CustomUserUpdateForm(forms.ModelForm):
     #     return user
 
 
+class CompanyForm(forms.ModelForm):
+    class Meta:
+        model = Company
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={'placeholder': 'Enter Company Name', 'class': 'form-control'})
+        }
+
+        
+class SectionForm(forms.ModelForm):
+    class Meta:
+        model = Section
+        fields = ['name', 'department_group']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'placeholder': 'Enter Section Name',
+                'class': 'form-control'
+            }),
+            'department_group': forms.Select(attrs={
+                'class': 'form-control'
+            })
+        }
+        labels = {
+            'name': 'Section Name',
+            'department_group': 'Department Group'
+        }
 
 
-# class CustomUserForm(forms.ModelForm):
-#     password = forms.CharField(widget=forms.PasswordInput, label="Password")
 
-#     class Meta:
-#         model = CustomUser
-#         fields = ['full_name', 'email', 'password', 'gender', 'contact']
-#         widgets = {
-#             'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
-#             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}),
-#             'contact': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact Number'}),
-#             'gender': forms.Select(attrs={'class': 'form-control'}),
-#         }
+class DepartmentGroupsForm(forms.ModelForm):
+    class Meta:
+        model = DepartmentGroups
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'placeholder': 'Enter Department Group Name',
+                'class': 'form-control'
+            })
+        }
 
-#     def save(self, commit=True):
-#         user = super().save(commit=False)
-#         user.set_password(self.cleaned_data["password"])  # Hash the password
-#         if commit:
-#             user.save()
-#         return user
-    
 
-# class CustomUserUpdateForm(forms.ModelForm):
+class HrAssignedCompaniesForm(forms.ModelForm):
+    hr = forms.ModelChoiceField(
+        queryset=CustomUser.objects.filter(is_active=True, is_superuser=False),
+        label="HR",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label="Select HR"
+    )
 
-#     password = forms.CharField(
-#         widget=forms.PasswordInput,
-#         label="Password",
-#         required=False  # ✅ optional here
-#     )
+    class Meta:
+        model = hr_assigned_companies
+        fields = ['hr', 'company']
+        widgets = {
+            'company': forms.Select(attrs={'class': 'form-control'}),
+        }
 
-#     class Meta:
-#         model = CustomUser
-#         fields = ['full_name', 'email', 'password', 'gender', 'contact']
-#         widgets = {
-#             'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
-#             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}),
-#             'contact': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact Number'}),
-#             'gender': forms.Select(attrs={'class': 'form-control'}),
-#         }
-
-#     def save(self, commit=True):
-#         user = super().save(commit=False)
-
-#         # only update password if provided
-#         if self.cleaned_data.get("password"):
-#             user.set_password(self.cleaned_data["password"])
-
-#         if commit:
-#             user.save()
-#         return user
-    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Display full_name instead of email
+        self.fields['hr'].label_from_instance = lambda obj: obj.full_name
 
 

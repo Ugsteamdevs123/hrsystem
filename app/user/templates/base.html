@@ -203,6 +203,18 @@
             <a href="{% url 'department_team' %}">Add Department</a>
             {% endif %}
 
+            {% if perms.user.view_section %}
+            <a href="{% url 'view_section' %}">Section</a>
+            {% endif %}
+
+            {% if perms.user.view_departmentgroups %}
+            <a href="{% url 'view_departmentgroups' %}">Department Groups</a>
+            {% endif %}
+
+            {% if perms.user.view_hr_assigned_companies %}
+            <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
+            {% endif %}
+
             {# --- Dynamic Companies → Departments (RBAC on Employee) --- #}
             {% if perms.user.view_employee and company_data %}
             <div class="company-tree">
