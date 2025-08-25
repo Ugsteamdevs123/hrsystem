@@ -1,185 +1,234 @@
 {% extends 'base.html' %}
+
 {% block title %}HR Dashboard{% endblock %}
+
 {% block content %}
-    <h1>HR Dashboard</h1>
+<h2>HR Dashboard</h2>
 
-    <div class="card-like">
-        <h3>Select a Company</h3>
-        <select id="company-select" class="custom-select" onchange="fetchIncrementData()">
-            <option value="" selected>Select a company</option>
-            {% for company in company_data %}
-                <option value="{{ company.company_id }}">{{ company.company_name }}</option>
-            {% endfor %}
-        </select>
+<!-- Company Selection -->
+<div class="card-like">
+    <h3>Select a company to view increment details.</h3>
+    <select id="company-select" class="custom-select" onchange="fetchIncrementData()">
+        <option value="" selected>Select a company</option>
+        {% for company in company_data %}
+            <option value="{{ company.company_id }}">{{ company.company_name }}</option>
+        {% endfor %}
+    </select>
+</div>
 
-        <div id="increment-data" class="mt-20">
-            <p class="muted">Select a company to view increment details.</p>
+<!-- Increment Details -->
+<div id="increment-data" class="mt-20"></div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <h3>Edit Eligible for Increment</h3>
+        <form id="editForm">
+            <label for="eligibleInput">Eligible for Increment</label>
+            <input type="number" id="eligibleInput" name="eligible_for_increment" required>
+            <input type="hidden" id="summaryId" name="id">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        </form>
+        <div class="modal-actions">
+            <button onclick="closeModal()" class="action-btn btn-secondary">Cancel</button>
+            <button type="button" id="openConfirmModal" class="action-btn btn-primary">Update</button>
         </div>
     </div>
+</div>
 
-    <!-- Custom Modal -->
-    <div id="editModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box">
-            <h3>Edit Eligible for Increment</h3>
-            <form id="editForm">
-                <label for="eligibleInput">Eligible for Increment</label>
-                <input type="number" id="eligibleInput" name="eligible_for_increment" required>
-                <input type="hidden" id="summaryId" name="id">
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-            </form>
-            <div class="modal-actions">
-                <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
-                <button type="button" id="submitBtn" class="btn btn-primary">Submit</button>
-            </div>
-        </div>
-    </div>
+<style>
+/* Card container */
+.card-like {
+    background: #fff;
+    padding: 20px;
+    margin: 10px 0;
+    border-radius: 8px;
+    box-shadow: 0 0 6px rgba(0,0,0,0.1);
+}
+/* Dropdown */
+.custom-select {
+    padding: 8px;
+    font-size: 14px;
+    width: 50%;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+/* Table styling */
+.custom-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 15px;
+}
+.custom-table th, .custom-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+.custom-table th {
+    background-color: #f2f2f2;
+}
+.custom-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+/* Buttons */
+.action-btn {
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #fff;
+    cursor: pointer;
+    margin-right: 5px;
+    border: none;
+}
+.btn-primary { background-color: #007bff; }
+.btn-primary:hover { background-color: #0056b3; }
+.btn-secondary { background-color: #6c757d; }
+.btn-secondary:hover { background-color: #565e64; }
+/* Modal */
+.modal-overlay {
+    position: fixed; top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.5);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 2000;
+}
+.modal-box {
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    width: 400px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.modal-box h3 { margin-top: 0; font-size: 18px; color: #333; }
+.modal-box input {
+    width: 100%; padding: 8px; margin: 8px 0 15px;
+    border: 1px solid #ccc; border-radius: 6px;
+}
+.modal-actions { text-align: right; }
 
-    <style>
-        .card-like {
-            background: #fff;
-            padding: 20px;
-            margin: 10px 0;
-            border-radius: 8px;
-            box-shadow: 0 0 6px rgba(0,0,0,0.1);
-        }
-        .custom-select {
-            padding: 8px;
-            font-size: 14px;
-            width: 50%;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
-        .muted { color: #666; font-size: 14px; }
-        .mt-20 { margin-top: 20px; }
+#editModal { z-index: 1000; }
 
-        /* Table styles */
-        .custom-table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        .custom-table th, .custom-table td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        .custom-table th {
-            background: #f0f0f0;
-        }
-        .custom-table tr:nth-child(even) {
-            background: #fafafa;
-        }
-        .btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .btn-primary { background: #007bff; color: #fff; }
-        .btn-primary:hover { background: #0056b3; }
-        .btn-secondary { background: #6c757d; color: #fff; }
-        .btn-secondary:hover { background: #565e64; }
+/* Responsive */
+@media screen and (max-width: 768px) {
+    .custom-select, .custom-table, th, td { font-size: 14px; }
+    .action-btn { font-size: 12px; padding: 6px 12px; }
+}
+</style>
 
-        /* Modal */
-        .modal-overlay {
-            position: fixed; top:0; left:0; right:0; bottom:0;
-            background: rgba(0,0,0,0.5);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 2000;
-        }
-        .modal-box {
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            width: 400px;
-        }
-        .modal-actions {
-            margin-top: 15px;
-            text-align: right;
-        }
-    </style>
+<script>
+function openModal() { document.getElementById('editModal').style.display = 'flex'; }
+function closeModal() { document.getElementById('editModal').style.display = 'none'; }
 
-    <script>
-        function openModal() {
-            document.getElementById('editModal').style.display = 'flex';
-        }
-        function closeModal() {
-            document.getElementById('editModal').style.display = 'none';
-        }
+async function fetchIncrementData() {
+    const companyId = document.getElementById('company-select').value;
+    const incrementDataDiv = document.getElementById('increment-data');
+    if (!companyId) { incrementDataDiv.innerHTML = ''; return; }
 
-        async function fetchIncrementData() {
-            const companyId = document.getElementById('company-select').value;
-            const incrementDataDiv = document.getElementById('increment-data');
+    try {
+        const response = await fetch(`/payroll/hr/?company_id=${companyId}`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!response.ok) throw new Error('Failed to fetch increment data');
+        const data = await response.json();
 
-            if (!companyId) {
-                incrementDataDiv.innerHTML = '<p class="muted">Select a company to view increment details.</p>';
-                return;
-            }
+        if (data.error) {
+            incrementDataDiv.innerHTML = `<p class="text-danger">${data.error}</p>`;
+        } else if (data.data.length === 0) {
+            incrementDataDiv.innerHTML = '<p class="muted">No increment details found.</p>';
+        } else {
+            let html = '<h4>Increment Details</h4><table class="custom-table"><thead><tr>';
+            const headers = Object.keys(data.data[0]).filter(h => h !== 'id');
+            headers.forEach(h => html += `<th>${h}</th>`);
+            html += '<th>Actions</th></tr></thead><tbody>';
 
-            try {
-                const response = await fetch(`/payroll/hr/?company_id=${companyId}`, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            data.data.forEach(row => {
+                html += `<tr data-id="${row.id}" data-eligible="${row['eligible for increment'] || ''}">`;
+                headers.forEach(h => html += `<td>${row[h] || ''}</td>`);
+                {% if perms.user.change_incrementdetailssummary %}
+                html += '<td><button class="action-btn btn-primary edit-btn">Edit</button></td></tr>';
+                {% else %}
+                html += '<td>-</td></tr>';
+                {% endif %}
+            });
+            html += '</tbody></table>';
+            incrementDataDiv.innerHTML = html;
+
+            {% if perms.user.change_incrementdetailssummary %}
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const row = this.closest('tr');
+                    document.getElementById('summaryId').value = row.dataset.id;
+                    document.getElementById('eligibleInput').value = row.dataset.eligible;
+                    openModal();
                 });
-                if (!response.ok) throw new Error('Failed to fetch increment data');
-                const data = await response.json();
+            });
 
-                if (data.error) {
-                    incrementDataDiv.innerHTML = `<p class="text-danger">${data.error}</p>`;
-                } else if (data.data.length === 0) {
-                    incrementDataDiv.innerHTML = '<p class="muted">No increment details found.</p>';
-                } else {
-                    let html = '<h4>Increment Details</h4>';
-                    html += '<table class="custom-table"><thead><tr>';
-                    const headers = Object.keys(data.data[0]).filter(h => h !== 'id');
-                    headers.forEach(h => html += `<th>${h}</th>`);
-                    html += '<th>Actions</th></tr></thead><tbody>';
-                    data.data.forEach(row => {
-                        html += `<tr data-id="${row.id}" data-eligible="${row['eligible for increment'] || ''}">`;
-                        headers.forEach(h => html += `<td>${row[h] || ''}</td>`);
-                        html += '<td><button class="btn btn-primary edit-btn">Edit</button></td></tr>';
-                    });
-                    html += '</tbody></table>';
-                    incrementDataDiv.innerHTML = html;
+            document.getElementById('openConfirmModal').onclick = function() {
+                // Keep edit modal open and show confirmation above it
+                showConfirmPopup(
+                    "Are you sure you want to update this increment detail?",
+                    async function yesCallback() {
+                        closeModal(); // Close edit modal only after confirmation
+                        await submitEdit();
+                    },
+                    function noCallback() {
+                        // Do nothing, keep edit modal open
+                    },
+                    {
+                        zIndex: 2000 // confirmation modal above edit modal
+                    }
+                );
+            };
 
-                    document.querySelectorAll('.edit-btn').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            const row = this.closest('tr');
-                            document.getElementById('summaryId').value = row.dataset.id;
-                            document.getElementById('eligibleInput').value = row.dataset.eligible;
-                            openModal();
-                        });
-                    });
 
-                    document.getElementById('submitBtn').onclick = async function() {
-                        const id = document.getElementById('summaryId').value;
-                        const value = document.getElementById('eligibleInput').value.trim();
-                        if (!value || isNaN(value)) {
-                            alert('Please enter a valid number');
-                            return;
-                        }
-                        const formData = new FormData(document.getElementById('editForm'));
-                        const entries = {};
-                        for (const [k,v] of formData.entries()) {
-                            if (k !== 'csrfmiddlewaretoken') entries[k] = v;
-                        }
+            /*
+            document.getElementById('openConfirmModal').onclick = function() {
+                // Keep edit modal open and show base.html confirmation modal above it
+                showConfirmPopup(
+                    "Are you sure you want to update this increment detail?",
+                    async function yesCallback() {
+                        closeModal(); // close edit modal after confirmation
+                        await submitEdit();
+                    },
+                    function noCallback() {
+                        // Keep edit modal open if user clicks "No"
+                    },
+                    { zIndex: 3000 } // higher than edit modal
+                );
+            };
+            */
 
-                        const resp = await fetch('/payroll/hr/', {
-                            method: 'PATCH',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(entries)
-                        });
-                        closeModal();
-                        fetchIncrementData();
-                    };
-                }
-            } catch (e) {
-                console.error(e);
-                incrementDataDiv.innerHTML = '<p class="text-danger">Error fetching increment data.</p>';
-            }
+            {% endif %}
         }
-    </script>
+    } catch (e) {
+        console.error(e);
+        incrementDataDiv.innerHTML = '<p class="text-danger">Error fetching increment data.</p>';
+    }
+}
+
+async function submitEdit() {
+    const formData = new FormData(document.getElementById('editForm'));
+    const entries = {};
+    for (const [k,v] of formData.entries()) { if (k !== 'csrfmiddlewaretoken') entries[k] = v; }
+
+    try {
+        const resp = await fetch('/payroll/hr/', {
+            method: 'PATCH',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(entries)
+        });
+
+        if (!resp.ok) throw new Error('Failed to save');
+        await fetchIncrementData();
+        showSnackbar('Increment detail updated successfully!');
+    } catch (e) {
+        console.error(e);
+        showSnackbar('Error updating increment detail. Please try again.', '#dc3545');
+    }
+}
+</script>
 {% endblock %}

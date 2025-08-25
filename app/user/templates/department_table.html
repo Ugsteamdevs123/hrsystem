@@ -2,228 +2,792 @@
 {% block title %}Department - {{ department.name }}{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Department - {{ department.name }}</h1>
-</div>
+<!-- Page Heading + Actions -->
+<section class="section-head">
+  <h1 class="page-title">Department — {{ department.name }}</h1>
+  <button id="openCreateModalBtn" class="btn btn-primary">Create New Record</button>
+</section>
 
-<div class="card shadow p-4 mt-4">
-    <div class="card-header d-flex justify-content-between align-items-center mb-3">
-        <h5>Employee Data</h5>
-        {% if perms.user.add_employee %}
-        <button id="openCreateBtn" class="btn btn-primary btn-sm">Add Employee</button>
-        {% endif %}
-    </div>
-    <div class="table-responsive">
-        {{ table_html|safe }}
-    </div>
-</div>
+<!-- Card -->
+<section class="card-like">
+  <header class="card-head">
+    <h2 class="card-title">Employee Data</h2>
+  </header>
 
-<!-- Create/Edit Employee Modal -->
-<div id="createModal" class="modal-overlay" data-company-id="{{ department.company.id }}" data-department-id="{{ department.id }}">
-  <div class="modal-content-lg">
-    <div class="modal-header">
-        <h5 id="createModalLabel">Add Employee</h5>
-        <span class="modal-close" id="cancelBtn">&times;</span>
-    </div>
-    <form id="createForm" enctype="multipart/form-data">
-        <!-- Step 1 -->
+  <!-- Responsive table container -->
+  <div class="table-wrap">
+    {{ table_html | safe }}
+  </div>
+</section>
+
+<!-- Pure HTML/JS Modal (no Bootstrap) -->
+<div id="createModal" class="modal-overlay" aria-hidden="true" data-company-id="{{ department.company.id }}" data-mode="create">
+  <div class="modal-window" role="dialog" aria-modal="true" aria-labelledby="createModalLabel">
+    <header class="modal-header">
+      <h3 id="createModalLabel">Create New Record</h3>
+      <button class="modal-close" type="button" aria-label="Close" id="modalCloseBtn">&times;</button>
+    </header>
+
+    <div class="modal-body">
+      <form id="createForm" enctype="multipart/form-data">
+        <!-- Step 1: Employee -->
         <div class="step" id="step-employee">
-            <h6>Step 1: Employee Details</h6>
-            <div class="form-group">
-                <label for="fullname">Full Name <span class="required">*</span></label>
-                <input type="text" id="fullname" name="fullname" class="form-control" required>
+          <h4 class="step-title">Step 1: Employee Details</h4>
+
+          <div class="form-field">
+            <label for="fullname">Full Name <span class="req">*</span></label>
+            <input type="text" id="fullname" name="fullname" required>
+          </div>
+
+          <div class="form-field">
+            <label for="department_group_id">Department Group <span class="req">*</span></label>
+            <select id="department_group_id" name="department_group_id" required>
+              <option value="">Select Department Group</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="section_id">Section <span class="req">*</span></label>
+            <select id="section_id" name="section_id">
+              <option value="">Select Section</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label>Designation <span class="req">*</span></label>
+            <div class="inline-group">
+              <select id="designation_id" name="designation_id">
+                <option value="">Select Designation</option>
+              </select>
+              <label class="inline-check">
+                <input type="checkbox" id="add_new_designation">
+                <span>Add New</span>
+              </label>
             </div>
-            <div class="form-group">
-                <label for="department_group_id">Department Group</label>
-                <select id="department_group_id" name="department_group_id" class="form-control"></select>
+            <input type="text" id="new_designation_title" name="new_designation_title" placeholder="Enter new designation title" disabled>
+          </div>
+
+          <div class="form-field">
+            <label for="location_id">Location <span class="req">*</span></label>
+            <select id="location_id" name="location_id">
+              <option value="">Select Location</option>
+            </select>
+          </div>
+
+          <div class="form-field split">
+            <div>
+              <label for="date_of_joining">Date of Joining <span class="req">*</span></label>
+              <input type="date" id="date_of_joining" name="date_of_joining">
             </div>
-            <div class="form-group">
-                <label for="section_id">Section</label>
-                <select id="section_id" name="section_id" class="form-control"></select>
+            <div>
+              <label for="resign">Resign</label>
+              <select id="resign" name="resign">
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </select>
             </div>
-            <div class="form-group">
-                <label for="designation_id">Designation</label>
-                <select id="designation_id" name="designation_id" class="form-control"></select>
-            </div>
-            <div class="form-group">
-                <label for="location_id">Location</label>
-                <select id="location_id" name="location_id" class="form-control"></select>
-            </div>
-            <div class="form-group">
-                <label for="date_of_joining">Date of Joining</label>
-                <input type="date" id="date_of_joining" name="date_of_joining" class="form-control">
-            </div>
-            <div class="form-group">
-                <label for="remarks">Remarks</label>
-                <textarea id="remarks" name="remarks" class="form-control"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="image">Employee Image</label>
-                <input type="file" id="image" name="image" class="form-control" accept="image/*">
-            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="date_of_resignation">Date of Resignation</label>
+            <input type="date" id="date_of_resignation" name="date_of_resignation" disabled>
+          </div>
+
+          <div class="form-field">
+            <label for="remarks">Remarks</label>
+            <textarea id="remarks" name="remarks"></textarea>
+          </div>
+
+          <div class="form-field">
+            <label for="image">Image</label>
+            <input type="file" id="image" name="image" accept="image/*">
+          </div>
         </div>
 
-        <!-- Step 2 -->
-        <div class="step d-none" id="step-current_package">
-            <h6>Step 2: Current Package</h6>
-            <div class="form-group">
-                <label for="gross_salary">Gross Salary</label>
-                <input type="number" id="gross_salary" name="gross_salary" class="form-control">
-            </div>
-            <div class="form-group">
-                <label for="vehicle">Vehicle</label>
-                <input type="text" id="vehicle" name="vehicle" class="form-control">
-            </div>
-            <div class="form-group">
-                <label for="fuel_limit">Fuel Limit</label>
-                <input type="number" id="fuel_limit" name="fuel_limit" class="form-control">
-            </div>
-            <div class="form-group">
-                <label for="mobile_allowance">Mobile Allowance</label>
-                <input type="number" id="mobile_allowance" name="mobile_allowance" class="form-control">
-            </div>
+        <!-- Step 2: Current Package -->
+        <div class="step hidden" id="step-current_package">
+          <h4 class="step-title">Step 2: Current Package Details</h4>
+
+          <div class="form-field">
+            <label for="gross_salary">Gross Salary</label>
+            <input type="number" id="gross_salary" name="gross_salary" step="0.01">
+          </div>
+          <div class="form-field">
+            <label for="vehicle">Vehicle</label>
+            <input type="text" id="vehicle" name="vehicle">
+          </div>
+          <div class="form-field">
+            <label for="fuel_limit">Fuel Limit</label>
+            <input type="number" id="fuel_limit" name="fuel_limit" step="0.01">
+          </div>
+          <div class="form-field">
+            <label for="mobile_allowance">Mobile Allowance</label>
+            <input type="number" id="mobile_allowance" name="mobile_allowance" step="0.01">
+          </div>
         </div>
 
-        <!-- Step 3 -->
-        <div class="step d-none" id="step-proposed_package">
-            <h6>Step 3: Proposed Package</h6>
-            <div class="form-group">
-                <label for="increment_percentage">Increment %</label>
-                <input type="number" id="increment_percentage" name="increment_percentage" class="form-control">
-            </div>
+        <!-- Step 3: Proposed Package -->
+        <div class="step hidden" id="step-proposed_package">
+          <h4 class="step-title">Step 3: Proposed Package Details</h4>
+
+          <div class="form-field">
+            <label for="increment_percentage">Increment Percentage</label>
+            <input type="number" id="increment_percentage" name="increment_percentage" step="0.01">
+          </div>
+          <div class="form-field">
+            <label for="increased_fuel_amount">Increased Fuel Amount</label>
+            <input type="number" id="increased_fuel_amount" name="increased_fuel_amount" step="0.01">
+          </div>
+          <div class="form-field">
+            <label for="mobile_allowance_proposed">Mobile Allowance</label>
+            <!-- FIX: name now matches the proposed field so it doesn't overwrite current mobile_allowance -->
+            <input type="number" id="mobile_allowance_proposed" name="mobile_allowance_proposed" step="0.01">
+          </div>
+          <div class="form-field">
+            <label for="vehicle_proposed">Vehicle</label>
+            <input type="text" id="vehicle_proposed" name="vehicle_proposed">
+          </div>
         </div>
 
-        <!-- Step 4 -->
-        <div class="step d-none" id="step-financial_impact">
-            <h6>Step 4: Financial Impact</h6>
-            <div class="form-group">
-                <label for="salary">Salary</label>
-                <input type="number" id="salary" name="salary" class="form-control">
-            </div>
+        <!-- Step 4: Financial Impact -->
+        <div class="step hidden" id="step-financial_impact">
+          <h4 class="step-title">Step 4: Financial Impact Details</h4>
+          <div class="form-field">
+            <label for="emp_status_id">Employee Status</label>
+            <select id="emp_status_id" name="emp_status_id">
+              <option value="">Select Employee Status</option>
+              <!-- JS fills -->
+            </select>
+          </div>
         </div>
 
-        <input type="hidden" id="step" name="step">
-        <input type="hidden" id="employee_id" name="employee_id">
+        <!-- Hidden fields -->
+        <input type="hidden" name="step" id="step">
+        <input type="hidden" name="employee_id" id="employee_id">
         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-    </form>
-    <div class="modal-footer">
-        <button id="prevBtn" class="btn btn-secondary btn-sm d-none">Previous</button>
-        <button id="nextBtn" class="btn btn-primary btn-sm">Next</button>
-        <button id="submitBtn" class="btn btn-success btn-sm d-none">Submit</button>
+      </form>
     </div>
+
+    <footer class="modal-footer">
+      <button type="button" class="btn btn-secondary hidden" id="prevBtn">Previous</button>
+      <button type="button" class="btn btn-primary" id="nextBtn">Next</button>
+      <button type="button" class="btn btn-primary hidden" id="submitBtn">Submit</button>
+      <button type="button" class="btn" id="modalCancelBtn">Cancel</button>
+    </footer>
   </div>
 </div>
 
+<!-- Page-specific styles (pure CSS, no Bootstrap) -->
 <style>
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1050}
-.modal-content-lg{background:#fff;border-radius:8px;padding:20px;max-width:800px;width:95%;box-shadow:0 5px 15px rgba(0,0,0,.3)}
-.modal-header{display:flex;justify-content:space-between;align-items:center}
-.modal-close{cursor:pointer;font-size:24px}
-.step{margin-bottom:10px}
-.required{color:red}
+/* Layout bits to match your base look */
+.section-head{
+  display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;
+}
+.page-title{ margin:0; font-size:20px; color:#343a40; }
+
+/* Card */
+.card-like{
+  background:#fff; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,.08);
+  padding:16px;
+}
+.card-head{ margin-bottom:8px; }
+.card-title{ margin:0; font-size:16px; color:#343a40; }
+
+/* Buttons (reusing your palette) */
+.btn{
+  appearance:none; border:none; cursor:pointer; padding:10px 14px; border-radius:6px;
+  background:#e9ecef; color:#343a40; font-size:14px; transition:.2s;
+}
+.btn:hover{ background:#dfe3e6; }
+.btn-primary{ background:#007bff; color:#fff; }
+.btn-primary:hover{ background:#0069d9; }
+.btn-secondary{ background:#6c757d; color:#fff; }
+.btn-secondary:hover{ background:#5a6268; }
+.btn-sm{ padding:6px 10px; font-size:12px; }
+
+/* Table wrapper */
+.table-wrap{ width:100%; overflow:auto; }
+
+/* OPTIONAL: If your rendered table uses Bootstrap classes, give them styles locally */
+.table{ width:100%; border-collapse:collapse; }
+.table th,.table td{ border:1px solid #dee2e6; padding:10px; text-align:left; }
+.table thead th{ background:#f1f3f5; }
+.table-striped tbody tr:nth-child(even){ background:#f8f9fa; }
+
+/* If your backend already injects .custom-table, keep/enhance these */
+.custom-table{ border-collapse:collapse; width:100%; }
+.custom-table th,.custom-table td{
+  min-width:120px; max-width:300px; padding:12px; border:2px solid #dee2e6; text-align:left;
+}
+.custom-table th{ background:#e9ecef; font-weight:700; }
+.custom-table tr:nth-child(even){ background:#f8f9fa; }
+.custom-table tr:nth-child(odd){ background:#fff; }
+.employee-col{ background:#b3d7ff !important; }
+.current-package-col{ background:#b8e4b8 !important; }
+.proposed-package-col{ background:#ffd699 !important; }
+.financial-impact-col{ background:#d8b8f0 !important; }
+.subheader{ background:#6c757d !important; color:#fff !important; text-align:center !important; font-weight:700; }
+
+/* Modal (pure CSS) */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,.45);
+  display:none; align-items:center; justify-content:center; z-index:1100;
+}
+.modal-overlay.show{ display:flex; }
+.modal-window{
+  background:#fff; width:min(960px, 94vw); max-height:90vh; overflow:auto;
+  border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.25); display:flex; flex-direction:column;
+}
+.modal-header,.modal-footer{ padding:12px 16px; border-bottom:1px solid #eee; }
+.modal-footer{ border-top:1px solid #eee; border-bottom:none; display:flex; gap:8px; justify-content:flex-end; }
+.modal-header{ display:flex; align-items:center; justify-content:space-between; }
+.modal-body{ padding:16px; }
+
+/* Modal close */
+.modal-close{
+  background:transparent; border:none; font-size:22px; line-height:1; cursor:pointer; color:#343a40;
+}
+.modal-close:hover{ opacity:.7; }
+
+/* Form */
+.form-field{ display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+.form-field.split{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-field input[type="text"],
+.form-field input[type="number"],
+.form-field input[type="date"],
+.form-field input[type="file"],
+.form-field select,
+.form-field textarea{
+  padding:10px; border-radius:6px; border:1px solid #ced4da; font-size:14px;
+}
+.form-field textarea{ min-height:90px; }
+.inline-group{ display:flex; align-items:center; gap:10px; }
+.inline-check{ display:flex; align-items:center; gap:6px; user-select:none; }
+.req{ color:#dc3545; }
+.step{ /* visible by default; control via JS */ }
+.hidden{ display:none !important; }
+
+/* Spacing helpers mirroring Bootstrap-ish utilities (optional) */
+.mt-5{ margin-top:2rem; }
+.mb-3{ margin-bottom:1rem; }
+.mb-4{ margin-bottom:1.5rem; }
+
+/* Make action buttons in table look consistent if your table rows include .btn/.btn-sm */
+.table .btn{ margin-right:6px; }
 </style>
 
 <script>
-document.addEventListener("DOMContentLoaded", function(){
-    const modal=document.getElementById("createModal");
-    const openBtn=document.getElementById("openCreateBtn");
-    const cancelBtn=document.getElementById("cancelBtn");
-    const steps=['employee','current_package','proposed_package','financial_impact'];
-    let currentStep=0;
+(function(){
+  // ===== Modal helpers (pure JS) =====
+  const modal = document.getElementById('createModal');
+  const openBtn = document.getElementById('openCreateModalBtn');
+  const closeBtn = document.getElementById('modalCloseBtn');
+  const cancelBtn = document.getElementById('modalCancelBtn');
+  const modalTitle = document.getElementById('createModalLabel');
+  const form = document.getElementById('createForm');
 
-    function showModal(){modal.style.display='flex';}
-    function hideModal(){modal.style.display='none';}
-    function showStep(i){
-        steps.forEach((s,idx)=>document.getElementById("step-"+s).classList.toggle("d-none",idx!==i));
-        document.getElementById("prevBtn").classList.toggle("d-none",i===0);
-        document.getElementById("nextBtn").classList.toggle("d-none",i===steps.length-1);
-        document.getElementById("submitBtn").classList.toggle("d-none",i!==steps.length-1);
-        document.getElementById("step").value=steps[i];
+  function openModal(mode='create'){
+    modal.dataset.mode = mode;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+  function closeModal(){
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    // reset to create state
+    modal.dataset.mode = 'create';
+    modalTitle.textContent = 'Create New Record';
+    delete modal.dataset.employeeId;
+    form.reset();
+    document.getElementById('employee_id').value = '';
+    document.getElementById('add_new_designation').checked = false;
+    document.getElementById('new_designation_title').disabled = true;
+    document.getElementById('date_of_resignation').disabled = true;
+    document.getElementById('designation_id').disabled = false;
+    currentStep = 0;
+    showStep(currentStep);
+  }
+
+  openBtn && openBtn.addEventListener('click', () => {
+    modalTitle.textContent = 'Create New Record - Step 1';
+    openModal('create');
+  });
+  closeBtn && closeBtn.addEventListener('click', closeModal);
+  cancelBtn && cancelBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if(e.target === modal) closeModal(); // click outside closes
+  });
+
+  // ===== Dropdown + data loaders (same endpoints, pure fetch) =====
+  const companyId = modal.dataset.companyId;
+
+  async function fetchJSON(url, opts = {}, timeoutMs = 8000){
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+    try{
+      const res = await fetch(url, {
+        headers:{
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        },
+        signal: controller.signal,
+        ...opts
+      });
+      clearTimeout(t);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    }catch(err){
+      clearTimeout(t);
+      throw err;
+    }
+  }
+
+  // helper to normalize API list payloads like [], {data:[]}, {results:[]}, {items:[]}
+  function asArray(payload){
+    if(Array.isArray(payload)) return payload;
+    if(payload && Array.isArray(payload.data)) return payload.data;
+    if(payload && Array.isArray(payload.results)) return payload.results;
+    if(payload && Array.isArray(payload.items)) return payload.items;
+    return [];
+  }
+
+  async function fetchDropdownData(){
+    // Department groups + sections
+    try{
+      const raw = await fetchJSON('/payroll/department-groups-sections/');
+      const list = asArray(raw);
+      if(!Array.isArray(list)) throw new Error('Invalid department groups data');
+      populateDepartmentGroups(list);
+    }catch(e){
+      console.error(e);
+      showSnackbar('Error loading department groups', '#dc3545');
+      window.departmentGroups = [];
     }
 
-    openBtn?.addEventListener("click",()=>{currentStep=0;document.getElementById("createForm").reset();showModal();showStep(currentStep);fetchDropdownData();});
-    cancelBtn.addEventListener("click",hideModal);
-    document.getElementById("prevBtn").addEventListener("click",()=>{if(currentStep>0){currentStep--;showStep(currentStep);}});
-    document.getElementById("nextBtn").addEventListener("click",()=>{submitStep(false);});
-    document.getElementById("submitBtn").addEventListener("click",()=>{submitStep(true);});
-
-    // AJAX - fetch dropdowns (from old file)
-    async function fetchDropdownData(){
-        const companyId=modal.dataset.companyId;
-        const deptGroup=document.getElementById("department_group_id");
-        const section=document.getElementById("section_id");
-        const designation=document.getElementById("designation_id");
-        const location=document.getElementById("location_id");
-        deptGroup.innerHTML=""; section.innerHTML=""; designation.innerHTML=""; location.innerHTML="";
-        // Example endpoints (adjust if needed)
-        await populateSelect(`/payroll/get-department-groups/${companyId}/`,deptGroup);
-        await populateSelect(`/payroll/get-sections/${companyId}/`,section);
-        await populateSelect(`/payroll/get-designations/${companyId}/`,designation);
-        await populateSelect(`/payroll/get-locations/${companyId}/`,location);
+    // Designations
+    try{
+      const d = await fetchJSON(`/payroll/designations/?company_id=${companyId}`);
+      const list = asArray(d);
+      populateDesignations(list);
+    }catch(e){
+      console.error(e);
+      showSnackbar('Error loading designations', '#dc3545');
     }
-    async function populateSelect(url,select){
-        try{
-            const res=await fetch(url);
-            const data=await res.json();
-            data.forEach(opt=>{
-                const o=document.createElement("option");
-                o.value=opt.id;o.textContent=opt.name||opt.title||opt.location;
-                select.appendChild(o);
+
+    // Locations
+    try{
+      const l = await fetchJSON('/payroll/locations/');
+      const list = asArray(l);
+      populateLocations(list);
+    }catch(e){
+      console.error(e);
+      showSnackbar('Error loading locations', '#dc3545');
+    }
+
+    // Employee status choices (static, as in your current code)
+    function populateEmployeeStatusDropdown() {
+      const select = document.getElementById('emp_status_id');
+      select.innerHTML = `
+          <option value="">Select Employee Status</option>
+          <option value="P">P</option>
+          <option value="C">C</option>
+      `;
+      window.employeeStatusChoices = [
+          { id: 'P', status: 'Permanent' },
+          { id: 'C', status: 'Contract' }
+      ];
+    }
+    populateEmployeeStatusDropdown();
+
+    /*
+    // If you later re-enable server-driven choices, restore this block and remove the static one above.
+    try{
+      const s = await fetchJSON('/payroll/employee-status-choices/');
+      const list = asArray(s);
+      populateEmployeeStatusDropdown(list);
+    }catch(e){
+      console.error(e);
+      showSnackbar('Error loading employee status choices', '#dc3545');
+      window.employeeStatusChoices = [];
+    }
+    */
+  }
+
+  function populateDepartmentGroups(data){
+    const select = document.getElementById('department_group_id');
+    select.innerHTML = '<option value="">Select Department Group</option>';
+    window.departmentGroups = [];
+    data.forEach(dept=>{
+      const opt = document.createElement('option');
+      opt.value = dept.id;
+      opt.textContent = dept.name;
+      select.appendChild(opt);
+      window.departmentGroups.push({ id: dept.id, name: dept.name, sections: dept.sections || [] });
+    });
+  }
+  function populateDesignations(data){
+    const select = document.getElementById('designation_id');
+    select.innerHTML = '<option value="">Select Designation</option>';
+    data.forEach(d=>{
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.title;
+      select.appendChild(opt);
+    });
+  }
+  function populateLocations(data){
+    const select = document.getElementById('location_id');
+    select.innerHTML = '<option value="">Select Location</option>';
+    data.forEach(l=>{
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = l.location;
+      select.appendChild(opt);
+    });
+  }
+  function populateEmployeeStatusDropdown(data){
+    const select = document.getElementById('emp_status_id');
+    select.innerHTML = '<option value="">Select Employee Status</option>';
+    window.employeeStatusChoices = [];
+    data.forEach(choice=>{
+      const opt = document.createElement('option');
+      opt.value = choice.id;
+      opt.textContent = choice.status;
+      select.appendChild(opt);
+      window.employeeStatusChoices.push({ id: choice.id, status: choice.status });
+    });
+  }
+  function populateSections(groupId){
+    const select = document.getElementById('section_id');
+    select.innerHTML = '<option value="">Select Section</option>';
+    if(!groupId || !window.departmentGroups) return;
+    const g = window.departmentGroups.find(x=> x.id === parseInt(groupId));
+    (g?.sections || []).forEach(s=>{
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name;
+      select.appendChild(opt);
+    });
+  }
+
+  // Load dropdowns on DOM ready
+  document.addEventListener('DOMContentLoaded', fetchDropdownData);
+
+  // ===== Form interactivity =====
+  const resignDropdown = document.getElementById('resign');
+  const resignationInput = document.getElementById('date_of_resignation');
+  resignDropdown.addEventListener('change', function(){
+    const yes = this.value === 'true';
+    resignationInput.disabled = !yes;
+    if(!yes) resignationInput.value = '';
+  });
+
+  const addNewDesignationCheckbox = document.getElementById('add_new_designation');
+  const newDesignationInput = document.getElementById('new_designation_title');
+  const designationSelect = document.getElementById('designation_id');
+  addNewDesignationCheckbox.addEventListener('change', function(){
+    const on = this.checked;
+    newDesignationInput.disabled = !on;
+    designationSelect.disabled = on;
+    if(!on){
+      newDesignationInput.value = '';
+      designationSelect.value = '';
+    }
+  });
+
+  document.getElementById('department_group_id').addEventListener('change', function(){
+    populateSections(this.value);
+  });
+
+  async function createNewDesignation(){
+    const title = newDesignationInput.value.trim();
+    if(!title){ showSnackbar('Enter designation title', '#dc3545'); return null; }
+    try{
+      const res = await fetch('/payroll/designations/create/',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'X-Requested-With':'XMLHttpRequest',
+          'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ title, company: companyId })
+      });
+      if(!res.ok) throw new Error('Failed to create designation');
+      const result = await res.json();
+      if(result.error){ showSnackbar(result.error, '#dc3545'); return null; }
+      return result;
+    }catch(e){
+      console.error(e);
+      showSnackbar('Error creating designation', '#dc3545');
+      return null;
+    }
+  }
+
+  function validateEmployeeStep(){
+    const errors = [];
+    const q = sel => form.querySelector(sel);
+    if(!q('#fullname').value.trim()) errors.push('Full Name is required');
+    if(!q('#department_group_id').value) errors.push('Department Group is required');
+    if(!q('#section_id').value) errors.push('Section is required');
+    if(!q('#location_id').value) errors.push('Location is required');
+    if(!q('#date_of_joining').value) errors.push('Date of Joining is required');
+    if(q('#resign').value === 'true' && !q('#date_of_resignation').value.trim()) errors.push('Date of Resignation is required');
+    if(addNewDesignationCheckbox.checked && !newDesignationInput.value.trim()) errors.push('New Designation Title is required when adding a new designation');
+    if(!addNewDesignationCheckbox.checked && !designationSelect.value) errors.push('Designation is required');
+    return errors;
+  }
+
+  async function fetchEmployeeData(employeeId){
+    try{
+      const d = await fetchJSON(`/payroll/get-data/employee/${employeeId}/`);
+      if(d.error || !d.data || !d.data.employee) throw new Error(d.error || 'Invalid employee data');
+      return d.data;
+    }catch(e){
+      console.error(e);
+      showSnackbar('Error fetching employee data', '#dc3545');
+      return null;
+    }
+  }
+
+  function populateForm(data){
+    const q = sel => form.querySelector(sel);
+    q('#fullname').value = data.employee.fullname || '';
+    q('#department_group_id').value = data.employee.department_group_id || '';
+    populateSections(data.employee.department_group_id);
+    q('#section_id').value = data.employee.section_id || '';
+    q('#designation_id').value = data.employee.designation_id || '';
+    addNewDesignationCheckbox.checked = false;
+    newDesignationInput.disabled = true;
+    designationSelect.disabled = false;
+    newDesignationInput.value = '';
+    q('#location_id').value = data.employee.location_id || '';
+    q('#date_of_joining').value = data.employee.date_of_joining || '';
+    q('#resign').value = data.employee.resign ? 'true' : 'false';
+    resignationInput.disabled = !data.employee.resign;
+    q('#date_of_resignation').value = data.employee.date_of_resignation || '';
+    q('#remarks').value = data.employee.remarks || '';
+
+    q('#gross_salary').value = data.current_package.gross_salary || '';
+    q('#vehicle').value = data.current_package.vehicle || '';
+    q('#fuel_limit').value = data.current_package.fuel_limit || '';
+    q('#mobile_allowance').value = data.current_package.mobile_allowance || '';
+
+    q('#increment_percentage').value = data.proposed_package.increment_percentage || '';
+    q('#increased_fuel_amount').value = data.proposed_package.increased_fuel_amount || '';
+    q('#mobile_allowance_proposed').value = data.proposed_package.mobile_allowance || '';
+    q('#vehicle_proposed').value = data.proposed_package.vehicle || '';
+
+    q('#emp_status_id').value = data.financial_impact.emp_status_id || '';
+  }
+
+  // ===== Multi-step form logic =====
+  const steps = ['employee','current_package','proposed_package','financial_impact'];
+  let currentStep = 0;
+
+  function showStep(stepIndex){
+    document.querySelectorAll('.step').forEach((el, i)=>{
+      el.classList.toggle('hidden', i !== stepIndex);
+    });
+    document.getElementById('step').value = steps[stepIndex];
+    document.getElementById('prevBtn').classList.toggle('hidden', stepIndex === 0);
+    document.getElementById('nextBtn').classList.toggle('hidden', stepIndex === steps.length - 1);
+    document.getElementById('submitBtn').classList.toggle('hidden', stepIndex !== steps.length - 1);
+    const mode = modal.dataset.mode === 'edit' ? 'Edit Record' : 'Create New Record';
+    modalTitle.textContent = `${mode} - Step ${stepIndex+1}`;
+  }
+  showStep(currentStep);
+
+  async function handleFormSubmission(formData, step){
+    if(step === 'employee'){
+      const errs = validateEmployeeStep();
+      if(errs.length){
+        alert('Please fix the following errors:\n- ' + errs.join('\n- '));
+        return null;
+      }
+      if(addNewDesignationCheckbox.checked){
+        const created = await createNewDesignation();
+        if(created){
+          formData.set('designation_id', created.id);
+          // refresh designation list
+          try{
+            const data = await fetchJSON(`/payroll/designations/?company_id=${companyId}`);
+            populateDesignations(asArray(data));
+            designationSelect.value = created.id;
+          }catch(e){ console.error('refresh designations failed', e); }
+        }else{
+          return null;
+        }
+      }
+    }
+    return formData;
+  }
+
+  // Next button
+  document.getElementById('nextBtn').addEventListener('click', async function(){
+    let formData = new FormData(form);
+    formData = await handleFormSubmission(formData, steps[currentStep]);
+    if(!formData) return;
+
+    const isEdit = modal.dataset.mode === 'edit';
+    const url = isEdit ? `/payroll/update-data/{{ department_id }}/` : `/payroll/create-data/{{ department_id }}/`;
+    if(isEdit) formData.append('employee_id', modal.dataset.employeeId);
+
+    try{
+      let headers = { 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' };
+      let body = formData;
+      let method = isEdit ? 'PATCH' : 'POST';
+
+      if(isEdit){
+        headers['X-CSRFToken'] = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        headers['Content-Type'] = 'application/json';
+        const obj = {};
+        for(const [k,v] of formData.entries()){
+          if(k === 'csrfmiddlewaretoken') continue;
+          obj[k] = v;
+        }
+        body = JSON.stringify(obj, null, 2);
+      }
+
+      const res = await fetch(url, { method, headers, body });
+      if(!res.ok) throw new Error('Failed to save step');
+      const result = await res.json();
+      if(result.error){ alert(result.error); return; }
+      if(result.employee_id) document.getElementById('employee_id').value = result.employee_id;
+
+      currentStep++;
+      if(currentStep < steps.length){
+        showStep(currentStep);
+        if(!isEdit){
+          // clear visible fields for next step UX (keep hidden fields)
+          form.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input=>{
+            if(['employee_id','step','csrfmiddlewaretoken'].includes(input.id)) return;
+            input.value = '';
+          });
+          addNewDesignationCheckbox.checked = false;
+          newDesignationInput.disabled = true;
+          designationSelect.disabled = false;
+        }
+      }
+    }catch(e){
+      console.error(e);
+      alert('Error saving step: ' + e.message);
+    }
+  });
+
+  // Submit button
+  document.getElementById('submitBtn').addEventListener('click', async function(){
+    let formData = new FormData(form);
+    formData = await handleFormSubmission(formData, steps[currentStep]);
+    if(!formData) return;
+
+    const isEdit = modal.dataset.mode === 'edit';
+    const url = isEdit ? `/payroll/update-data/{{ department_id }}/` : `/payroll/create-data/{{ department_id }}/`;
+    if(isEdit) formData.append('employee_id', modal.dataset.employeeId);
+
+    try{
+      let headers = { 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' };
+      let body = formData;
+      let method = isEdit ? 'PATCH' : 'POST';
+
+      if(isEdit){
+        headers['X-CSRFToken'] = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        headers['Content-Type'] = 'application/json';
+        const obj = {};
+        for(const [k,v] of formData.entries()){
+          if(k === 'csrfmiddlewaretoken') continue;
+          obj[k] = v;
+        }
+        body = JSON.stringify(obj, null, 2);
+      }
+
+      const res = await fetch(url, { method, headers, body });
+      if(!res.ok) throw new Error('Failed to save final step');
+      const result = await res.json();
+      if(result.error){
+        alert(result.error);
+      }else{
+        closeModal();
+        // you already have showSnackbar; use it for success
+        showSnackbar('Saved successfully');
+        // reload to refresh table state
+        window.location.reload();
+      }
+    }catch(e){
+      console.error(e);
+      alert('Error saving final step: ' + e.message);
+    }
+  });
+
+  // Prev button
+  document.getElementById('prevBtn').addEventListener('click', function(){
+    if(currentStep > 0){
+      currentStep--;
+      showStep(currentStep);
+    }
+  });
+
+  // ===== Row actions (Edit/Delete) =====
+  // Expecting buttons with classes .edit-employee-btn / .delete-employee-btn inside table rows
+  function bindRowActions(){
+    document.querySelectorAll('.edit-employee-btn').forEach(btn=>{
+      btn.addEventListener('click', async function(){
+        const tr = this.closest('tr');
+        const employeeId = tr?.dataset?.employeeId;
+        if(!employeeId){ alert('Invalid employee ID'); return; }
+
+        // ensure dropdowns loaded first
+        if(!window.departmentGroups || !window.employeeStatusChoices){
+          await fetchDropdownData();
+        }
+        const data = await fetchEmployeeData(employeeId);
+        if(data){
+          modal.dataset.mode = 'edit';
+          modal.dataset.employeeId = employeeId;
+          modalTitle.textContent = 'Edit Record - Step 1';
+          populateForm(data);
+          openModal('edit');
+        }
+      });
+    });
+
+    document.querySelectorAll('.delete-employee-btn').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        const tr = this.closest('tr');
+        const employeeId = tr?.dataset?.employeeId;
+        if(!employeeId){ alert('Invalid employee ID'); return; }
+
+        // Use your global confirm popup from base.html
+        showConfirmPopup('Are you sure you want to delete this employee?', async ()=>{
+          try{
+            const res = await fetch(`/payroll/delete-data/employee/${employeeId}/`, {
+              method:'DELETE',
+              headers:{
+                'X-Requested-With':'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+                'Accept': 'application/json'
+              }
             });
-        }catch(e){console.error("Dropdown fetch error",e);}
-    }
-
-    // AJAX - create/edit steps
-    async function submitStep(isFinal){
-        const form=document.getElementById("createForm");
-        const formData=new FormData(form);
-        formData.append("step",steps[currentStep]);
-        const deptId=modal.dataset.departmentId;
-        try{
-            const res=await fetch(`/payroll/department-table/${deptId}/create/`,{
-                method:"POST",
-                body:formData,
-                headers:{"X-Requested-With":"XMLHttpRequest"}
-            });
-            const data=await res.json();
-            if(data.employee_id){document.getElementById("employee_id").value=data.employee_id;}
-            if(isFinal){hideModal();location.reload();}
-            else{currentStep++;showStep(currentStep);}
-        }catch(e){console.error("Submit error",e);}
-    }
-
-    // DELETE employee
-    document.querySelectorAll(".delete-employee-btn").forEach(btn=>{
-        btn.addEventListener("click",async e=>{
-            const empId=e.target.closest("tr").dataset.employeeId;
-            if(confirm("Delete this employee?")){
-                try{
-                    await fetch(`/payroll/employees/${empId}/delete/`,{method:"DELETE",headers:{"X-CSRFToken":document.querySelector("[name=csrfmiddlewaretoken]").value}});
-                    location.reload();
-                }catch(e){console.error("Delete error",e);}
+            if(!res.ok) throw new Error('Failed to delete employee');
+            const out = await res.json();
+            if(out.error){
+              showSnackbar(out.error, '#dc3545');
+            }else{
+              showSnackbar('Deleted successfully');
+              window.location.reload();
             }
+          }catch(e){
+            console.error(e);
+            showSnackbar('Error deleting employee', '#dc3545');
+          }
         });
+      });
     });
+  }
 
-    // EDIT employee (prefill + open modal)
-    document.querySelectorAll(".edit-employee-btn").forEach(btn=>{
-        btn.addEventListener("click",async e=>{
-            const empId=e.target.closest("tr").dataset.employeeId;
-            try{
-                const res=await fetch(`/payroll/employees/${empId}/`);
-                const data=await res.json();
-                document.getElementById("fullname").value=data.fullname;
-                document.getElementById("department_group_id").value=data.department_group_id;
-                document.getElementById("section_id").value=data.section_id;
-                document.getElementById("designation_id").value=data.designation_id;
-                document.getElementById("location_id").value=data.location_id;
-                document.getElementById("remarks").value=data.remarks;
-                document.getElementById("employee_id").value=empId;
-                currentStep=0;showStep(currentStep);showModal();
-            }catch(e){console.error("Edit fetch error",e);}
-        });
-    });
+  // Bind once DOM has table
+  document.addEventListener('DOMContentLoaded', bindRowActions);
 
-});
+})();
 </script>
 {% endblock %}

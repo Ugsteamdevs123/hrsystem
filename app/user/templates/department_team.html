@@ -1,235 +1,348 @@
 {% extends 'base.html' %}
-{% block title %}Add Department{% endblock %}
+{% block title %}View Departments{% endblock %}
 
 {% block content %}
-<div>
-    <h1 class="mb-3" style="color:#0d6efd;">Add Department</h1>
+<h2>All Departments</h2>
 
-    <div style="background:#f8f9fa; padding:20px; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1); max-width:600px;">
+<!-- Add Department Button -->
+{% if perms.user.add_departmentteams %}
+<button class="form-btn btn-add" onclick="openAddModal()">Add New Department</button>
+{% endif %}
+
+<!-- Company Dropdown -->
+<div style="margin-top: 15px; margin-bottom: 15px;">
+    <label for="company-select" style="display:block; margin-bottom:5px;">Select Company</label>
+    <select id="company-select" style="width:50%; padding:8px; border-radius:4px; border:1px solid #ced4da; font-size: 14px;">
+        <option value="" selected>Select a company</option>
+    </select>
+</div>
+
+<!-- Departments Table -->
+<div id="departments-table">
+    <p class="muted">Select a company to view departments.</p>
+</div>
+
+<!-- Add/Edit Department Popup -->
+<div id="departmentPopup" class="popup-overlay">
+    <div class="popup-content" style="width: 350px; padding: 30px;">
+        <h5 id="departmentPopupLabel" style="margin-bottom: 20px; font-size: 18px; color: #343a40; text-align: center;">Add Department</h5>
         <form id="departmentForm">
-            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            {% csrf_token %}
+            <input type="hidden" id="department-id" name="id">
 
-            <div style="margin-bottom:15px;">
-                <label for="company-select" style="display:block; margin-bottom:5px;">Select Company</label>
-                <select id="company-select" name="company_id" style="width:50%; padding:6px 8px; border-radius:4px; border:1px solid #ced4da;" required onchange="fetchDepartments()">
+            <div style="margin-bottom: 15px;">
+                <label for="modal-company-select" style="display: block; margin-bottom: 5px; font-weight: bold; color: #343a40;">Select Company</label>
+                <select id="modal-company-select" name="company_id" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ced4da; font-size: 14px;" required>
                     <option value="" selected>Select a company</option>
                 </select>
             </div>
 
-            <div style="margin-bottom:15px;">
-                <label for="department-name" style="display:block; margin-bottom:5px;">Department Name</label>
-                <input type="text" id="department-name" name="name" style="width:50%; padding:6px 8px; border-radius:4px; border:1px solid #ced4da;" required>
+            <div style="margin-bottom: 15px;">
+                <label for="department-name" style="display: block; margin-bottom: 5px; font-weight: bold; color: #343a40;">Department Name</label>
+                <input type="text" id="department-name" name="name" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ced4da; font-size: 14px;" required>
             </div>
 
-            <button type="submit" style="padding:8px 16px; border:none; border-radius:5px; background:#0d6efd; color:#fff; cursor:pointer;">Add Department</button>
+            <div id="form-message" style="margin-bottom: 15px; text-align: center;"></div>
+            <div style="display: flex; justify-content: center; gap: 10px;">
+                <button type="submit" class="popup-btn yes-btn">Save</button>
+                <button type="button" class="popup-btn no-btn" onclick="closeDepartmentPopup()">Cancel</button>
+            </div>
         </form>
-
-        <div id="form-message" style="margin-top:15px;"></div>
-
-        <div id="departments-table" style="margin-top:20px;">
-            <p class="muted">Select a company to view departments.</p>
-        </div>
     </div>
 </div>
 
 <style>
-    /* Custom table styling consistent with base.html */
-    .custom-table {
-        border-collapse: collapse;
+/* Table styling (consistent with view_company.html) */
+table {
+    border-collapse: collapse;
+    margin-top: 15px;
+    width: 100%;
+}
+th, td {
+    text-align: left;
+    padding: 10px;
+    border: 1px solid #dee2e6;
+}
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+/* Buttons (consistent with view_company.html) */
+.form-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+.btn-add {
+    background-color: #28a745;
+    color: #fff;
+}
+.btn-add:hover {
+    background-color: #218838;
+}
+
+.action-btn {
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-block;
+    margin-right: 5px;
+    border: none; /* Ensure no border on action buttons */
+}
+.edit-btn {
+    background-color: #007bff;
+}
+.edit-btn:hover {
+    background-color: #0056b3;
+}
+.delete-btn {
+    background-color: #dc3545;
+}
+.delete-btn:hover {
+    background-color: #c82333;
+}
+
+/* Enhanced Popup Styling */
+.popup-content {
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+.popup-content h5 {
+    color: #343a40;
+    font-weight: bold;
+}
+.popup-content label {
+    color: #343a40;
+}
+.popup-content input, .popup-content select {
+    border: 1px solid #ced4da;
+    transition: border-color 0.2s;
+}
+.popup-content input:focus, .popup-content select:focus {
+    border-color: #007bff;
+    outline: none;
+}
+.popup-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 5px;
+    min-width: 80px;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    table, th, td {
+        font-size: 14px;
+    }
+    .form-btn, .action-btn {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+    #company-select {
         width: 100%;
-        margin-top: 15px;
     }
-    .custom-table th, .custom-table td {
-        min-width: 120px;
-        padding: 10px;
-        border: 1px solid #dee2e6;
+    .popup-content {
+        width: 90%;
+        padding: 20px;
     }
-    .custom-table th {
-        background-color: #e9ecef;
-        font-weight: bold;
-        text-align: left;
+    .popup-content div[style*="justify-content: center"] {
+        flex-direction: column;
+        gap: 8px;
     }
-    .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
-    .custom-table tr:nth-child(odd) { background-color: #ffffff; }
-    .custom-table .editable-cell {
-        background-color: #e6f3ff;
-        cursor: text;
-    }
-    .custom-table .editable-cell:hover { background-color: #cce5ff; }
-    .custom-table button {
-        padding: 4px 8px;
-        margin-right: 5px;
-        border-radius: 4px;
-        border: none;
-        cursor: pointer;
-        font-size: 13px;
-    }
-    .btn-edit { background:#0d6efd; color:#fff; }
-    .btn-save { background:#198754; color:#fff; }
-    .btn-delete { background:#dc3545; color:#fff; }
+}
 </style>
 
 <script>
-let selectedDepartmentId = null;
+let companyData = [];
+let editingDepartmentId = null;
 
-// Fetch companies and populate dropdown
-async function fetchCompaniesAndDepartmentTeams() {
+// Fetch companies and populate dropdowns
+async function fetchCompanies() {
     try {
         const response = await fetch("{% url 'get_companies_and_department_teams' %}", {
             method: 'GET',
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         });
         if (!response.ok) throw new Error('Failed to fetch companies');
-
         const data = await response.json();
-        const companySelect = document.getElementById('company-select');
-        const selectedCompanyId = companySelect.value;
-        companySelect.innerHTML = '<option value="" selected>Select a company</option>';
-        window.companyData = data.data;
+        companyData = data.data;
 
-        data.data.forEach(company => {
-            companySelect.innerHTML += `<option value="${company.company_id}">${company.company_name}</option>`;
+        const mainSelect = document.getElementById('company-select');
+        const modalSelect = document.getElementById('modal-company-select');
+
+        mainSelect.innerHTML = '<option value="" selected>Select a company</option>';
+        modalSelect.innerHTML = '<option value="" selected>Select a company</option>';
+
+        companyData.forEach(c => {
+            mainSelect.innerHTML += `<option value="${c.company_id}">${c.company_name}</option>`;
+            modalSelect.innerHTML += `<option value="${c.company_id}">${c.company_name}</option>`;
         });
 
-        if (selectedCompanyId) companySelect.value = selectedCompanyId;
+        // Refresh departments if a company is already selected
         fetchDepartments();
-
-    } catch (error) {
-        console.error(error);
-        document.getElementById('form-message').innerHTML = '<p style="color:#dc3545;">Error fetching companies.</p>';
+    } catch(err) {
+        console.error(err);
+        showSnackbar('Error fetching companies', '#dc3545');
     }
 }
 
-// Render departments table
+// Fetch departments when company selected
 function fetchDepartments() {
     const companySelect = document.getElementById('company-select');
     const companyId = companySelect.value;
-    const departmentsTable = document.getElementById('departments-table');
+    const tableDiv = document.getElementById('departments-table');
 
     if (!companyId) {
-        departmentsTable.innerHTML = '<p class="muted">Select a company to view departments.</p>';
+        tableDiv.innerHTML = '<p class="muted">Select a company to view departments.</p>';
         return;
     }
 
-    const company = window.companyData.find(c => c.company_id == companyId);
+    const company = companyData.find(c => c.company_id == companyId);
     if (!company || !company.departments || company.departments.length === 0) {
-        departmentsTable.innerHTML = '<p class="muted">No departments found for this company.</p>';
+        tableDiv.innerHTML = '<p class="muted">No departments found for this company.</p>';
         return;
     }
 
-    let html = '<h6 style="margin-bottom:10px;">Registered Departments</h6>';
-    html += '<table class="custom-table"><thead><tr><th>Department Name</th><th>Actions</th></tr></thead><tbody>';
-    company.departments.forEach(dept => {
-        html += `<tr data-department-id="${dept.id}">`;
-        html += `<td class="editable-cell" contenteditable="false">${dept.name}</td>`;
-        html += `<td>`;
-        html += `<button class="btn-edit">Edit</button>`;
-        html += `<button class="btn-save" style="display:none;">Save</button>`;
-        html += `<button class="btn-delete">Delete</button>`;
-        html += `</td></tr>`;
+    let html = `
+        <table border="1" cellpadding="8" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th>SR.No</th>
+                    <th>Department Name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    company.departments.forEach((dept, index) => {
+        html += `
+            <tr data-id="${dept.id}">
+                <td>${index + 1}</td>
+                <td>${dept.name}</td>
+                <td>
+                    {% if perms.user.change_departmentteams %}
+                    <button class="action-btn edit-btn" onclick="openEditModal(${dept.id}, '${dept.name}', ${company.company_id})">Update</button>
+                    {% endif %}
+                    {% if perms.user.delete_departmentteams %}
+                    <button class="action-btn delete-btn" onclick="showConfirmPopup('Are you sure you want to delete this department?', function(){ deleteDepartment(${dept.id}); })">Delete</button>
+                    {% endif %}
+                </td>
+            </tr>
+        `;
     });
     html += '</tbody></table>';
-    departmentsTable.innerHTML = html;
-
-    // Edit / Save buttons
-    document.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', function(){
-            const row = this.closest('tr');
-            row.querySelector('.editable-cell').contentEditable = 'true';
-            row.querySelector('.editable-cell').focus();
-            this.style.display = 'none';
-            row.querySelector('.btn-save').style.display = 'inline-block';
-        });
-    });
-
-    document.querySelectorAll('.btn-save').forEach(btn => {
-        btn.addEventListener('click', async function(){
-            const row = this.closest('tr');
-            const id = row.dataset.departmentId;
-            const value = row.querySelector('.editable-cell').textContent.trim();
-            if (!value) { alert('Department name cannot be empty'); fetchDepartments(); return; }
-
-            try {
-                const response = await fetch("{% url 'department_team' %}", {
-                    method: 'PATCH',
-                    headers: {
-                        'X-Requested-With':'XMLHttpRequest',
-                        'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({id, name:value})
-                });
-                if (!response.ok) throw new Error('Failed to update');
-                const result = await response.json();
-                if (result.error) { alert(result.error); fetchDepartments(); return; }
-
-                row.querySelector('.editable-cell').contentEditable = 'false';
-                this.style.display = 'none';
-                row.querySelector('.btn-edit').style.display = 'inline-block';
-                fetchCompaniesAndDepartmentTeams();
-
-            } catch(err){ console.error(err); alert('Error updating department'); fetchDepartments(); }
-        });
-    });
-
-    // Delete buttons
-    document.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.addEventListener('click', function(){
-            selectedDepartmentId = this.closest('tr').dataset.departmentId;
-            showConfirmPopup(
-                'Deleting this department will also delete associated increment summaries and employee increment details. Are you sure?',
-                async function(){
-                    try {
-                        const response = await fetch("{% url 'department_team' %}", {
-                            method: 'DELETE',
-                            headers: {
-                                'X-Requested-With':'XMLHttpRequest',
-                                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({id:selectedDepartmentId})
-                        });
-                        if (!response.ok) throw new Error('Failed to delete');
-                        const result = await response.json();
-                        if (result.error) alert(result.error);
-                        fetchCompaniesAndDepartmentTeams();
-                    } catch(err){ console.error(err); alert('Error deleting department'); }
-                    selectedDepartmentId = null;
-                }
-            );
-        });
-    });
+    tableDiv.innerHTML = html;
 }
 
-// Form submission
-document.getElementById('departmentForm').addEventListener('submit', async function(e){
+// Open modal for adding
+function openAddModal() {
+    editingDepartmentId = null;
+    document.getElementById('departmentPopupLabel').innerText = 'Add Department';
+    document.getElementById('departmentForm').reset();
+    document.getElementById('form-message').innerHTML = '';
+    document.getElementById('modal-company-select').value = document.getElementById('company-select').value || '';
+    document.getElementById('departmentPopup').style.display = 'flex';
+}
+
+// Open modal for editing
+function openEditModal(id, name, companyId) {
+    editingDepartmentId = id;
+    document.getElementById('departmentPopupLabel').innerText = 'Edit Department';
+    document.getElementById('department-id').value = id;
+    document.getElementById('department-name').value = name;
+    document.getElementById('modal-company-select').value = companyId;
+    document.getElementById('form-message').innerHTML = '';
+    document.getElementById('departmentPopup').style.display = 'flex';
+}
+
+// Close modal
+function closeDepartmentPopup() {
+    document.getElementById('departmentPopup').style.display = 'none';
+}
+
+// Add/Edit department with confirmation
+document.getElementById('departmentForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
-    const companyId = document.getElementById('company-select').value;
+    const companyId = document.getElementById('modal-company-select').value;
     const departmentName = document.getElementById('department-name').value.trim();
     const msg = document.getElementById('form-message');
+    const deptId = editingDepartmentId;
 
-    if (!companyId) { msg.innerHTML = '<p style="color:#dc3545;">Please select a company.</p>'; return; }
-    if (!departmentName) { msg.innerHTML = '<p style="color:#dc3545;">Please enter a department name.</p>'; return; }
+    if (!companyId) {
+        msg.innerHTML = '<p style="color:#dc3545;">Please select a company.</p>';
+        return;
+    }
+    if (!departmentName) {
+        msg.innerHTML = '<p style="color:#dc3545;">Please enter a department name.</p>';
+        return;
+    }
 
-    const formData = new FormData(this);
-    try {
-        const response = await fetch("{% url 'department_team' %}", {
-            method:'POST',
-            headers:{'X-Requested-With':'XMLHttpRequest'},
-            body: formData
-        });
-        if (!response.ok) throw new Error('Failed to add department');
-        const result = await response.json();
-        if (result.error) { msg.innerHTML = `<p style="color:#dc3545;">${result.error}</p>`; }
-        else {
-            msg.innerHTML = '<p style="color:#28a745;">Department added successfully!</p>';
-            document.getElementById('department-name').value = '';
-            fetchCompaniesAndDepartmentTeams();
+    showConfirmPopup(`Are you sure you want to ${deptId ? 'update' : 'add'} this department?`, async function() {
+        const formData = new FormData(document.getElementById('departmentForm'));
+        if (deptId) formData.append('id', deptId);
+
+        try {
+            const response = await fetch("{% url 'department_team' %}", {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            });
+            if (!response.ok) throw new Error('Failed to save department');
+            const result = await response.json();
+            if (result.error) {
+                msg.innerHTML = `<p style="color:#dc3545;">${result.error}</p>`;
+            } else {
+                showSnackbar(`Department ${deptId ? 'updated' : 'added'} successfully!`, '#28a745');
+                await fetchCompanies(); // Refresh data and table
+                closeDepartmentPopup();
+            }
+        } catch(err) {
+            console.error(err);
+            msg.innerHTML = '<p style="color:#dc3545;">Error saving department.</p>';
         }
-    } catch(err){ console.error(err); msg.innerHTML = '<p style="color:#dc3545;">Error adding department.</p>'; }
+    });
 });
 
+// Delete department
+async function deleteDepartment(id) {
+    try {
+        const response = await fetch("{% url 'department_team' %}", {
+            method: 'DELETE',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        if (!response.ok) throw new Error('Failed to delete');
+        const result = await response.json();
+        if (result.error) {
+            showSnackbar(result.error, '#dc3545');
+        } else {
+            showSnackbar('Department deleted successfully!', '#28a745');
+            await fetchCompanies(); // Refresh data and table
+        }
+    } catch(err) {
+        console.error(err);
+        showSnackbar('Error deleting department', '#dc3545');
+    }
+}
+
 // Initialize
-window.onload = fetchCompaniesAndDepartmentTeams;
+window.onload = () => {
+    fetchCompanies();
+    document.getElementById('company-select').addEventListener('change', fetchDepartments);
+};
 </script>
 {% endblock %}
