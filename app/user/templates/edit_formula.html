@@ -39,12 +39,99 @@
 
 <script>
     $(document).ready(function() {
-        $('#field-selector').select2();
+        let lastInsertedField = null;
+
+        // Initialize Select2 for dropdowns
+        $('#field-selector, #id_company, #id_employee, #id_department_team').select2();
+
+        // Update target_field based on target_model
+        $('#id_target_model').on('change', function() {
+            var modelName = $(this).val();
+            if (modelName) {
+                $.ajax({
+                    url: '/pyroll/get-model-fields/',
+                    data: { 'model_name': modelName },
+                    success: function(data) {
+                        var fieldSelect = $('#id_target_field');
+                        fieldSelect.empty();
+                        data.fields.forEach(function(field) {
+                            fieldSelect.append(new Option(field, field));
+                        });
+                        fieldSelect.trigger('change');
+                    }
+                });
+            } else {
+                $('#id_target_field').empty().append('<option value="">Select a field</option>');
+            }
+        });
+
+        // Update department_team and employee based on company
+        $('#id_company').on('change', function() {
+            var companyId = $(this).val();
+            if (companyId) {
+                $.ajax({
+                    url: '/pyroll/get-company-departments-employees/',
+                    data: { 'company_id': companyId },
+                    success: function(data) {
+                        // Update department_team dropdown
+                        var deptSelect = $('#id_department_team');
+                        deptSelect.empty();
+                        deptSelect.append('<option value="">Select a department team</option>');
+                        $.each(data.department_teams, function(index, dept) {
+                            deptSelect.append($('<option>', {
+                                value: dept.id,
+                                text: dept.name
+                            }));
+                        });
+                        deptSelect.trigger('change');
+
+                        // Clear employee dropdown until department is selected
+                        var empSelect = $('#id_employee');
+                        empSelect.empty();
+                        empSelect.append('<option value="">Select an employee (optional)</option>');
+                        empSelect.trigger('change');
+                    }
+                });
+            } else {
+                $('#id_department_team').empty().append('<option value="">Select a department team</option>');
+                $('#id_employee').empty().append('<option value="">Select an employee (optional)</option>');
+            }
+        });
+
+        // Update employee based on department_team and company
+        $('#id_department_team').on('change', function() {
+            var departmentId = $(this).val();
+            var companyId = $('#id_company').val();
+            if (departmentId && companyId) {
+                $.ajax({
+                    url: '/pyroll/get-department-employees/',
+                    data: {
+                        'company_id': companyId,
+                        'department_team_id': departmentId
+                    },
+                    success: function(data) {
+                        var empSelect = $('#id_employee');
+                        empSelect.empty();
+                        empSelect.append('<option value="">Select an employee (optional)</option>');
+                        $.each(data.employees, function(index, emp) {
+                            empSelect.append($('<option>', {
+                                value: emp.id,
+                                text: emp.name
+                            }));
+                        });
+                        empSelect.trigger('change');
+                    }
+                });
+            } else {
+                $('#id_employee').empty().append('<option value="">Select an employee (optional)</option>');
+            }
+        });
+        
         $('#field-selector').on('select2:select', function(e) {
-            var insertText = e.params.data.id;
+            var insertText = e.params.data.id; // e.g., [CurrentPackageDetails: Gross Salary]
             var aggregate = $('#aggregate-selector').val();
             if (aggregate) {
-                insertText = `${aggregate}${insertText}`;
+                insertText = `${aggregate}${insertText}`; // Single bracket: SUM[Model: Field]
             }
             lastInsertedField = insertText;
             var textarea = $('#formula-expression');

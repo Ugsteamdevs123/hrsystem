@@ -48,12 +48,15 @@ def update_department_team_increment_summary(sender, instance, company, departme
 
                 print("fuel_limit: ",fuel_limit)
 
+                # IncrementDetailsSummary.objects.filter(company=company, 
+                #                                     department_team=department_team
+                #                                     ).update(total_employees = employee_count,
+                #                                                 fuel_increment_impact_hod = increased_fuel_amount,
+                #                                                 effective_fuel_percentage_hod = increased_fuel_amount/fuel_limit if fuel_limit>0 else None
+                #                                                 )
                 IncrementDetailsSummary.objects.filter(company=company, 
                                                     department_team=department_team
-                                                    ).update(total_employees = employee_count,
-                                                                fuel_increment_impact_hod = increased_fuel_amount,
-                                                                effective_fuel_percentage_hod = increased_fuel_amount/fuel_limit if fuel_limit>0 else None
-                                                                )
+                                                    ).update(total_employees = employee_count,)
                 print("ProposedPackageDetails")
 
         if sender is FinancialImpactPerMonth:
@@ -167,14 +170,20 @@ def list_fields(model):
 
 from collections import defaultdict, deque
 
-def build_dependency_graph(formulas):
+def build_dependency_graph(formulas, company=None, employee=None, department_team=None):
     graph = defaultdict(list)
     indegree = defaultdict(int)
     formula_targets = set()
 
     for formula in formulas:
         target = (formula.target_model.strip(), formula.target_field.strip().lower())
-        formula_targets.add(target)   # ✅ keep track of only formula fields
+        if company and formula.company != company:
+            continue
+        if employee and formula.employee and formula.employee != employee:
+            continue
+        if department_team and formula.department_team and formula.department_team != department_team:
+            continue
+        formula_targets.add(target)
         expression = formula.formula.formula_expression
 
         if target not in indegree:
@@ -190,32 +199,20 @@ def build_dependency_graph(formulas):
 
     return graph, indegree, formula_targets
 
-
-def topological_sort(formulas):
-    """
-    Perform topological sort on formula dependencies.
-    Returns the list of formula targets in correct evaluation order.
-    """
-    graph, indegree, formula_targets = build_dependency_graph(formulas)
-
-    # Start queue with all zero indegree nodes
+def topological_sort(formulas, company=None, employee=None, department_team=None):
+    graph, indegree, formula_targets = build_dependency_graph(formulas, company, employee, department_team)
     queue = deque([node for node, deg in indegree.items() if deg == 0])
     order = []
 
     while queue:
         node = queue.popleft()
-
-        # ✅ Only add real formula targets to the order
         if node in formula_targets:
             order.append(node)
-
-        # Decrease indegree for dependent nodes
         for neighbor in graph[node]:
             indegree[neighbor] -= 1
             if indegree[neighbor] == 0:
                 queue.append(neighbor)
 
-    # ✅ Detect cycle (if some formulas never reduced indegree to 0)
     if len(order) != len(formula_targets):
         raise ValueError("Cycle detected or unresolved dependencies in formulas!")
 

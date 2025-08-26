@@ -26,4 +26,7 @@ urlpatterns = [
     path('create-formula/', views.create_formula, name='create_formula'),
     path('edit-formula/<int:pk>/', views.edit_formula, name='edit_formula'),
     path('edit-field-formula/<int:pk>/', views.edit_field_formula, name='edit_field_formula'),
+
+    path('get-company-departments-employees/', views.get_company_departments_employees, name='get_company_departments_employees'),
+    path('get-department-employees/', views.get_department_employees, name='get_department_employees'),
 ]

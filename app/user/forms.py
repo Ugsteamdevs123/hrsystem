@@ -1,6 +1,7 @@
 # In app/forms.py
 from django import forms
-from .models import Formula, FieldFormula, FieldReference
+from django.apps import apps
+from .models import Formula, FieldFormula, FieldReference, Employee, Company, DepartmentTeams
 
 
 class FormulaForm(forms.ModelForm):
@@ -15,9 +16,30 @@ class FormulaForm(forms.ModelForm):
 class FieldFormulaForm(forms.ModelForm):
     target_field = forms.ChoiceField(choices=[])
 
+    employee = forms.ModelChoiceField(
+        queryset=Employee.objects.all(),
+        required=False,
+        empty_label="Select an employee (optional)",
+        help_text="Choose an employee for a specific formula, or leave blank for department-wide."
+    )
+
+    company = forms.ModelChoiceField(
+        queryset=Company.objects.all(),
+        required=True,
+        empty_label="Select a company",
+        help_text="Choose the company for this formula."
+    )
+
+    department_team = forms.ModelChoiceField(
+        queryset=DepartmentTeams.objects.all(),
+        required=False,
+        empty_label="Select a department team",
+        help_text="Choose a department team (required if no employee is selected)."
+    )
+
     class Meta:
         model = FieldFormula
-        fields = ['target_model', 'target_field', 'formula', 'description']
+        fields = ['target_model', 'target_field', 'formula', 'company', 'department_team', 'employee', 'description']
         widgets = {
             'target_model': forms.Select(
                 choices=[
@@ -38,7 +60,7 @@ class FieldFormulaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # If editing or form submitted with target_model selected
+				 
         model_name = None
         if 'target_model' in self.data:
             model_name = self.data.get('target_model')
@@ -46,13 +68,57 @@ class FieldFormulaForm(forms.ModelForm):
             model_name = self.instance.target_model
 
         if model_name:
-            from django.apps import apps
+		  
             try:
                 model = apps.get_model("user", model_name)
                 fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
-                self.fields['target_field'].choices = [(f, f) for f in fields]
+                self.fields['target_field'].choices = [(f, f.replace('_', ' ').title()) for f in fields]
             except LookupError:
                 self.fields['target_field'].choices = []
+
+        # Filter department_team and employee based on company
+        company_id = self.data.get('company') if 'company' in self.data else (self.instance.company_id if self.instance.pk else None)
+												 
+        if company_id:
+            self.fields['department_team'].queryset = DepartmentTeams.objects.filter(company_id=company_id)
+            self.fields['employee'].queryset = Employee.objects.filter(company_id=company_id)
+        else:
+            self.fields['department_team'].queryset = DepartmentTeams.objects.none()
+            self.fields['employee'].queryset = Employee.objects.none()
+
+        # Filter employee based on department_team
+        department_team_id = self.data.get('department_team') if 'department_team' in self.data else (self.instance.department_team_id if self.instance.pk else None)
+        if department_team_id and company_id:
+            self.fields['employee'].queryset = Employee.objects.filter(
+                company_id=company_id,
+                department_team_id=department_team_id
+            )
+
+        self.fields['target_model'].required = True
+        self.fields['formula'].required = True
+        self.fields['company'].required = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        employee = cleaned_data.get('employee')
+        department_team = cleaned_data.get('department_team')
+        company = cleaned_data.get('company')
+        # print("cleaned_data: ", cleaned_data)
+        if not company:
+            raise forms.ValidationError("A company must be selected.")
+        if not employee and not department_team:
+            raise forms.ValidationError("Either an employee or a department team must be selected.")
+        if employee and employee.company != company:
+            raise forms.ValidationError("Selected employee must belong to the selected company.")
+        if department_team and department_team.company != company:
+            raise forms.ValidationError("Selected department team must belong to the selected company.")
+        if employee and department_team and employee.department_team != department_team:
+            raise forms.ValidationError("Selected employee must belong to the selected department team.")
+        return cleaned_data
+    
+    # def save(self, commit=True):
+    #     print("Values before saving:", self.cleaned_data)  # Inspect values
+    #     return super().save(commit)
             
 
 

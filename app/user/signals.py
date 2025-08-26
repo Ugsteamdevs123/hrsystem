@@ -18,6 +18,7 @@ def update_increment_summary(sender, instance, created, **kwargs):
     Signal to check the driver wallet amount when a DriverAdditional is saved.
     """
     try:
+
         increment_details_summary = IncrementDetailsSummary.objects.filter(company = instance.employee.company, department_team = instance.employee.department_team)
 
         if not increment_details_summary.exists():
@@ -26,47 +27,66 @@ def update_increment_summary(sender, instance, created, **kwargs):
         update_department_team_increment_summary(sender, instance, instance.employee.company, instance.employee.department_team)
         
 
-        target_models = [ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary]
-        
-        
-        # _, model_cls = get_model_by_name(target_model.__name__)
-        # print("model_cls: ", model_cls)
-        # fields = list_fields(model_cls)
-        # print("fields: ", fields)
+        # target_models = [ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary]
 
-        # graph, indegree = build_dependency_graph(FieldFormula.objects.all())
-        ordered = topological_sort(FieldFormula.objects.all())
+        # Determine context
+        employee = getattr(instance, 'employee', None)
+        company = getattr(instance, 'company', None) or (employee.company if employee else None)
+        department_team = getattr(instance, 'department_team', None) or (employee.department_team if employee else None)
 
+        # Get all formulas for the company
+        formulas = FieldFormula.objects.filter(company=company).select_related('formula')
+
+        # Prioritize employee-specific formulas
+        employee_formulas = formulas.filter(employee=employee, department_team=department_team) if employee else formulas.none()
+        print("employee_formulas: ", employee_formulas)
+        department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
+        print("department_formulas: ", department_formulas)
+        # Combine, prioritizing employee formulas
+        formula_ids = list(employee_formulas.values_list('id', flat=True))
+        formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+        print("formula_ids: ", formula_ids)
+        formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
+
+        if not formulas:
+            print(f"No formulas found for company={company}, department_team={department_team}, employee={employee}")
+            return
+
+        # Topological sort with context
+        ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
         print("ordered: ", ordered)
+
         for model_name, field in ordered:
             print("model_name, field: ", model_name, field)
-            field_formula = FieldFormula.objects.filter(target_model=model_name, target_field=field)
-            print("field_formula", field_formula)
-            # field_formula = FieldFormula.objects.filter(target_model=target_model.__name__, target_field=field)
-            # if not field_formula.exists():
-            #     continue
-            
-            # choose instance depending on model
+            # Prefer employee-specific formula, else department-specific
+            field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
+                           department_formulas.filter(target_model=model_name, target_field=field).first()
+            if not field_formula:
+                print(f"No formula found for {model_name}.{field}")
+                continue
+
+            # Choose instance
             if model_name == "IncrementDetailsSummary":
                 target_instance = IncrementDetailsSummary.objects.filter(
-                    company=instance.employee.company,
-                    department_team=instance.employee.department_team
+                    company=company,
+                    department_team=department_team
                 ).first()
             else:
                 instance.refresh_from_db()
                 target_instance = instance
 
-            field_formula = field_formula.first()
-            expression = field_formula.formula.formula_expression
-            # value = evaluate_formula(target_instance, expression, target_model.__name__)
-            value = evaluate_formula(target_instance, expression, model_name)
-            
-            print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value, '\n')
+            if not target_instance:
+                print(f"No instance found for {model_name} with company={company}, department_team={department_team}")
+                continue
 
-            # **{field: value} upacks them and the 'field' is replaced by its value. e.g., 'gross_salary' and value is will be value e.g., '12'
-            # .update saves without signals recursion
-            Model = apps.get_model('user', model_name)
-            Model.objects.filter(id = target_instance.id).update(**{field: value})
+            expression = field_formula.formula.formula_expression
+            try:
+                value = evaluate_formula(target_instance, expression, model_name)
+                print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)
+                Model = apps.get_model('user', model_name)
+                Model.objects.filter(id=target_instance.id).update(**{field: value})
+            except ValueError as e:
+                print(f"Error evaluating formula for {model_name}.{field}: {e}")
 
     except Exception as e:
         print(f"Error in updating increment summary: {e}")
