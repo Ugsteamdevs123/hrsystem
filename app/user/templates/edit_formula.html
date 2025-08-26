@@ -5,11 +5,21 @@
 <h2>Edit Formula</h2>
 <form method="post">
     {% csrf_token %}
-    <label for="formula_name">Formula Name:</label>
+    <label for="formula_name">Formula Name: <span style="color: red;">*</span></label>
     <input type="text" name="formula_name" value="{{ form.formula_name.value }}" required>
-    <label for="formula-expression">Formula Expression:</label>
-    <textarea id="formula-expression" name="formula_expression" rows="4" style="width: 100%">{{ form.formula_expression.value }}</textarea>
+    <label for="formula-expression">Formula Expression: <span style="color: red;">*</span></label>
+    <textarea id="formula-expression" name="formula_expression" rows="4" style="width: 100%" required>{{ form.formula_expression.value }}</textarea>
     <label for="field-selector">Insert Field:</label>
+    <small style="color: gray; display: block;">
+        Choose how to combine values from other tables (e.g., Sum for total salaries) by choosing an option from 'Combine Values'.
+    </small>
+    <label for="aggregate-selector">Combine Values:</label>
+    <select id="aggregate-selector" style="width: 100px;">
+        <option value="">None</option>
+        <option value="SUM">Sum</option>
+        <option value="AVG">Average</option>
+        <option value="COUNT">Count</option>
+    </select>
     <select id="field-selector" style="width: 300px;">
         <option selected disabled value="[Model: Field]">[Model: Field]</option>
         {% for ref in field_references %}
@@ -32,6 +42,11 @@
         $('#field-selector').select2();
         $('#field-selector').on('select2:select', function(e) {
             var insertText = e.params.data.id;
+            var aggregate = $('#aggregate-selector').val();
+            if (aggregate) {
+                insertText = `${aggregate}${insertText}`;
+            }
+            lastInsertedField = insertText;
             var textarea = $('#formula-expression');
             var current = textarea.val();
             var cursorPos = textarea.prop('selectionStart');
@@ -39,6 +54,19 @@
             textarea.val(newText);
             textarea.focus();
             textarea[0].setSelectionRange(cursorPos + insertText.length, cursorPos + insertText.length);
+        });
+
+        $('#aggregate-selector').on('change', function() {
+            if (!lastInsertedField) return;
+            var newAggregate = $(this).val();
+            var textarea = $('#formula-expression');
+            var current = textarea.val();
+            var baseField = lastInsertedField.match(/\[.*?\]/)[0] || lastInsertedField;
+            var newText = newAggregate ? `${newAggregate}${baseField}` : baseField.replace(/^(SUM|AVG|COUNT)/, '');
+            var updatedText = current.replace(lastInsertedField, newText);
+            textarea.val(updatedText);
+            lastInsertedField = newText;
+            textarea.focus();
         });
     });
 </script>

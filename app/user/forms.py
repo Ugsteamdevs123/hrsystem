@@ -19,16 +19,25 @@ class FieldFormulaForm(forms.ModelForm):
         model = FieldFormula
         fields = ['target_model', 'target_field', 'formula', 'description']
         widgets = {
-            'target_model': forms.Select(choices=[
-                ('ProposedPackageDetails', 'Proposed Package Details'),
-                ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
-                ('IncrementDetailsSummary', 'Increment Details Summary'),
-            ]),
+            'target_model': forms.Select(
+                choices=[
+                    ('', 'None'),
+                    ('ProposedPackageDetails', 'Proposed Package Details'),
+                    ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
+                    ('IncrementDetailsSummary', 'Increment Details Summary'),
+                ],
+                attrs={'required': 'true'}  # HTML required attribute for UI
+            ),
+            'target_field': forms.Select(
+                attrs={'required': 'true'}  # HTML required attribute
+            ),
+            'formula': forms.Select(
+                attrs={'required': 'true'}  # HTML required attribute
+            ),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.fields['target_field'].choices = []  # will be filled by JS
         # If editing or form submitted with target_model selected
         model_name = None
         if 'target_model' in self.data:
@@ -45,7 +54,7 @@ class FieldFormulaForm(forms.ModelForm):
             except LookupError:
                 self.fields['target_field'].choices = []
             
-            print("self.fields['target_field']: ", self.fields['target_field'].choices)
+
 
 
 

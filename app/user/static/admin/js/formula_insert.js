@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("hiiii");
   const insertFieldSelect = document.getElementById("id_insert_field"); // dropdown
   const formulaInput = document.getElementById("id_formula"); // textarea or input for formula
 
@@ -14,12 +13,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const end = formulaInput.selectionEnd;
     const current = formulaInput.value;
 
-    formulaInput.value =
-      current.substring(0, start) + fieldValue + current.substring(end);
+    formulaInput.value = current.substring(0, start) + fieldValue + current.substring(end);
 
     // Move cursor after inserted text
-    formulaInput.selectionStart = formulaInput.selectionEnd =
-      start + fieldValue.length;
+    formulaInput.selectionStart = formulaInput.selectionEnd = start + fieldValue.length;
 
     // reset dropdown to placeholder
     this.value = "";

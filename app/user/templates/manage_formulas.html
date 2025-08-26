@@ -13,21 +13,32 @@
 
 <!-- Formula creation form -->
 <h3>Create New Formula</h3>
+<h3>Create New Formula</h3>
 <form method="post" action="{% url 'user:create_formula' %}">
     {% csrf_token %}
-    <label for="formula_name">Formula Name:</label>
+    <label for="formula_name">Formula Name: <span style="color: red;">*</span></label>
     <input type="text" name="formula_name" required>
-    <label for="formula-expression">Formula Expression:</label>
-    <textarea id="formula-expression" name="formula_expression" rows="4" style="width: 100%"></textarea>
+    <label for="formula-expression">Formula Expression: <span style="color: red;">*</span></label>
+    <textarea id="formula-expression" name="formula_expression" rows="4" style="width: 100%" required></textarea>
+    <small style="color: gray; display: block;">
+        Choose how to combine values from other tables (e.g., Sum for total salaries) by choosing an option from 'Combine Values'.
+    </small>
+    <label for="aggregate-selector">Combine Values:</label>
+    <select id="aggregate-selector" style="width: 100px;">
+        <option value="">None</option>
+        <option value="SUM">Sum</option>
+        <option value="AVG">Average</option>
+        <option value="COUNT">Count</option>
+    </select>
     <label for="field-selector">Insert Field:</label>
-    <select id="field-selector" style="width:300px;">
+    <select id="field-selector" style="width: 300px;">
         <option selected disabled value="[Model: Field]">[Model: Field]</option>
         {% for ref in field_references %}
             <option value="[{{ ref.model_name }}: {{ ref.display_name }}]">{{ ref }}</option>
         {% endfor %}
     </select>
-
     <button type="submit">Create Formula</button>
+</form>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -49,11 +60,15 @@
                 }
             });
         });
-
+        
         $('#field-selector').select2();
         $('#field-selector').on('select2:select', function(e) {
-            console.log("Event fired!", e.params.data);
-            var insertText = e.params.data.id;  // or .text depending on what you want
+            var insertText = e.params.data.id; // e.g., [CurrentPackageDetails: Gross Salary]
+            var aggregate = $('#aggregate-selector').val();
+            if (aggregate) {
+                insertText = `${aggregate}${insertText}`; // Single bracket: SUM[Model: Field]
+            }
+            lastInsertedField = insertText;
             var textarea = $('#formula-expression');
             var current = textarea.val();
             var cursorPos = textarea.prop('selectionStart');
@@ -61,6 +76,19 @@
             textarea.val(newText);
             textarea.focus();
             textarea[0].setSelectionRange(cursorPos + insertText.length, cursorPos + insertText.length);
+        });
+
+        $('#aggregate-selector').on('change', function() {
+            if (!lastInsertedField) return;
+            var newAggregate = $(this).val();
+            var textarea = $('#formula-expression');
+            var current = textarea.val();
+            var baseField = lastInsertedField.match(/\[.*?\]/)[0] || lastInsertedField;
+            var newText = newAggregate ? `${newAggregate}${baseField}` : baseField.replace(/^(SUM|AVG|COUNT)/, '');
+            var updatedText = current.replace(lastInsertedField, newText);
+            textarea.val(updatedText);
+            lastInsertedField = newText;
+            textarea.focus();
         });
     });
 </script>
@@ -74,6 +102,7 @@
             <th>Target Model</th>
             <th>Target Field</th>
             <th>Formula Expression</th>
+            <th>Aggregate Type</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -84,6 +113,7 @@
             <td>{{ ff.target_model }}</td>
             <td>{{ ff.target_field }}</td>
             <td>{{ ff.formula.formula_expression }}</td>
+            <td>{{ ff.get_aggregate_type_display|default:"None" }}</td>
             <td>
                 <a href="{% url 'user:edit_formula' ff.formula.id %}">Edit Formula</a> |
                 <a href="{% url 'user:edit_field_formula' ff.id %}">Edit Association</a>

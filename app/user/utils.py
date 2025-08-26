@@ -1,5 +1,5 @@
 from .models import CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, configurations, Employee, hr_assigned_companies, DepartmentTeams
-from django.db.models import Sum, Prefetch
+from django.db.models import Sum, Prefetch, Avg
 from decimal import Decimal
 
 
@@ -13,11 +13,12 @@ def update_department_team_increment_summary(sender, instance, company, departme
                 gross_salary = current_package.aggregate(total_price=Sum('gross_salary'))['total_price'] or 0
                 print("gross_salary: ", gross_salary)
 
-                IncrementDetailsSummary.objects.filter(company=company, 
-                                                    department_team=department_team
-                                                    ).update(current_salary=gross_salary,
-                                                                total_employees = employee_count
-                                                                )
+                # IncrementDetailsSummary.objects.filter(company=company, 
+                #                                     department_team=department_team
+                #                                     ).update(current_salary=gross_salary,
+                #                                                 total_employees = employee_count
+                #                                                 )
+                IncrementDetailsSummary.objects.filter(company=company, department_team=department_team).update(total_employees = employee_count)
                 print("CurrentPackageDetails")
                 
         if sender is ProposedPackageDetails:
@@ -78,14 +79,14 @@ def update_department_team_increment_summary(sender, instance, company, departme
             if financial_impact_per_month.exists():
                 salary = financial_impact_per_month.aggregate(total_price=Sum('salary'))['total_price'] or 0
 
-                Increment_details_summary = IncrementDetailsSummary.objects.filter(company=company, department_team=department_team).first()
-                Increment_details_summary.total_employees = employee_count
-                Increment_details_summary.effective_increment_rate_hod = salary/Decimal(str(Increment_details_summary.current_salary))
-                Increment_details_summary.salary_increment_impact_hod = float(salary)
-                Increment_details_summary.total_cost_on_p_and_l_per_month = float(financial_impact_per_month.aggregate(total_price=Sum('total'))['total_price'] or 0)
-                Increment_details_summary.revised_department_salary = Increment_details_summary.salary_increment_impact_hod + Increment_details_summary.current_salary
-                Increment_details_summary.staff_revised_cost = Increment_details_summary.total_cost_on_p_and_l_per_month + Increment_details_summary.current_salary
-                Increment_details_summary.save()
+                # Increment_details_summary = IncrementDetailsSummary.objects.filter(company=company, department_team=department_team).first()
+                # Increment_details_summary.total_employees = employee_count
+                # Increment_details_summary.effective_increment_rate_hod = salary/Decimal(str(Increment_details_summary.current_salary))
+                # Increment_details_summary.salary_increment_impact_hod = float(salary)
+                # Increment_details_summary.total_cost_on_p_and_l_per_month = float(financial_impact_per_month.aggregate(total_price=Sum('total'))['total_price'] or 0)
+                # Increment_details_summary.revised_department_salary = Increment_details_summary.salary_increment_impact_hod + Increment_details_summary.current_salary
+                # Increment_details_summary.staff_revised_cost = Increment_details_summary.total_cost_on_p_and_l_per_month + Increment_details_summary.current_salary
+                # Increment_details_summary.save()
                 pass
     except Exception as e:
         print(f"Error in updating department team increment summary: {e}")
@@ -125,6 +126,18 @@ def get_companies_and_department_teams(hr_id):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 from django.apps import apps
 
 # ✅ Put your app labels here
@@ -152,16 +165,78 @@ def list_fields(model):
         and not getattr(f, "many_to_many", False)
     ]
 
+from collections import defaultdict, deque
+
+def build_dependency_graph(formulas):
+    graph = defaultdict(list)
+    indegree = defaultdict(int)
+    formula_targets = set()
+
+    for formula in formulas:
+        target = (formula.target_model.strip(), formula.target_field.strip().lower())
+        formula_targets.add(target)   # ✅ keep track of only formula fields
+        expression = formula.formula.formula_expression
+
+        if target not in indegree:
+            indegree[target] = 0
+
+        deps = get_variables_from_expression(expression)
+        for _, model, field in deps:
+            dep_node = (model.strip(), field.strip().lower().replace(" ", "_"))
+            if dep_node not in indegree:
+                indegree[dep_node] = 0
+            graph[dep_node].append(target)
+            indegree[target] += 1
+
+    return graph, indegree, formula_targets
+
+
+def topological_sort(formulas):
+    """
+    Perform topological sort on formula dependencies.
+    Returns the list of formula targets in correct evaluation order.
+    """
+    graph, indegree, formula_targets = build_dependency_graph(formulas)
+
+    # Start queue with all zero indegree nodes
+    queue = deque([node for node, deg in indegree.items() if deg == 0])
+    order = []
+
+    while queue:
+        node = queue.popleft()
+
+        # ✅ Only add real formula targets to the order
+        if node in formula_targets:
+            order.append(node)
+
+        # Decrease indegree for dependent nodes
+        for neighbor in graph[node]:
+            indegree[neighbor] -= 1
+            if indegree[neighbor] == 0:
+                queue.append(neighbor)
+
+    # ✅ Detect cycle (if some formulas never reduced indegree to 0)
+    if len(order) != len(formula_targets):
+        raise ValueError("Cycle detected or unresolved dependencies in formulas!")
+
+    return order
+
 
 # In app/utils.py
 import re
 from decimal import Decimal
-from .models import FieldReference
+from .models import FieldReference, FieldFormula
 
 def get_variables_from_expression(expression):
-    """Extract field references like [CurrentPackageDetails: Gross Salary]."""
-    pattern = r'\[(.*?): (.*?)\]'
-    return re.findall(pattern, expression)  # Returns list of (model_name, display_name) tuples
+    """Extract field references with optional aggregates like SUM[Model: Field]."""
+    pattern = r'(SUM|AVG|COUNT)?\[([^:]+): ([^\]]+)\]'
+    matches = re.findall(pattern, expression)
+    print(f"Expression: {expression}")
+    print(f"Matches: {matches}")
+    result = [(match[0] or None, match[1], match[2]) for match in matches]
+    if not matches:
+        raise ValueError(f"No valid field references found in expression: {expression}")
+    return result
 
 def get_field_path(model_name, display_name):
     """Map display name to Django path."""
@@ -170,6 +245,51 @@ def get_field_path(model_name, display_name):
         return ref.path
     except FieldReference.DoesNotExist:
         raise ValueError(f"Field {model_name}: {display_name} not found")
+
+def get_nested_attr(instance, path, aggregate_type=None):
+    """Fetch value via Django-style path, applying aggregate if specified."""
+    parts = path.split('__')
+    print("parts: ", parts)
+    if len(parts) > 1:  # External model field
+        model_name = parts[-2].capitalize()
+        field_name = parts[-1]
+        print("aggregate_type: ", aggregate_type, "    ", "model_name: ", model_name , "   ", "field_name: ", field_name , "   ")
+        Model = apps.get_model('user', model_name)
+        # related_field = 'employee' if 'employee' in path else parts[0]
+        related_field = parts[1]
+        print("instance._meta.object_name: ", instance._meta.object_name)
+
+        if instance._meta.object_name == "IncrementDetailsSummary" and model_name=="IncrementDetailsSummary":
+            filter_kwargs = {"company": instance.company, "department_team": instance.department_team}
+        elif instance._meta.object_name != "IncrementDetailsSummary" and model_name=="IncrementDetailsSummary":
+            filter_kwargs = {"company": instance.employee.company, "department_team": instance.employee.department_team}
+        elif instance._meta.object_name == "IncrementDetailsSummary" and model_name!="IncrementDetailsSummary":
+            filter_kwargs = {"employee__company": instance.company, "employee__department_team": instance.department_team}
+        else:
+            filter_kwargs = {"employee__company": instance.employee.company, "employee__department_team": instance.employee.department_team}
+
+        if aggregate_type:
+            if aggregate_type == 'SUM':
+                result = Model.objects.filter(**filter_kwargs).aggregate(Sum(field_name)) or {f"{field_name}__sum": 0}
+                print("resulttt: ", result)
+                return result[f"{field_name}__sum"] or 0
+            elif aggregate_type == 'AVG':
+                result = Model.objects.filter(**filter_kwargs).aggregate(Avg(field_name)) or {f"{field_name}__avg": 0}
+                print("resulttt: ", result)
+                return result[f"{field_name}__avg"] or 0
+            elif aggregate_type == 'COUNT':
+                return Model.objects.filter(**filter_kwargs).count()
+        else:
+            obj = instance
+            for part in parts:
+                if obj._meta.object_name == 'IncrementDetailsSummary' and part in ['employee', 'incrementdetailssummary']:
+                    # 'continue' because IncrementDetailsSummary do not have foreign field 'employee', hence ther will be no reverse lookup 'incrementdetailssummary'
+                    continue
+                obj = getattr(obj, part)
+            return obj
+    else:
+        return getattr(instance, path)
+    
 
 def sanitize_expression(expression, context):
     mapping = {}
@@ -181,38 +301,40 @@ def sanitize_expression(expression, context):
     print("new_context: ", new_context)
     return expression, new_context
 
-def evaluate_formula(instance, expression):
-    """Evaluate formula, replacing [Model: Field] with actual values."""
-    variables = get_variables_from_expression(expression)
-    print("variables: ", variables)
+
+def evaluate_formula(instance, expression, target_model):
+    """Evaluate formula, replacing [Model: Field] or SUM[Model: Field] with values."""
     context = {}
-    for model_name, display_name in variables:
+    for aggregate_type, model_name, display_name in get_variables_from_expression(expression):
+        print("aggregate_type, model_name, display_name: ", aggregate_type, model_name, display_name)
         path = get_field_path(model_name, display_name)
-        try:
-            print("path: ", path)
-            value = get_nested_attr(instance, path)
-            print("value: ", value)
-            if isinstance(value, Decimal):
-                value = float(value)  # For math ops
-            context[f'[{model_name}: {display_name}]'] = value
-        except AttributeError:
-            raise ValueError(f"Invalid path for {model_name}: {display_name}")
+        print("path: ", path)
+        value = get_nested_attr(
+            instance,
+            path,
+            aggregate_type if model_name != target_model else None
+        )
+        print("value: ", value)
+        if isinstance(value, Decimal):
+            value = float(value)
+        context[f'{aggregate_type or ""}[{model_name}: {display_name}]'] = value
 
     try:
         print("expression: ", expression)
         print("context: ", context)
-        expression, safe_context = sanitize_expression(expression, context)
-        result = eval(expression, {"__builtins__": {}}, safe_context)
-        print(result)
+        expr = expression.split('=', 1)[1].strip() if '=' in expression else expression
+        print("expr: ", expr)
+        expr, safe_context = sanitize_expression(expr, context)
+        result = eval(expr, {"__builtins__": {}}, safe_context)
+        print("result: ", result)
         return Decimal(result)
     except Exception as e:
-        print("Error in Evaluating formula: ", e)
+        print("error in evaluating formula: ", e)
         raise ValueError(f"Formula evaluation failed: {e}")
-
-def get_nested_attr(instance, path):
-    parts = path.split('__')
-    obj = instance
-    for part in parts:
-        obj = getattr(obj, part)
-        print("obj: ", obj)
-    return obj
+# def get_nested_attr(instance, path):
+#     parts = path.split('__')
+#     obj = instance
+#     for part in parts:
+#         obj = getattr(obj, part)
+#         print("obj: ", obj)
+#     return obj
