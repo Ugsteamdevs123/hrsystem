@@ -215,6 +215,10 @@
             <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
             {% endif %}
 
+            {% if perms.user.view_vehicleinfo %}
+            <a href="{% url 'view_vehicles' %}">Vehicle Information</a>
+            {% endif %}
+
             {# --- Dynamic Companies → Departments (RBAC on Employee) --- #}
             {% if perms.user.view_employee and company_data %}
             <div class="company-tree">

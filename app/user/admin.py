@@ -51,3 +51,11 @@ admin.site.register(models.EmployeeStatus)
 admin.site.register(models.CurrentPackageDetails)
 admin.site.register(models.ProposedPackageDetails)
 admin.site.register(models.FinancialImpactPerMonth)
+
+admin.site.register(models.Employee)
+admin.site.register(models.VehicleInfo)
+
+admin.site.register(models.VehicleBrand)
+admin.site.register(models.VehicleModel)
+admin.site.register(models.VehicleOwnerShipModel)
+

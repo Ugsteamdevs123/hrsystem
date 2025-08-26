@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Add Vehicle{% endblock %}
+
+{% block content %}
+<h2>Add Vehicle</h2>
+
+<form id="addVehicleForm" method="POST">
+    {% csrf_token %}
+
+    <!-- Vehicle Brand -->
+    <div class="form-field">
+        {{ vehicle_form.brand.label_tag }}
+        {{ vehicle_form.brand }}
+    </div>
+
+    <!-- Vehicle Model Name -->
+    <div class="form-field">
+        {{ vehicle_form.name.label_tag }}
+        {{ vehicle_form.name }}
+    </div>
+
+    <!-- Year -->
+    <div class="form-field">
+        {{ vehicle_form.year.label_tag }}
+        {{ vehicle_form.year }}
+    </div>
+
+    <!-- Condition -->
+    <div class="form-field">
+        {{ vehicle_form.condition.label_tag }}
+        {{ vehicle_form.condition }}
+    </div>
+
+    <!-- Ownership Type -->
+    <div class="form-field">
+        {{ info_form.ownership_type.label_tag }}
+        {{ info_form.ownership_type }}
+    </div>
+
+    <!-- Color -->
+    <div class="form-field">
+        {{ info_form.color.label_tag }}
+        {{ info_form.color }}
+    </div>
+
+    <!-- Registration Number -->
+    <div class="form-field">
+        {{ info_form.registration_number.label_tag }}
+        {{ info_form.registration_number }}
+    </div>
+
+    <!-- Mileage -->
+    <div class="form-field">
+        {{ info_form.mileage_km.label_tag }}
+        {{ info_form.mileage_km }}
+    </div>
+
+    <!-- Buttons -->
+    <div class="button-group">
+        <button type="button" class="form-btn btn-submit"
+            onclick="showConfirmPopup('Are you sure you want to add this vehicle?', function(){ 
+                document.getElementById('addVehicleForm').submit(); 
+            })">
+            Add Vehicle
+        </button>
+        <button type="button" class="form-btn btn-back" 
+            onclick="window.location.href='{% url 'view_vehicles' %}'">
+            Back
+        </button>
+    </div>
+</form>
+
+<style>
+/* Form fields styling (same as add_section.html) */
+.form-field {
+    margin-bottom: 15px;
+    text-align: left;
+}
+.form-field input, .form-field select, .form-field textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+/* Buttons */
+.form-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+}
+.btn-submit { background-color: #28a745; color: #fff; }
+.btn-submit:hover { background-color: #218838; }
+.btn-back { background-color: #6c757d; color: #fff; }
+.btn-back:hover { background-color: #5a6268; }
+
+/* Responsive */
+@media screen and (max-width: 500px) {
+    .form-btn { font-size: 12px; padding: 10px; }
+    .form-field input, .form-field select, .form-field textarea { font-size: 14px; padding: 10px; }
+}
+</style>
+
+{% endblock %}

@@ -112,10 +112,22 @@
             <label for="gross_salary">Gross Salary</label>
             <input type="number" id="gross_salary" name="gross_salary" step="0.01">
           </div>
+
+          {% comment %} 
           <div class="form-field">
             <label for="vehicle">Vehicle</label>
             <input type="text" id="vehicle" name="vehicle">
           </div>
+          {% endcomment %}
+          
+          <div class="form-field">
+            <label for="vehicle_id">Vehicle</label>
+            <select id="vehicle_id" name="vehicle_id">
+              <option value="">Select Vehicle</option>
+            </select>
+          </div>
+
+          
           <div class="form-field">
             <label for="fuel_limit">Fuel Limit</label>
             <input type="number" id="fuel_limit" name="fuel_limit" step="0.01">
@@ -143,10 +155,21 @@
             <!-- FIX: name now matches the proposed field so it doesn't overwrite current mobile_allowance -->
             <input type="number" id="mobile_allowance_proposed" name="mobile_allowance_proposed" step="0.01">
           </div>
+
+          {% comment %}           
           <div class="form-field">
             <label for="vehicle_proposed">Vehicle</label>
             <input type="text" id="vehicle_proposed" name="vehicle_proposed">
           </div>
+          {% endcomment %}
+
+          <div class="form-field">
+            <label for="vehicle_proposed_id">Vehicle</label>
+            <select id="vehicle_proposed_id" name="vehicle_proposed">
+              <option value="">Select Vehicle</option>
+            </select>
+          </div>
+
         </div>
 
         <!-- Step 4: Financial Impact -->
@@ -399,6 +422,16 @@
     }
     populateEmployeeStatusDropdown();
 
+    // Vehicles
+    try {
+      const v = await fetchJSON('/payroll/vehicles-dropdown/'); // <-- Make sure this endpoint returns vehicle list
+      const list = asArray(v);
+      populateVehicles(list);
+    } catch (e) {
+      console.error(e);
+      showSnackbar('Error loading vehicles', '#dc3545');
+    }
+
     /*
     // If you later re-enable server-driven choices, restore this block and remove the static one above.
     try{
@@ -445,6 +478,29 @@
       select.appendChild(opt);
     });
   }
+
+  function populateVehicles(data) {
+    const currentSelect = document.getElementById('vehicle_id');
+    const proposedSelect = document.getElementById('vehicle_proposed_id');
+    currentSelect.innerHTML = '<option value="">Select Vehicle</option>';
+    proposedSelect.innerHTML = '<option value="">Select Vehicle</option>';
+
+    data.forEach(v => {
+      const plateText = `Number Plate (${v.registration_number && v.registration_number.trim() ? v.registration_number : 'Not Assigned'})`;
+      const label = `${v.brand_name} ${v.model_name} ${v.year} (${v.condition}) - ${plateText}`;
+
+      const opt1 = document.createElement('option');
+      opt1.value = v.id;
+      opt1.textContent = label;
+      currentSelect.appendChild(opt1);
+
+      const opt2 = opt1.cloneNode(true);
+      proposedSelect.appendChild(opt2);
+    });
+  }
+
+  console.log(populateVehicles , '************')
+
   function populateEmployeeStatusDropdown(data){
     const select = document.getElementById('emp_status_id');
     select.innerHTML = '<option value="">Select Employee Status</option>';
@@ -569,14 +625,20 @@
     q('#remarks').value = data.employee.remarks || '';
 
     q('#gross_salary').value = data.current_package.gross_salary || '';
-    q('#vehicle').value = data.current_package.vehicle || '';
+
+    //q('#vehicle').value = data.current_package.vehicle || '';
+    q('#vehicle_id').value = data.current_package.vehicle_id || '';
+    
+    
     q('#fuel_limit').value = data.current_package.fuel_limit || '';
     q('#mobile_allowance').value = data.current_package.mobile_allowance || '';
 
     q('#increment_percentage').value = data.proposed_package.increment_percentage || '';
     q('#increased_fuel_amount').value = data.proposed_package.increased_fuel_amount || '';
     q('#mobile_allowance_proposed').value = data.proposed_package.mobile_allowance || '';
-    q('#vehicle_proposed').value = data.proposed_package.vehicle || '';
+
+    //q('#vehicle_proposed').value = data.proposed_package.vehicle || '';
+    q('#vehicle_proposed_id').value = data.proposed_package.vehicle_id || '';
 
     q('#emp_status_id').value = data.financial_impact.emp_status_id || '';
   }

@@ -5,7 +5,9 @@ from .models import (
     Gender,
     Section,
     DepartmentGroups,
-    hr_assigned_companies
+    hr_assigned_companies,
+    VehicleModel,
+    VehicleInfo
 )
 from django.contrib.auth.models import Group
 
@@ -167,5 +169,17 @@ class HrAssignedCompaniesForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Display full_name instead of email
         self.fields['hr'].label_from_instance = lambda obj: obj.full_name
+
+
+class VehicleModelForm(forms.ModelForm):
+    class Meta:
+        model = VehicleModel
+        fields = ["brand", "name", "year", "condition"]
+
+
+class VehicleInfoForm(forms.ModelForm):
+    class Meta:
+        model = VehicleInfo
+        fields = ["ownership_type", "color", "registration_number", "mileage_km"]
 
 

@@ -194,6 +194,52 @@ class IncrementDetailsSummary(models.Model):
         return self.department_team.company.name + ' ' + self.department_team.name + ' increment summary'
 
 
+
+class VehicleBrand(models.Model):
+    """Stores vehicle brand details like Toyota, Honda."""
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class VehicleModel(models.Model):
+    """Stores vehicle model details, linked to a brand."""
+    CONDITION_CHOICES = [
+        ('NEW', 'Brand New'),
+        ('USED', 'Used'),
+    ]
+
+    brand = models.ForeignKey(VehicleBrand, on_delete=models.CASCADE, related_name='models')
+    name = models.CharField(max_length=50)
+    year = models.PositiveIntegerField()
+    condition = models.CharField(max_length=10, choices=CONDITION_CHOICES, default='NEW')
+
+    class Meta:
+        unique_together = ('brand', 'name', 'year', 'condition')
+
+    def __str__(self):
+        return f"{self.brand.name} {self.name} ({self.year}) - {self.get_condition_display()}"
+
+
+class VehicleOwnerShipModel(models.Model)   :
+    own_type = models.CharField(max_length=20)
+
+    def __str__(self):
+        return self.own_type
+    
+class VehicleInfo(models.Model):
+    vehicle = models.OneToOneField(VehicleModel, on_delete=models.CASCADE, related_name='info')
+    ownership_type = models.ForeignKey(VehicleOwnerShipModel, on_delete=models.SET_NULL, null=True)
+    color = models.CharField(max_length=20, blank=True)
+    registration_number = models.CharField(max_length=100)
+    mileage_km = models.PositiveIntegerField(default=0, help_text="Total distance travelled in kilometers")
+
+    def __str__(self):
+        return f"Info for {self.vehicle}"
+    
+
+
 class Employee(models.Model):
 
     emp_id = models.AutoField(primary_key=True)
@@ -224,7 +270,7 @@ class Employee(models.Model):
 class CurrentPackageDetails(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
     gross_salary = models.DecimalField(max_digits=10, decimal_places=2)
-    vehicle = models.CharField(max_length=40)
+    vehicle = models.ForeignKey(VehicleInfo, on_delete=models.SET_NULL, null=True)
     fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
 
@@ -244,7 +290,7 @@ class ProposedPackageDetails(models.Model):
     increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2)
     revised_fuel_allowance = models.ForeignKey(Formula, related_name='revised_fuel_allowance', on_delete=models.SET_NULL, null=True)
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
-    vehicle = models.DecimalField(max_digits=10, decimal_places=2)
+    vehicle = models.ForeignKey(VehicleInfo, on_delete=models.SET_NULL, null=True)
 
     is_deleted = models.BooleanField(default=False)
 
@@ -284,3 +330,32 @@ class configurations(models.Model):
 
     def __str__(self):
         return f"{self.fuel_rate} - {self.as_of_date}"
+    
+
+
+
+# class Vehicle(models.Model):
+#     """Stores employee vehicle assignments."""
+
+#     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='vehicles')
+#     vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.CASCADE, related_name='vehicles')
+#     color = models.CharField(max_length=20, blank=True)
+#     ownership_type = models.ForeignKey(VehicleOwnerShipModel, on_delete=models.SET_NULL, null=True)
+
+#     issue_date = models.DateField()
+#     is_active = models.BooleanField(default=True)
+#     mileage_km = models.PositiveIntegerField(default=0, help_text="Total distance travelled in kilometers")
+
+#     def __str__(self):
+#         return f"{self.vehicle_model} - {self.employee.fullname}"
+
+
+
+
+
+
+
+
+
+
+

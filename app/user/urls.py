@@ -38,6 +38,12 @@ urlpatterns = [
     path('hr-assigned-companies/<int:pk>/edit/', views.UpdateHrAssignedCompanyView.as_view(), name='update_hr_assigned_company'),
     path('hr-assigned-companies/<int:pk>/delete/', views.DeleteHrAssignedCompanyView.as_view(), name='delete_hr_assigned_company'),
 
+    # vehicle crud
+    path("vehicles/", views.ViewVehicleListView.as_view(), name="view_vehicles"),
+    path("vehicles/add/", views.AddVehicleView.as_view(), name="add_vehicle"),
+    path("vehicles/update/<int:pk>/", views.UpdateVehicleView.as_view(), name="update_vehicle"),
+    path("vehicles/delete/<int:pk>/", views.DeleteVehicleView.as_view(), name="delete_vehicle"),
+
 
 
     path('hr/', views.HrDashboardView.as_view(), name='hr_dashboard'),
@@ -53,8 +59,8 @@ urlpatterns = [
     path('designations/', views.DesignationsView.as_view(), name='designations'),
     path('designations/create/', views.DesignationCreateView.as_view(), name='designation_create'),
     path('locations/', views.LocationsView.as_view(), name='locations'),
-    
-    
+    path('vehicles-dropdown/', views.VehiclesDropdownView.as_view(), name='vehicles-dropdown'),
+
 
     # path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
 

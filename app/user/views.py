@@ -9,6 +9,8 @@ from .models import (
     CustomUser,
     Company,
     Section,
+    VehicleInfo,
+    VehicleModel
 )
 
 from django.contrib.auth import login, logout
@@ -31,7 +33,9 @@ from .forms import (
     CustomUserUpdateForm,
     SectionForm,
     DepartmentGroupsForm,
-    HrAssignedCompaniesForm
+    HrAssignedCompaniesForm,
+    VehicleInfoForm,
+    VehicleModelForm
 
 )
 
@@ -430,6 +434,87 @@ class DeleteHrAssignedCompanyView(PermissionRequiredMixin, View):
 
 
 
+# --- VIEW VEHICLES ---
+class ViewVehicleListView(PermissionRequiredMixin, View):
+    permission_required = "user.view_vehicleinfo"
+    template_name = "view_vehicle_list.html"
+
+    def get(self, request):
+        vehicles = VehicleInfo.objects.select_related("vehicle", "ownership_type").all()
+        return render(request, self.template_name, {"vehicles": vehicles})
+
+
+# --- ADD VEHICLE ---
+class AddVehicleView(PermissionRequiredMixin, View):
+    permission_required = "user.add_vehicleinfo"
+    template_name = "add_vehicle.html"
+
+    def get(self, request):
+        vehicle_form = VehicleModelForm()
+        info_form = VehicleInfoForm()
+        return render(request, self.template_name, {
+            "vehicle_form": vehicle_form,
+            "info_form": info_form
+        })
+
+    def post(self, request):
+        vehicle_form = VehicleModelForm(request.POST)
+        info_form = VehicleInfoForm(request.POST)
+        if vehicle_form.is_valid() and info_form.is_valid():
+            vehicle = vehicle_form.save()
+            info = info_form.save(commit=False)
+            info.vehicle = vehicle
+            info.save()
+            messages.success(request, "Vehicle added successfully!")
+            return redirect("view_vehicles")
+        return render(request, self.template_name, {
+            "vehicle_form": vehicle_form,
+            "info_form": info_form
+        })
+
+
+# --- UPDATE VEHICLE ---
+class UpdateVehicleView(PermissionRequiredMixin, View):
+    permission_required = "user.change_vehicleinfo"
+    template_name = "update_vehicle.html"
+
+    def get(self, request, pk):
+        vehicle_info = get_object_or_404(VehicleInfo, pk=pk)
+        vehicle_form = VehicleModelForm(instance=vehicle_info.vehicle)
+        info_form = VehicleInfoForm(instance=vehicle_info)
+        return render(request, self.template_name, {
+            "vehicle_form": vehicle_form,
+            "info_form": info_form,
+            "vehicle_info": vehicle_info
+        })
+
+    def post(self, request, pk):
+        vehicle_info = get_object_or_404(VehicleInfo, pk=pk)
+        vehicle_form = VehicleModelForm(request.POST, instance=vehicle_info.vehicle)
+        info_form = VehicleInfoForm(request.POST, instance=vehicle_info)
+        if vehicle_form.is_valid() and info_form.is_valid():
+            vehicle_form.save()
+            info_form.save()
+            messages.success(request, "Vehicle updated successfully!")
+            return redirect("view_vehicles")
+        return render(request, self.template_name, {
+            "vehicle_form": vehicle_form,
+            "info_form": info_form,
+            "vehicle_info": vehicle_info
+        })
+
+
+# --- DELETE VEHICLE ---
+class DeleteVehicleView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_vehicleinfo"
+
+    def get(self, request, pk):
+        vehicle_info = get_object_or_404(VehicleInfo, pk=pk)
+        vehicle_info.delete()  # Hard delete, or you can soft delete by adding a flag
+        messages.success(request, "Vehicle deleted successfully!")
+        return redirect("view_vehicles")
+
+
 
 
 
@@ -476,12 +561,14 @@ from .serializer import (
     DepartmentGroupsSerializer,
     DesignationSerializer,
     DesignationCreateSerializer,
-    LocationsSerializer
+    LocationsSerializer,
+    VehicleInfoDropdownSerializer
 
 )
 from collections import defaultdict
 import json
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 
 
 
@@ -629,7 +716,7 @@ class DepartmentTeamView(View):
         # ✅ Check permission: Can delete department
         if not request.user.has_perm('user.delete_departmentteams'):
             raise PermissionDenied("You do not have permission to delete departments.")
-            
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)
@@ -719,6 +806,7 @@ class CompanySummaryView(View):
         # logger.info(f"User {request.user.username} accessed summary for company {company_id}")
         return render(request, 'company_summary.html', {'company_data': company_data, 'company': company, 'table_html': table_html})
 
+
     def patch(self, request, company_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
@@ -783,7 +871,11 @@ class DepartmentTableView(View):
                 'remarks': employee.remarks or '',
                 'image': employee.image.url if employee.image else '',
                 'gross_salary': current_package.gross_salary if current_package else '',
-                'vehicle': current_package.vehicle if current_package else '',
+                
+                # 'vehicle': current_package.vehicle if current_package else '',
+                # 'vehicle': current_package.vehicle.vehicle_model.name if current_package and current_package.vehicle else '',
+                'vehicle': current_package.vehicle.vehicle.brand.name if current_package and current_package.vehicle else '',
+
                 'fuel_limit': current_package.fuel_limit if current_package else '',
                 'mobile_allowance_current': current_package.mobile_allowance if current_package else '',
                 'increment_percentage': proposed_package.increment_percentage if proposed_package else '',
@@ -792,7 +884,10 @@ class DepartmentTableView(View):
                 'increased_fuel_amount': proposed_package.increased_fuel_amount if proposed_package else '',
                 'revised_fuel_allowance': proposed_package.revised_fuel_allowance.formula if proposed_package and proposed_package.revised_fuel_allowance else '',
                 'mobile_allowance_proposed': proposed_package.mobile_allowance if proposed_package else '',
-                'vehicle_proposed': proposed_package.vehicle if proposed_package else '',
+                
+                # 'vehicle_proposed': proposed_package.vehicle if proposed_package else '',
+                'vehicle_proposed': proposed_package.vehicle.vehicle.brand.name if proposed_package and proposed_package.vehicle else '',
+
                 'emp_status': financial_impact.emp_status.name if financial_impact and financial_impact.emp_status else '',
                 'serving_years': financial_impact.serving_years if financial_impact else '',
                 'salary': financial_impact.salary if financial_impact else '',
@@ -854,73 +949,84 @@ class CreateDataView(View):
     def post(self, request, department_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
-                print(request.POST)
-                step = request.POST.get('step')
-                department = DepartmentTeams.objects.get(
-                    id=department_id,
-                    company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-                )
-                if step == 'employee':
-                    employee = Employee.objects.create(
-                        fullname=request.POST.get('fullname'),
-                        company=department.company,
-                        department_team=department,
-                        department_group_id=request.POST.get('department_group_id'),
-                        section_id=request.POST.get('section_id'),
-                        designation_id=request.POST.get('designation_id'),
-                        location_id=request.POST.get('location_id'),
-                        date_of_joining=request.POST.get('date_of_joining'),
-                        resign=request.POST.get('resign') == 'true',
-                        date_of_resignation=request.POST.get('date_of_resignation') or None,
-                        remarks=request.POST.get('remarks') or '',
-                        image=request.FILES.get('image') if 'image' in request.FILES else None
+                with transaction.atomic():  # 🚀 Start atomic block
+                    
+                    print(request.POST)
+                    step = request.POST.get('step')
+                    department = DepartmentTeams.objects.get(
+                        id=department_id,
+                        company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
                     )
-                    logger.debug(f"Employee created: {employee.emp_id}")
-                    return JsonResponse({'message': 'Employee created', 'employee_id': employee.emp_id})
-                elif step == 'current_package':
-                    employee_id = request.POST.get('employee_id')
-                    employee = Employee.objects.get(emp_id=employee_id, department_team=department)
-                    current_package = CurrentPackageDetails.objects.create(
-                        employee=employee,
-                        gross_salary=request.POST.get('gross_salary'),
-                        vehicle=request.POST.get('vehicle'),
-                        fuel_limit=request.POST.get('fuel_limit'),
-                        mobile_allowance=request.POST.get('mobile_allowance')
-                    )
-                    logger.debug(f"CurrentPackageDetails created for employee: {employee_id}")
-                    return JsonResponse({'message': 'Current Package created'})
-                elif step == 'proposed_package':
-                    employee_id = request.POST.get('employee_id')
-                    employee = Employee.objects.get(emp_id=employee_id, department_team=department)
-                    proposed_package = ProposedPackageDetails.objects.create(
-                        employee=employee,
-                        increment_percentage=request.POST.get('increment_percentage'),
-                        increased_amount_id=request.POST.get('increased_amount_id'),
-                        revised_salary_id=request.POST.get('revised_salary_id'),
-                        increased_fuel_amount=request.POST.get('increased_fuel_amount'),
-                        revised_fuel_allowance_id=request.POST.get('revised_fuel_allowance_id'),
-                        mobile_allowance=request.POST.get('mobile_allowance'),
-                        vehicle=request.POST.get('vehicle')
-                    )
-                    logger.debug(f"ProposedPackageDetails created for employee: {employee_id}")
-                    return JsonResponse({'message': 'Proposed Package created'})
-                elif step == 'financial_impact':
-                    employee_id = request.POST.get('employee_id')
-                    employee = Employee.objects.get(emp_id=employee_id, department_team=department)
-                    financial_impact = FinancialImpactPerMonth.objects.create(
-                        employee=employee,
-                        emp_status_id=request.POST.get('emp_status_id'),
-                        serving_years=request.POST.get('serving_years'),
-                        salary=request.POST.get('salary'),
-                        gratuity_id=request.POST.get('gratuity_id'),
-                        bonus_id=request.POST.get('bonus_id'),
-                        leave_encashment_id=request.POST.get('leave_encashment_id'),
-                        mobile_allowance_id=request.POST.get('mobile_allowance_id'),
-                        fuel=request.POST.get('fuel'),
-                        total_id=request.POST.get('total_id')
-                    )
-                    logger.debug(f"FinancialImpactPerMonth created for employee: {employee_id}")
-                    return JsonResponse({'message': 'Financial Impact created'})
+                    if step == 'employee':
+                        employee = Employee.objects.create(
+                            fullname=request.POST.get('fullname'),
+                            company=department.company,
+                            department_team=department,
+                            department_group_id=request.POST.get('department_group_id'),
+                            section_id=request.POST.get('section_id'),
+                            designation_id=request.POST.get('designation_id'),
+                            location_id=request.POST.get('location_id'),
+                            date_of_joining=request.POST.get('date_of_joining'),
+                            resign=request.POST.get('resign') == 'true',
+                            date_of_resignation=request.POST.get('date_of_resignation') or None,
+                            remarks=request.POST.get('remarks') or '',
+                            image=request.FILES.get('image') if 'image' in request.FILES else None
+                        )
+                        logger.debug(f"Employee created: {employee.emp_id}")
+                        return JsonResponse({'message': 'Employee created', 'employee_id': employee.emp_id})
+                    elif step == 'current_package':
+                        employee_id = request.POST.get('employee_id')
+
+                        vehicle_id = request.POST.get('vehicle_id')  # vehicle_id instead of vehicle
+                        
+                        employee = Employee.objects.get(emp_id=employee_id, department_team=department)
+                        current_package = CurrentPackageDetails.objects.create(
+                            employee=employee,
+                            gross_salary=request.POST.get('gross_salary'),
+                            
+                            vehicle_id=vehicle_id  if vehicle_id else None,  # Link to Vehicle instance,
+                            
+                            fuel_limit=request.POST.get('fuel_limit'),
+                            mobile_allowance=request.POST.get('mobile_allowance')
+                        )
+                        logger.debug(f"CurrentPackageDetails created for employee: {employee_id}")
+                        return JsonResponse({'message': 'Current Package created'})
+                    elif step == 'proposed_package':
+                        employee_id = request.POST.get('employee_id')
+
+                        vehicle_id=request.POST.get('vehicle_id')  # vehicle_id instead of vehicle
+                        
+                        employee = Employee.objects.get(emp_id=employee_id, department_team=department)
+                        proposed_package = ProposedPackageDetails.objects.create(
+                            employee=employee,
+                            increment_percentage=request.POST.get('increment_percentage'),
+                            increased_amount_id=request.POST.get('increased_amount_id'),
+                            revised_salary_id=request.POST.get('revised_salary_id'),
+                            increased_fuel_amount=request.POST.get('increased_fuel_amount'),
+                            revised_fuel_allowance_id=request.POST.get('revised_fuel_allowance_id'),
+                            mobile_allowance=request.POST.get('mobile_allowance'),
+
+                            vehicle_id=vehicle_id if vehicle_id else None,  # Link to Vehicle instance
+                        )
+                        logger.debug(f"ProposedPackageDetails created for employee: {employee_id}")
+                        return JsonResponse({'message': 'Proposed Package created'})
+                    elif step == 'financial_impact':
+                        employee_id = request.POST.get('employee_id')
+                        employee = Employee.objects.get(emp_id=employee_id, department_team=department)
+                        financial_impact = FinancialImpactPerMonth.objects.create(
+                            employee=employee,
+                            emp_status_id=request.POST.get('emp_status_id'),
+                            serving_years=request.POST.get('serving_years'),
+                            salary=request.POST.get('salary'),
+                            gratuity_id=request.POST.get('gratuity_id'),
+                            bonus_id=request.POST.get('bonus_id'),
+                            leave_encashment_id=request.POST.get('leave_encashment_id'),
+                            mobile_allowance_id=request.POST.get('mobile_allowance_id'),
+                            fuel=request.POST.get('fuel'),
+                            total_id=request.POST.get('total_id')
+                        )
+                        logger.debug(f"FinancialImpactPerMonth created for employee: {employee_id}")
+                        return JsonResponse({'message': 'Financial Impact created'})
                 return JsonResponse({'error': 'Invalid step'}, status=400)
             except (DepartmentTeams.DoesNotExist, Employee.DoesNotExist, ValueError) as e:
                 logger.error(f"Error in CreateDataView: {str(e)}")
@@ -1003,13 +1109,13 @@ class LocationsView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-
-
-
-
-
-
-
+class VehiclesDropdownView(View):
+    def get(self, request):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            vehicles = VehicleInfo.objects.select_related('vehicle__brand').all()
+            data = VehicleInfoDropdownSerializer(vehicles, many=True).data
+            return JsonResponse({'data': data})
+        return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
 
