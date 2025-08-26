@@ -40,10 +40,17 @@ class IncrementDetailsSummarySerializer(serializers.ModelSerializer):
             if field in rep:
                 # department should stay as is
                 if field == "department":
-                    ordered["department"] = rep[field]
+                    # ordered["department"] = rep[field]
+
+                    # Department stays as "Department"
+                    ordered["Department"] = rep[field]
                 else:
-                    # replace _ with space for other fields
-                    ordered[field.replace("_", " ")] = rep[field]
+                    # # replace _ with space for other fields
+                    # ordered[field.replace("_", " ")] = rep[field]
+
+                    # Replace underscores with spaces and capitalize
+                    pretty_name = field.replace("_", " ").title()
+                    ordered[pretty_name] = rep[field]
 
         return ordered
 

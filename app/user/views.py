@@ -481,12 +481,13 @@ from .serializer import (
 )
 from collections import defaultdict
 import json
+from django.core.exceptions import PermissionDenied
 
 
 
 
 
-# Hr login then show this dashboard
+# Hr login then show this dashboard view . this is incrementdetailssummary model
 
 class HrDashboardView(PermissionRequiredMixin, View):
     """
@@ -494,8 +495,8 @@ class HrDashboardView(PermissionRequiredMixin, View):
     Handles PATCH requests to update 'eligible_for_increment' value.
     Renders HR dashboard page for GET requests.
     """
-    # permission_classes = [GroupOrSuperuserPermission]
-    # group_name = 'Hr'  # Set the group name for the permission
+    permission_required = 'user.view_incrementdetailssummary'  # ✅ set permission
+    raise_exception = True  # ✅ raise 403 if no permission
 
     @classmethod
     def as_view(cls, **initkwargs):
@@ -544,6 +545,11 @@ class HrDashboardView(PermissionRequiredMixin, View):
                 if not summary_id or not eligible_for_increment:
                     return JsonResponse({'error': 'Invalid data'}, status=400)
                 summary = IncrementDetailsSummary.objects.get(id=summary_id, company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company'))
+
+                 # Permission check
+                if not request.user.has_perm('user.change_incrementdetailssummary'):
+                    return JsonResponse({'error': 'Permission denied'}, status=403)
+                
                 summary.eligible_for_increment = int(eligible_for_increment)
                 summary.save()
                 return JsonResponse({'message': 'Updated successfully'})
@@ -554,7 +560,7 @@ class HrDashboardView(PermissionRequiredMixin, View):
 
 
 
-
+# For dept team crud
 class DepartmentTeamView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -566,11 +572,21 @@ class DepartmentTeamView(View):
 
     def get(self, request):
 
+        # ✅ Check permission: Can view departments
+        if not request.user.has_perm('user.view_departmentteams'):
+            raise PermissionDenied("You do not have permission to view departments.")
+
+
         company_data = get_companies_and_department_teams(request.user)
 
         return render(request, 'department_team.html', {'company_data': company_data})
 
     def post(self, request):
+
+        # ✅ Check permission: Can add department
+        if not request.user.has_perm('user.add_departmentteams'):
+            raise PermissionDenied("You do not have permission to add departments.")
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 company_id = request.POST.get('company_id')
@@ -585,6 +601,11 @@ class DepartmentTeamView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
     def patch(self, request):
+
+        # ✅ Check permission: Can change department
+        if not request.user.has_perm('user.change_departmentteams'):
+            raise PermissionDenied("You do not have permission to edit departments.")
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)
@@ -604,6 +625,11 @@ class DepartmentTeamView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
     def delete(self, request):
+
+        # ✅ Check permission: Can delete department
+        if not request.user.has_perm('user.delete_departmentteams'):
+            raise PermissionDenied("You do not have permission to delete departments.")
+            
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)

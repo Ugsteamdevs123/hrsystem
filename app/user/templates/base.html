@@ -195,12 +195,12 @@
             <a href="{% url 'view_company' %}">Company</a>
             {% endif %}
 
-            {% if perms.user.view_employee %}
+            {% if perms.user.view_incrementdetailssummary %}
             <a href="{% url 'hr_dashboard' %}">Dashboard</a>
             {% endif %}
 
-            {% if perms.user.add_departmentteams %}
-            <a href="{% url 'department_team' %}">Add Department</a>
+            {% if perms.user.view_departmentteams %}
+            <a href="{% url 'department_team' %}">Department</a>
             {% endif %}
 
             {% if perms.user.view_section %}

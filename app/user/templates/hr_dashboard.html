@@ -7,7 +7,7 @@
 
 <!-- Company Selection -->
 <div class="card-like">
-    <h3>Select a company to view increment details.</h3>
+    <h3>Select Company To View It's Increment Details</h3>
     <select id="company-select" class="custom-select" onchange="fetchIncrementData()">
         <option value="" selected>Select a company</option>
         {% for company in company_data %}
@@ -179,24 +179,6 @@ async function fetchIncrementData() {
                     }
                 );
             };
-
-
-            /*
-            document.getElementById('openConfirmModal').onclick = function() {
-                // Keep edit modal open and show base.html confirmation modal above it
-                showConfirmPopup(
-                    "Are you sure you want to update this increment detail?",
-                    async function yesCallback() {
-                        closeModal(); // close edit modal after confirmation
-                        await submitEdit();
-                    },
-                    function noCallback() {
-                        // Keep edit modal open if user clicks "No"
-                    },
-                    { zIndex: 3000 } // higher than edit modal
-                );
-            };
-            */
 
             {% endif %}
         }
