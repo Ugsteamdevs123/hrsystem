@@ -56,6 +56,9 @@ class LoginView(View):
                 if user.is_superuser:
                     # Redirect superuser to view users page
                     return redirect("view_users")
+                
+                elif user.has_perm('user.can_admin_access'):
+                    return redirect("view_users")
                 else:
                     # Placeholder for normal users (empty page for now)
                     return redirect("hr_dashboard")
@@ -175,7 +178,7 @@ class ViewUsersView(PermissionRequiredMixin, View):
 
 # --- VIEW COMPANIES ---
 class ViewCompaniesView(PermissionRequiredMixin, View):
-    permission_required = "app.view_company"  # replace 'app' with your app name
+    permission_required = "user.view_company"  # replace 'app' with your app name
     template_name = "view_company.html"
 
     def get(self, request):
@@ -185,7 +188,7 @@ class ViewCompaniesView(PermissionRequiredMixin, View):
 
 # --- ADD COMPANY ---
 class AddCompanyView(PermissionRequiredMixin, View):
-    permission_required = "app.add_company"  # 🔑 change 'app' to your app name
+    permission_required = "user.add_company"  # 🔑 change 'app' to your app name
     template_name = "add_company.html"
 
     def get(self, request):
@@ -206,7 +209,7 @@ class AddCompanyView(PermissionRequiredMixin, View):
 
 # --- UPDATE COMPANY ---
 class UpdateCompanyView(PermissionRequiredMixin, View):
-    permission_required = "app.change_company"
+    permission_required = "user.change_company"
     template_name = "update_company.html"
 
     def get(self, request, pk):
@@ -227,7 +230,7 @@ class UpdateCompanyView(PermissionRequiredMixin, View):
 
 # --- DELETE COMPANY ---
 class DeleteCompanyView(PermissionRequiredMixin, View):
-    permission_required = "app.delete_company"
+    permission_required = "user.delete_company"
 
     def get(self, request, pk):
         company = get_object_or_404(Company, pk=pk, is_deleted=False)

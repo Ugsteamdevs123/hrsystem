@@ -32,11 +32,11 @@
                 {% endif %}
             </td>
             <td>
-                {% if perms.app.change_section %}
+                {% if perms.user.change_section %}
                 <a href="{% url 'update_section' section.id %}" class="action-btn edit-btn">Update</a>
                 {% endif %}
                 
-                {% if perms.app.delete_section %}
+                {% if perms.user.delete_section %}
                 <button class="action-btn delete-btn" 
                         onclick="showConfirmPopup('Are you sure you want to delete this section?', function(){
                             window.location.href='{% url 'delete_section' section.id %}';

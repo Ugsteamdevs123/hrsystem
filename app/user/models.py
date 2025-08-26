@@ -31,13 +31,6 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
         unique=True
     )
     full_name = models.CharField(max_length=255)
-
-    # # For making relation with django built-in Group
-    # designation =  models.ForeignKey(
-    #     Group, 
-    #     on_delete=models.CASCADE,
-    # )
-
     gender = models.ForeignKey(
         Gender,
         on_delete=models.CASCADE,
@@ -67,6 +60,11 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
     def group_check(name: str) -> Group:
         designation, _ = Group.objects.get_or_create(name=name)
         return designation
+    
+    class Meta:
+        permissions = [
+            ('can_admin_access', 'Can Admin Access')
+        ]
 
 
 class Company(models.Model):

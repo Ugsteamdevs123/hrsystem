@@ -5,7 +5,7 @@
 <h2>All Companies</h2>
 
 <!-- Add Company Button -->
-{% if perms.app.add_company %}
+{% if perms.user.add_company %}
 <button class="form-btn btn-add" onclick="window.location.href='{% url 'add_company' %}'">Add New Company</button>
 {% endif %}
 
@@ -24,11 +24,11 @@
             <td>{{ forloop.counter }}</td>
             <td>{{ company.name }}</td>
             <td>
-                {% if perms.app.change_company %}
+                {% if perms.user.change_company %}
                 <a href="{% url 'update_company' company.id %}" class="action-btn edit-btn">Update</a>
                 {% endif %}
                 
-                {% if perms.app.delete_company %}
+                {% if perms.user.delete_company %}
                 <button class="action-btn delete-btn" 
                         onclick="showConfirmPopup('Are you sure you want to delete this company?', function(){
                             window.location.href='{% url 'delete_company' company.id %}';
