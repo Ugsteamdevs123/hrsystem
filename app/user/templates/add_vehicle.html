@@ -15,8 +15,8 @@
 
     <!-- Vehicle Model Name -->
     <div class="form-field">
-        {{ vehicle_form.name.label_tag }}
-        {{ vehicle_form.name }}
+        {{ vehicle_form.model_name.label_tag }}
+        {{ vehicle_form.model_name }}
     </div>
 
     <!-- Year -->
@@ -25,16 +25,10 @@
         {{ vehicle_form.year }}
     </div>
 
-    <!-- Condition -->
+    <!-- Registration Number -->
     <div class="form-field">
-        {{ vehicle_form.condition.label_tag }}
-        {{ vehicle_form.condition }}
-    </div>
-
-    <!-- Ownership Type -->
-    <div class="form-field">
-        {{ info_form.ownership_type.label_tag }}
-        {{ info_form.ownership_type }}
+        {{ info_form.registration_number.label_tag }}
+        {{ info_form.registration_number }}
     </div>
 
     <!-- Color -->
@@ -43,16 +37,22 @@
         {{ info_form.color }}
     </div>
 
-    <!-- Registration Number -->
+    <!-- Condition -->
     <div class="form-field">
-        {{ info_form.registration_number.label_tag }}
-        {{ info_form.registration_number }}
+        {{ vehicle_form.condition.label_tag }}
+        {{ vehicle_form.condition }}
     </div>
 
-    <!-- Mileage -->
-    <div class="form-field">
+    <!-- Mileage (Initially Hidden) -->
+    <div class="form-field" id="mileageField" style="display: none;">
         {{ info_form.mileage_km.label_tag }}
         {{ info_form.mileage_km }}
+    </div>
+
+    <!-- Ownership Type -->
+    <div class="form-field">
+        {{ info_form.ownership_type.label_tag }}
+        {{ info_form.ownership_type }}
     </div>
 
     <!-- Buttons -->
@@ -70,8 +70,26 @@
     </div>
 </form>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const conditionField = document.getElementById("id_condition");
+        const mileageField = document.getElementById("mileageField");
+
+        function toggleMileage() {
+            if (conditionField.value === "USED") {
+                mileageField.style.display = "block";
+            } else {
+                mileageField.style.display = "none";
+            }
+        }
+
+        conditionField.addEventListener("change", toggleMileage);
+        toggleMileage();  // Initial check
+    });
+</script>
+
 <style>
-/* Form fields styling (same as add_section.html) */
+/* Form fields styling */
 .form-field {
     margin-bottom: 15px;
     text-align: left;

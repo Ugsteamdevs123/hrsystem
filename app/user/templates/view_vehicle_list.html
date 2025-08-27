@@ -15,11 +15,11 @@
         <tr>
             <th>SR.No</th>
             <th>Brand</th>
-            <th>Model</th>
+            <th>Model Name</th>
             <th>Year</th>
-            <th>Condition</th>
+            <th>Registration Number</th>
             <th>Color</th>
-            <th>Reg. Number</th>
+            <th>Condition</th>
             <th>Mileage (km)</th>
             <th>Ownership</th>
             <th>Actions</th>
@@ -30,12 +30,18 @@
         <tr>
             <td>{{ forloop.counter }}</td>
             <td>{{ v.vehicle.brand.name }}</td>
-            <td>{{ v.vehicle.name }}</td>
+            <td>{{ v.vehicle.model_name }}</td>
             <td>{{ v.vehicle.year }}</td>
-            <td>{{ v.vehicle.get_condition_display }}</td>
-            <td>{{ v.color|default:"-" }}</td>
             <td>{{ v.registration_number }}</td>
-            <td>{{ v.mileage_km }}</td>
+            <td>{{ v.color|default:"-" }}</td>
+            <td>{{ v.vehicle.get_condition_display }}</td>
+            <td>
+                {% if v.vehicle.condition == "USED" %}
+                    {{ v.mileage_km|default:"0" }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
             <td>{{ v.ownership_type|default:"-" }}</td>
             <td>
                 {% if perms.user.change_vehicleinfo %}
@@ -61,7 +67,7 @@
 </table>
 
 <style>
-/* Table styling (same as sections table) */
+/* Table styling */
 table { border-collapse: collapse; margin-top: 15px; width: 100%; }
 th, td { text-align: left; padding: 10px; }
 th { background-color: #f2f2f2; }
