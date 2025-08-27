@@ -1,6 +1,14 @@
 from rest_framework import serializers
 from collections import OrderedDict
-from .models import IncrementDetailsSummary, DepartmentGroups, Section, Designation, Location, EmployeeStatus
+from .models import (
+    IncrementDetailsSummary, 
+    DepartmentGroups, 
+    Section, 
+    Designation, 
+    Location,
+    VehicleInfo,
+    EmployeeStatus
+)
 
 class IncrementDetailsSummarySerializer(serializers.ModelSerializer):
     department = serializers.CharField(source="department_team.name", read_only=True)
@@ -41,6 +49,8 @@ class IncrementDetailsSummarySerializer(serializers.ModelSerializer):
                 # department should stay as is
                 if field == "department":
                     ordered["department"] = rep[field]
+
+                   
                 else:
                     # replace _ with space for other fields
                     ordered[field.replace("_", " ")] = rep[field]
@@ -91,3 +101,17 @@ class EmployeeStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployeeStatus
         fields = '__all__'
+
+
+class VehicleInfoDropdownSerializer(serializers.ModelSerializer):
+    brand_name = serializers.CharField(source='vehicle.brand.name', read_only=True)
+    model_name = serializers.CharField(source='vehicle.name', read_only=True)
+    year = serializers.IntegerField(source='vehicle.year', read_only=True)
+    condition = serializers.CharField(source='vehicle.get_condition_display', read_only=True)
+
+    class Meta:
+        model = VehicleInfo
+        fields = ['id', 'brand_name', 'model_name', 'year', 'condition', 'registration_number']
+
+
+

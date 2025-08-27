@@ -1,3 +1,532 @@
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+
+from .serializers import (
+    UserLoginSerializer,
+)
+from .models import (
+    CustomUser,
+    Company,
+    Section,
+    VehicleInfo,
+    VehicleModel
+)
+
+from django.contrib.auth import login, logout
+from rest_framework import status
+from django.middleware.csrf import get_token
+from rest_framework.permissions import AllowAny , IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+
+from django.contrib.auth.mixins import PermissionRequiredMixin
+
+
+
+from django.views import View
+from django.shortcuts import render, redirect , get_object_or_404
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from .forms import (
+    CompanyForm , 
+    CustomUserForm,
+    CustomUserUpdateForm,
+    SectionForm,
+    DepartmentGroupsForm,
+    HrAssignedCompaniesForm,
+    VehicleInfoForm,
+    VehicleModelForm
+
+)
+
+# Create your views here.
+
+class LoginView(View):
+    template_name = "login.html"
+
+    def get(self, request):
+        """Handles GET requests and renders the login form."""
+        return render(request, self.template_name)
+
+    def post(self, request):
+        """Handles POST requests and authenticates users."""
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+
+        user = authenticate(username=email, password=password)
+        if user is not None:
+            if user.is_active:
+                login(request, user)
+                if user.is_superuser:
+                    # Redirect superuser to view users page
+                    return redirect("view_users")
+                
+                elif user.has_perm('user.can_admin_access'):
+                    return redirect("view_users")
+                else:
+                    # Placeholder for normal users (empty page for now)
+                    return redirect("hr_dashboard")
+            else:
+                messages.error(request, "Your account is disabled.")
+        else:
+            messages.error(request, "Invalid email or password.")
+
+        return render(request, self.template_name)
+
+
+
+class LogoutView(View):
+    def get(self, request):
+        logout(request)
+        return redirect("login")  # Replace with your login URL name
+
+
+
+
+
+# --- CREATE USER ---
+class AddUserView(PermissionRequiredMixin, View):
+    permission_required = "user.add_customuser"
+    template_name = "add_user.html"
+
+    def get(self, request):
+        form = CustomUserForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CustomUserForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            user.is_staff = True
+            user.is_superuser = False
+            user.save()
+            messages.success(request, "User added successfully!")
+            return redirect("view_users")
+        return render(request, self.template_name, {"form": form})
+
+
+
+# --- UPDATE USER ---
+class UpdateUserView(PermissionRequiredMixin, View):
+    permission_required = "user.change_customuser"
+    template_name = "update_user.html"
+
+    def get(self, request, pk):
+        user = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_deleted=False,
+            is_staff=True,
+            is_superuser=False,
+        )
+        form = CustomUserUpdateForm(instance=user)
+        return render(request, self.template_name, {"form": form, "user": user})
+
+    def post(self, request, pk):
+        user = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_deleted=False,
+            is_staff=True,
+            is_superuser=False,
+        )
+        form = CustomUserUpdateForm(request.POST, instance=user)
+        if form.is_valid():
+            user = form.save()
+            user.is_staff = True
+            user.is_superuser = False
+            user.save()
+            messages.success(request, "User updated successfully!")
+            return redirect("view_users")
+        return render(request, self.template_name, {"form": form, "user": user})
+
+
+
+# --- DELETE USER (soft delete) ---
+class DeleteUserView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_customuser"
+
+    def get(self, request, pk):
+        user = get_object_or_404(
+            CustomUser,
+            pk=pk,
+            is_staff=True,
+            is_superuser=False,
+        )
+        user.is_deleted = True
+        user.save()
+        messages.success(request, "User deleted successfully")
+        return redirect("view_users")
+
+
+
+
+# --- VIEW USERS ---
+class ViewUsersView(PermissionRequiredMixin, View):
+    permission_required = "user.view_customuser"
+    template_name = "view_users.html"
+
+    def get(self, request):
+        users = CustomUser.objects.filter(
+            is_staff=True,
+            is_deleted=False,
+            is_superuser=False
+        ).select_related("gender").prefetch_related("groups")  # ✅ fetch groups too
+
+        # attach a selected_group attribute to each user
+        for user in users:
+            user.selected_group = user.groups.first()  # None if no group
+
+        return render(request, self.template_name, {"users": users})
+
+
+# --- VIEW COMPANIES ---
+class ViewCompaniesView(PermissionRequiredMixin, View):
+    permission_required = "user.view_company"  # replace 'app' with your app name
+    template_name = "view_company.html"
+
+    def get(self, request):
+        companies = Company.objects.filter(is_deleted=False)
+        return render(request, self.template_name, {"companies": companies})
+
+
+# --- ADD COMPANY ---
+class AddCompanyView(PermissionRequiredMixin, View):
+    permission_required = "user.add_company"  # 🔑 change 'app' to your app name
+    template_name = "add_company.html"
+
+    def get(self, request):
+        form = CompanyForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CompanyForm(request.POST)
+        if form.is_valid():
+            company = form.save(commit=False)
+            company.is_deleted = False
+            company.save()
+            messages.success(request, "Company added successfully!")
+            return redirect("view_company")  # 🔄 go to companies list
+        return render(request, self.template_name, {"form": form})
+
+
+
+# --- UPDATE COMPANY ---
+class UpdateCompanyView(PermissionRequiredMixin, View):
+    permission_required = "user.change_company"
+    template_name = "update_company.html"
+
+    def get(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        form = CompanyForm(instance=company)
+        return render(request, self.template_name, {"form": form, "company": company})
+
+    def post(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        form = CompanyForm(request.POST, instance=company)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Company updated successfully!")
+            return redirect("view_company")
+        return render(request, self.template_name, {"form": form, "company": company})
+
+
+
+# --- DELETE COMPANY ---
+class DeleteCompanyView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_company"
+
+    def get(self, request, pk):
+        company = get_object_or_404(Company, pk=pk, is_deleted=False)
+        company.is_deleted = True  # ✅ soft delete only active companies
+        company.save()
+        messages.success(request, "Company deleted successfully!")
+        return redirect("view_company")
+
+
+
+# --- VIEW SECTIONS ---
+class ViewSectionsView(PermissionRequiredMixin, View):
+    permission_required = "user.view_section"  # replace 'app' with your app name
+    template_name = "view_section.html"
+
+    def get(self, request):
+        sections = Section.objects.filter(is_deleted=False)
+        return render(request, self.template_name, {"sections": sections})
+
+
+# --- ADD SECTION ---
+class AddSectionView(PermissionRequiredMixin, View):
+    permission_required = "user.add_section"
+    template_name = "add_section.html"
+
+    def get(self, request):
+        form = SectionForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = SectionForm(request.POST)
+        if form.is_valid():
+            section = form.save(commit=False)
+            section.is_deleted = False
+            section.save()
+            messages.success(request, "Section added successfully!")
+            return redirect("view_section")  # 🔄 go to sections list
+        return render(request, self.template_name, {"form": form})
+
+
+# --- UPDATE SECTION ---
+class UpdateSectionView(PermissionRequiredMixin, View):
+    permission_required = "user.change_section"
+    template_name = "update_section.html"
+
+    def get(self, request, pk):
+        section = get_object_or_404(Section, pk=pk, is_deleted=False)
+        form = SectionForm(instance=section)
+        return render(request, self.template_name, {"form": form, "section": section})
+
+    def post(self, request, pk):
+        section = get_object_or_404(Section, pk=pk, is_deleted=False)
+        form = SectionForm(request.POST, instance=section)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Section updated successfully!")
+            return redirect("view_section")
+        return render(request, self.template_name, {"form": form, "section": section})
+
+
+# --- DELETE SECTION ---
+class DeleteSectionView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_section"
+
+    def get(self, request, pk):
+        section = get_object_or_404(Section, pk=pk, is_deleted=False)
+        section.is_deleted = True  # ✅ soft delete only active sections
+        section.save()
+        messages.success(request, "Section deleted successfully!")
+        return redirect("view_section")
+
+
+
+
+# --- VIEW DEPARTMENT GROUPS ---
+class ViewDepartmentGroupsView(PermissionRequiredMixin, View):
+    permission_required = "user.view_departmentgroups"
+    template_name = "view_departmentgroups.html"
+
+    def get(self, request):
+        groups = DepartmentGroups.objects.filter(is_deleted=False)
+        return render(request, self.template_name, {"groups": groups})
+
+
+# --- ADD DEPARTMENT GROUP ---
+class AddDepartmentGroupView(PermissionRequiredMixin, View):
+    permission_required = "user.add_departmentgroups"
+    template_name = "add_departmentgroups.html"
+
+    def get(self, request):
+        form = DepartmentGroupsForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = DepartmentGroupsForm(request.POST)
+        if form.is_valid():
+            group = form.save(commit=False)
+            group.is_deleted = False
+            group.save()
+            messages.success(request, "Department Group added successfully!")
+            return redirect("view_departmentgroups")
+        return render(request, self.template_name, {"form": form})
+
+
+# --- UPDATE DEPARTMENT GROUP ---
+class UpdateDepartmentGroupView(PermissionRequiredMixin, View):
+    permission_required = "user.change_departmentgroups"
+    template_name = "update_departmentgroups.html"
+
+    def get(self, request, pk):
+        group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
+        form = DepartmentGroupsForm(instance=group)
+        return render(request, self.template_name, {"form": form, "group": group})
+
+    def post(self, request, pk):
+        group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
+        form = DepartmentGroupsForm(request.POST, instance=group)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Department Group updated successfully!")
+            return redirect("view_departmentgroups")
+        return render(request, self.template_name, {"form": form, "group": group})
+
+
+# --- DELETE DEPARTMENT GROUP ---
+class DeleteDepartmentGroupView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_departmentgroups"
+
+    def get(self, request, pk):
+        group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
+        group.is_deleted = True  # soft delete
+        group.save()
+        messages.success(request, "Department Group deleted successfully!")
+        return redirect("view_departmentgroups")
+
+
+# --- VIEW HR ASSIGNED COMPANIES ---
+class ViewHrAssignedCompaniesView(PermissionRequiredMixin, View):
+    permission_required = "user.view_hr_assigned_companies"
+    template_name = "view_hr_assigned_companies.html"
+
+    def get(self, request):
+        assignments = hr_assigned_companies.objects.filter(is_deleted=False)
+        return render(request, self.template_name, {"assignments": assignments})
+
+
+# --- ADD HR ASSIGNED COMPANY ---
+class AddHrAssignedCompanyView(PermissionRequiredMixin, View):
+    permission_required = "user.add_hr_assigned_companies"
+    template_name = "add_hr_assigned_company.html"
+
+    def get(self, request):
+        form = HrAssignedCompaniesForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = HrAssignedCompaniesForm(request.POST)
+        if form.is_valid():
+            assignment = form.save(commit=False)
+            assignment.is_deleted = False
+            assignment.save()
+            messages.success(request, "HR assigned company added successfully!")
+            return redirect("view_hr_assigned_companies")
+        return render(request, self.template_name, {"form": form})
+
+
+# --- UPDATE HR ASSIGNED COMPANY ---
+class UpdateHrAssignedCompanyView(PermissionRequiredMixin, View):
+    permission_required = "user.change_hr_assigned_companies"
+    template_name = "update_hr_assigned_company.html"
+
+    def get(self, request, pk):
+        assignment = get_object_or_404(hr_assigned_companies, pk=pk, is_deleted=False)
+        form = HrAssignedCompaniesForm(instance=assignment)
+        return render(request, self.template_name, {"form": form, "assignment": assignment})
+
+    def post(self, request, pk):
+        assignment = get_object_or_404(hr_assigned_companies, pk=pk, is_deleted=False)
+        form = HrAssignedCompaniesForm(request.POST, instance=assignment)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "HR assigned company updated successfully!")
+            return redirect("view_hr_assigned_companies")
+        return render(request, self.template_name, {"form": form, "assignment": assignment})
+
+
+# --- DELETE HR ASSIGNED COMPANY ---
+class DeleteHrAssignedCompanyView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_hr_assigned_companies"
+
+    def get(self, request, pk):
+        assignment = get_object_or_404(hr_assigned_companies, pk=pk, is_deleted=False)
+        assignment.is_deleted = True  # soft delete
+        assignment.save()
+        messages.success(request, "HR assigned company deleted successfully!")
+        return redirect("view_hr_assigned_companies")
+
+
+
+# --- VIEW VEHICLES ---
+class ViewVehicleListView(PermissionRequiredMixin, View):
+    permission_required = "user.view_vehicleinfo"
+    template_name = "view_vehicle_list.html"
+
+    def get(self, request):
+        vehicles = VehicleInfo.objects.select_related("vehicle", "ownership_type").all()
+        return render(request, self.template_name, {"vehicles": vehicles})
+
+
+# --- ADD VEHICLE ---
+class AddVehicleView(PermissionRequiredMixin, View):
+    permission_required = "user.add_vehicleinfo"
+    template_name = "add_vehicle.html"
+
+    def get(self, request):
+        vehicle_form = VehicleModelForm()
+        info_form = VehicleInfoForm()
+        return render(request, self.template_name, {
+            "vehicle_form": vehicle_form,
+            "info_form": info_form
+        })
+
+    def post(self, request):
+        vehicle_form = VehicleModelForm(request.POST)
+        info_form = VehicleInfoForm(request.POST)
+        if vehicle_form.is_valid() and info_form.is_valid():
+            vehicle = vehicle_form.save()
+            info = info_form.save(commit=False)
+            info.vehicle = vehicle
+            info.save()
+            messages.success(request, "Vehicle added successfully!")
+            return redirect("view_vehicles")
+        return render(request, self.template_name, {
+            "vehicle_form": vehicle_form,
+            "info_form": info_form
+        })
+
+
+# --- UPDATE VEHICLE ---
+class UpdateVehicleView(PermissionRequiredMixin, View):
+    permission_required = "user.change_vehicleinfo"
+    template_name = "update_vehicle.html"
+
+    def get(self, request, pk):
+        vehicle_info = get_object_or_404(VehicleInfo, pk=pk)
+        vehicle_form = VehicleModelForm(instance=vehicle_info.vehicle)
+        info_form = VehicleInfoForm(instance=vehicle_info)
+        return render(request, self.template_name, {
+            "vehicle_form": vehicle_form,
+            "info_form": info_form,
+            "vehicle_info": vehicle_info
+        })
+
+    def post(self, request, pk):
+        vehicle_info = get_object_or_404(VehicleInfo, pk=pk)
+        vehicle_form = VehicleModelForm(request.POST, instance=vehicle_info.vehicle)
+        info_form = VehicleInfoForm(request.POST, instance=vehicle_info)
+        if vehicle_form.is_valid() and info_form.is_valid():
+            vehicle_form.save()
+            info_form.save()
+            messages.success(request, "Vehicle updated successfully!")
+            return redirect("view_vehicles")
+        return render(request, self.template_name, {
+            "vehicle_form": vehicle_form,
+            "info_form": info_form,
+            "vehicle_info": vehicle_info
+        })
+
+
+# --- DELETE VEHICLE ---
+class DeleteVehicleView(PermissionRequiredMixin, View):
+    permission_required = "user.delete_vehicleinfo"
+
+    def get(self, request, pk):
+        vehicle_info = get_object_or_404(VehicleInfo, pk=pk)
+        vehicle_info.delete()  # Hard delete, or you can soft delete by adding a flag
+        messages.success(request, "Vehicle deleted successfully!")
+        return redirect("view_vehicles")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 from venv import logger
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
@@ -26,7 +555,8 @@ from .models import (
     Designation,
     Location,
     EmployeeStatus,
-    Formula)
+    Formula
+    )
 
 from .utils import get_companies_and_department_teams
 from .serializer import (
@@ -35,69 +565,20 @@ from .serializer import (
     DesignationSerializer,
     DesignationCreateSerializer,
     LocationsSerializer,
-    EmployeeStatusSerializer
+    EmployeeStatusSerializer,
+    VehicleInfoDropdownSerializer
+
 )
 
 import json
-
-# # Original function-based decorator (kept for reference)
-# def group_or_superuser_required(group_name):
-#     def decorator(view_func):
-#         def wrapper(request, *args, **kwargs):
-#             if not request.user.is_authenticated:
-#                 return redirect('login')
-#             if request.user.is_superuser or request.user.groups.filter(name=group_name).exists():
-#                 return view_func(request, *args, **kwargs)
-#             return HttpResponseForbidden(f'You Must Be {group_name} or Admin')
-#         return wrapper
-#     return decorator
-
-# Class-based mixin equivalent
-# class GroupOrSuperuserRequiredMixin:
-#     """
-#     Mixin to restrict access to users who are either superusers or belong to a specific group.
-#     """
-#     group_name = None  # Must be set in the view
-
-#     def dispatch(self, request, *args, **kwargs):
-#         if not request.user.is_authenticated:
-#             return redirect('login')
-#         if request.user.is_superuser or request.user.groups.filter(name=self.group_name).exists():
-#             return super().dispatch(request, *args, **kwargs)
-#         return HttpResponseForbidden(f'You Must Be {self.group_name} or Admin')
-
-# # Example usage with the CustomerServiceLogoutView
-# class CustomerServiceLogoutView(View):
-#     permission_classes = [GroupOrSuperuserRequiredMixin]
-#     """
-#     Class-based logout view for customer service representatives.
-#     Handles POST requests to log out the user, clear sessions, and redirect to the login page.
-#     Renders a confirmation page for GET requests.
-#     """
-#     group_name = 'Customer Service'  # Set the group name for the mixin
-
-#     @classmethod
-#     def as_view(cls, **initkwargs):
-#         view = super().as_view(**initkwargs)
-#         view = login_required(view)
-#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
-#         view = csrf_protect(view)
-#         return view
-
-#     def post(self, request):
-#         user = request.user
-#         token = request.session.get('access_token', '')  # Optional: Retrieve JWT token from session
-#         Session.objects.filter(user=user).delete()  # Clear active session
-#         user.logged = False
-#         user.save()
-#         logout(request)  # Clear Django session
-#         messages_success(request, 'You have been logged out successfully.')
-#         return redirect('login')
-
-#     def get(self, request):
-#         return render(request, 'logout.html')
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
 
 
+
+
+
+# Hr login then show this dashboard view . this is incrementdetailssummary model
 
 class HrDashboardView(PermissionRequiredMixin, View):
     """
@@ -105,8 +586,8 @@ class HrDashboardView(PermissionRequiredMixin, View):
     Handles PATCH requests to update 'eligible_for_increment' value.
     Renders HR dashboard page for GET requests.
     """
-    permission_classes = [GroupOrSuperuserPermission]
-    group_name = 'Hr'  # Set the group name for the permission
+    permission_required = 'user.view_incrementdetailssummary'  # ✅ set permission
+    raise_exception = True  # ✅ raise 403 if no permission
 
     @classmethod
     def as_view(cls, **initkwargs):
@@ -118,11 +599,6 @@ class HrDashboardView(PermissionRequiredMixin, View):
     
     def get(self, request):
         # Fetch companies assigned to the logged-in HR
-        # assigned_companies = hr_assigned_companies.objects.filter(hr=request.user)
-        # company_data = [
-        #     {'company_id': ac.company.id, 'company_name': ac.company.name}
-        #     for ac in assigned_companies
-        # ]
 
         company_data = get_companies_and_department_teams(request.user)
 
@@ -160,6 +636,11 @@ class HrDashboardView(PermissionRequiredMixin, View):
                 if not summary_id or not eligible_for_increment:
                     return JsonResponse({'error': 'Invalid data'}, status=400)
                 summary = IncrementDetailsSummary.objects.get(id=summary_id, company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company'))
+
+                 # Permission check
+                if not request.user.has_perm('user.change_incrementdetailssummary'):
+                    return JsonResponse({'error': 'Permission denied'}, status=403)
+                
                 summary.eligible_for_increment = int(eligible_for_increment)
                 summary.save()
                 return JsonResponse({'message': 'Updated successfully'})
@@ -168,6 +649,9 @@ class HrDashboardView(PermissionRequiredMixin, View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
+
+
+# For dept team crud
 class DepartmentTeamView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -178,17 +662,22 @@ class DepartmentTeamView(View):
         return view
 
     def get(self, request):
-        # assigned_companies = hr_assigned_companies.objects.filter(hr=request.user)
-        # company_data = [
-        #     {'company_id': ac.company.id, 'company_name': ac.company.name}
-        #     for ac in assigned_companies
-        # ]
+
+        # ✅ Check permission: Can view departments
+        if not request.user.has_perm('user.view_departmentteams'):
+            raise PermissionDenied("You do not have permission to view departments.")
+
 
         company_data = get_companies_and_department_teams(request.user)
 
         return render(request, 'department_team.html', {'company_data': company_data})
 
     def post(self, request):
+
+        # ✅ Check permission: Can add department
+        if not request.user.has_perm('user.add_departmentteams'):
+            raise PermissionDenied("You do not have permission to add departments.")
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 company_id = request.POST.get('company_id')
@@ -203,6 +692,11 @@ class DepartmentTeamView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
     def patch(self, request):
+
+        # ✅ Check permission: Can change department
+        if not request.user.has_perm('user.change_departmentteams'):
+            raise PermissionDenied("You do not have permission to edit departments.")
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)
@@ -222,6 +716,11 @@ class DepartmentTeamView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
     def delete(self, request):
+
+        # ✅ Check permission: Can delete department
+        if not request.user.has_perm('user.delete_departmentteams'):
+            raise PermissionDenied("You do not have permission to delete departments.")
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)
@@ -239,12 +738,15 @@ class DepartmentTeamView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
+
+# show company name with dept in dropdwon 
+
 class GetCompaniesAndDepartmentTeamsView(PermissionRequiredMixin, View):
     """
     Class-based view for fetching companies and departments teams list assigned to HR.
     """
-    permission_classes = [GroupOrSuperuserPermission]
-    group_name = 'Hr'  # Set the group name for the permission
+    # permission_classes = [GroupOrSuperuserPermission]
+    # group_name = 'Hr'  # Set the group name for the permission
 
     @classmethod
     def as_view(cls, **initkwargs):
@@ -260,6 +762,7 @@ class GetCompaniesAndDepartmentTeamsView(PermissionRequiredMixin, View):
             return JsonResponse({'data': data})  # Return companies for add_department.html
         except Exception as e:
             print(e)
+            return JsonResponse({'data': [], 'error': str(e)})
 
 
 
@@ -306,6 +809,7 @@ class CompanySummaryView(View):
             table_html = '<p>No summary data available for this company.</p>'
         # logger.info(f"User {request.user.username} accessed summary for company {company_id}")
         return render(request, 'company_summary.html', {'company_data': company_data, 'company': company, 'table_html': table_html})
+
 
     def patch(self, request, company_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -378,7 +882,11 @@ class DepartmentTableView(View):
                 'remarks': employee.remarks or '',
                 'image': employee.image.url if employee.image else '',
                 'gross_salary': current_package.gross_salary if current_package else '',
-                'vehicle': current_package.vehicle if current_package else '',
+                
+                # 'vehicle': current_package.vehicle if current_package else '',
+                # 'vehicle': current_package.vehicle.vehicle_model.name if current_package and current_package.vehicle else '',
+                'vehicle': current_package.vehicle.vehicle.brand.name if current_package and current_package.vehicle else '',
+
                 'fuel_limit': current_package.fuel_limit if current_package else '',
                 'mobile_allowance_current': current_package.mobile_allowance if current_package else '',
                 'increment_percentage': proposed_package.increment_percentage if proposed_package else '',
@@ -390,7 +898,10 @@ class DepartmentTableView(View):
                 # 'revised_fuel_allowance': proposed_package.revised_fuel_allowance.formula if proposed_package and proposed_package.revised_fuel_allowance else '',
                 'revised_fuel_allowance': proposed_package.revised_fuel_allowance if proposed_package and proposed_package.revised_fuel_allowance else '',
                 'mobile_allowance_proposed': proposed_package.mobile_allowance if proposed_package else '',
-                'vehicle_proposed': proposed_package.vehicle if proposed_package else '',
+                
+                # 'vehicle_proposed': proposed_package.vehicle if proposed_package else '',
+                'vehicle_proposed': proposed_package.vehicle.vehicle.brand.name if proposed_package and proposed_package.vehicle else '',
+
                 'emp_status': financial_impact.emp_status.status if financial_impact and financial_impact.emp_status else '',
                 'serving_years': financial_impact.serving_years if financial_impact else '',
                 'salary': financial_impact.salary if financial_impact else '',
@@ -431,6 +942,8 @@ class DepartmentTableView(View):
         })
 
 
+# View for create employee data
+
 class CreateDataView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -455,12 +968,14 @@ class CreateDataView(View):
     def post(self, request, department_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
-                print(request.POST)
-                step = request.POST.get('step')
-                department = DepartmentTeams.objects.get(
-                    id=department_id,
-                    company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-                )
+                with transaction.atomic():  # 🚀 Start atomic block
+                    
+                    print(request.POST)
+                    step = request.POST.get('step')
+                    department = DepartmentTeams.objects.get(
+                        id=department_id,
+                        company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+                    )
                 if step == 'employee':
                     employee = Employee.objects.create(
                         fullname=request.POST.get('fullname'),
@@ -496,10 +1011,7 @@ class CreateDataView(View):
                     proposed_package = ProposedPackageDetails.objects.create(
                         employee=employee,
                         increment_percentage=request.POST.get('increment_percentage'),
-                        # increased_amount_id=request.POST.get('increased_amount_id'),
-                        # revised_salary_id=request.POST.get('revised_salary_id'),
                         increased_fuel_amount=request.POST.get('increased_fuel_amount'),
-                        # revised_fuel_allowance_id=request.POST.get('revised_fuel_allowance_id'),
                         mobile_allowance=request.POST.get('mobile_allowance'),
                         vehicle=request.POST.get('vehicle')
                     )
@@ -510,15 +1022,7 @@ class CreateDataView(View):
                     employee = Employee.objects.get(emp_id=employee_id, department_team=department)
                     financial_impact = FinancialImpactPerMonth.objects.create(
                         employee=employee,
-                        emp_status_id=request.POST.get('emp_status_id'),
-                        # serving_years=request.POST.get('serving_years'),
-                        # salary=request.POST.get('salary'),
-                        # gratuity_id=request.POST.get('gratuity_id'),
-                        # bonus_id=request.POST.get('bonus_id'),
-                        # leave_encashment_id=request.POST.get('leave_encashment_id'),
-                        # mobile_allowance_id=request.POST.get('mobile_allowance_id'),
-                        # fuel=request.POST.get('fuel'),
-                        # total_id=request.POST.get('total_id')
+                        emp_status_id=request.POST.get('emp_status_id')
                     )
                     logger.debug(f"FinancialImpactPerMonth created for employee: {employee_id}")
                     return JsonResponse({'message': 'Financial Impact created'})
@@ -530,6 +1034,7 @@ class CreateDataView(View):
 
 
 class GetDataView(View):
+    
     @classmethod
     def as_view(cls, **initkwargs):
         view = super().as_view(**initkwargs)
@@ -573,12 +1078,9 @@ class GetDataView(View):
                         },
                         'proposed_package': {
                             'increment_percentage': str(proposed_package.increment_percentage) if proposed_package and proposed_package.increment_percentage else '',
-                            # 'increased_amount_id': str(proposed_package.increased_amount_id) if proposed_package and proposed_package.increased_amount_id else '',
-                            # 'revised_salary_id': str(proposed_package.revised_salary_id) if proposed_package and proposed_package.revised_salary_id else '',
                             'increased_amount': str(proposed_package.increased_amount) if proposed_package and proposed_package.increased_amount else '',
                             'revised_salary': str(proposed_package.revised_salary) if proposed_package and proposed_package.revised_salary else '',
                             'increased_fuel_amount': str(proposed_package.increased_fuel_amount) if proposed_package and proposed_package.increased_fuel_amount else '',
-                            # 'revised_fuel_allowance_id': str(proposed_package.revised_fuel_allowance_id) if proposed_package and proposed_package.revised_fuel_allowance_id else '',
                             'revised_fuel_allowance': str(proposed_package.revised_fuel_allowance) if proposed_package and proposed_package.revised_fuel_allowance else '',
                             'mobile_allowance': str(proposed_package.mobile_allowance) if proposed_package and proposed_package.mobile_allowance else '',
                             'vehicle': proposed_package.vehicle if proposed_package else ''
@@ -587,16 +1089,11 @@ class GetDataView(View):
                             'emp_status_id': str(financial_impact.emp_status_id) if financial_impact and financial_impact.emp_status_id else '',
                             'serving_years': str(financial_impact.serving_years) if financial_impact and financial_impact.serving_years else '',
                             'salary': str(financial_impact.salary) if financial_impact and financial_impact.salary else '',
-                            # 'gratuity_id': str(financial_impact.gratuity_id) if financial_impact and financial_impact.gratuity_id else '',
                             'gratuity': str(financial_impact.gratuity) if financial_impact and financial_impact.gratuity else '',
-                            # 'bonus_id': str(financial_impact.bonus_id) if financial_impact and financial_impact.bonus_id else '',
                             'bonus': str(financial_impact.bonus) if financial_impact and financial_impact.bonus else '',
-                            # 'leave_encashment_id': str(financial_impact.leave_encashment_id) if financial_impact and financial_impact.leave_encashment_id else '',
                             'leave_encashment': str(financial_impact.leave_encashment) if financial_impact and financial_impact.leave_encashment else '',
-                            # 'mobile_allowance_id': str(financial_impact.mobile_allowance_id) if financial_impact and financial_impact.mobile_allowance_id else '',
                             'mobile_allowance': str(financial_impact.mobile_allowance) if financial_impact and financial_impact.mobile_allowance else '',
                             'fuel': str(financial_impact.fuel) if financial_impact and financial_impact.fuel else '',
-                            # 'total_id': str(financial_impact.total_id) if financial_impact and financial_impact.total_id else ''
                             'total': str(financial_impact.total) if financial_impact and financial_impact.total else ''
                         }
                     }
@@ -657,10 +1154,7 @@ class UpdateDataView(View):
                 elif step == 'proposed_package':
                     proposed_package, created = ProposedPackageDetails.objects.get_or_create(employee=employee)
                     proposed_package.increment_percentage = data.get('increment_percentage')
-                    # proposed_package.increased_amount_id = data.get('increased_amount_id')
-                    # proposed_package.revised_salary_id = data.get('revised_salary_id')
                     proposed_package.increased_fuel_amount = data.get('increased_fuel_amount')
-                    # proposed_package.revised_fuel_allowance_id = data.get('revised_fuel_allowance_id')
                     proposed_package.mobile_allowance = data.get('mobile_allowance')
                     proposed_package.vehicle = data.get('vehicle')
                     proposed_package.save()
@@ -669,14 +1163,6 @@ class UpdateDataView(View):
                 elif step == 'financial_impact':
                     financial_impact, created = FinancialImpactPerMonth.objects.get_or_create(employee=employee)
                     financial_impact.emp_status_id = data.get('emp_status_id')
-                    # financial_impact.serving_years = data.get('serving_years')
-                    # financial_impact.salary = data.get('salary')
-                    # financial_impact.gratuity_id = data.get('gratuity_id')
-                    # financial_impact.bonus_id = data.get('bonus_id')
-                    # financial_impact.leave_encashment_id = data.get('leave_encashment_id')
-                    # financial_impact.mobile_allowance_id = data.get('mobile_allowance_id')
-                    # financial_impact.fuel = data.get('fuel')
-                    # financial_impact.total_id = data.get('total_id')
                     financial_impact.save()
                     logger.debug(f"FinancialImpactPerMonth updated for employee: {employee_id}")
                     return JsonResponse({'message': 'Financial Impact updated'})
@@ -712,6 +1198,8 @@ class DeleteDataView(View):
             except (Employee.DoesNotExist, ValueError):
                 return JsonResponse({'error': 'Invalid data'}, status=400)
         return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
 
 
 class DepartmentGroupsSectionsView(View):
@@ -771,6 +1259,13 @@ class EmployeeStatusView(View):
         
         return JsonResponse({'error': 'Invalid request'}, status=400)
     
+class VehiclesDropdownView(View):
+    def get(self, request):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            vehicles = VehicleInfo.objects.select_related('vehicle__brand').all()
+            data = VehicleInfoDropdownSerializer(vehicles, many=True).data
+            return JsonResponse({'data': data})
+        return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
 
@@ -786,13 +1281,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 
 def manage_formulas(request):
+    company_data = get_companies_and_department_teams(request.user)
+
     field_formulas = FieldFormula.objects.all()
     field_references = FieldReference.objects.all()
     if request.method == 'POST':
         form = FieldFormulaForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('user:manage_formulas')
+            return redirect('manage_formulas')
         else:
             print(form.errors)
     else:
@@ -800,7 +1297,8 @@ def manage_formulas(request):
     return render(request, 'manage_formulas.html', {
         'form': form,
         'field_formulas': field_formulas,
-        'field_references': field_references
+        'field_references': field_references,
+        'company_data': company_data
     })
 
 
@@ -825,7 +1323,7 @@ def create_formula(request):
         form = FormulaForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('user:manage_formulas')
+            return redirect('manage_formulas')
     else:
         form = FormulaForm()
     return render(request, 'create_formula.html', {'form': form})
@@ -837,7 +1335,7 @@ def edit_formula(request, pk):
         form = FormulaForm(request.POST, instance=formula)
         if form.is_valid():
             form.save()
-            return redirect('user:manage_formulas')
+            return redirect('manage_formulas')
     else:
         form = FormulaForm(instance=formula)
     return render(request, 'edit_formula.html', {'form': form, 'field_references': FieldReference.objects.all()})
@@ -848,7 +1346,7 @@ def edit_field_formula(request, pk):
         form = FieldFormulaForm(request.POST, instance=field_formula)
         if form.is_valid():
             form.save()
-            return redirect('user:manage_formulas')
+            return redirect('manage_formulas')
     else:
         form = FieldFormulaForm(instance=field_formula)
     return render(request, 'edit_field_formula.html', {'form': form})

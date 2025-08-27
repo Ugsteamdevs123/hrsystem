@@ -9,15 +9,23 @@ from .managers import  CustomUserManager
 
 from decimal import Decimal, InvalidOperation
 
+# For audit logs 
+from auditlog.registry import auditlog
+from auditlog.models import AuditlogHistoryField
+
 # Create your models here.
 
 
 class Gender(models.Model):
     gender = models.CharField(max_length=12)
 
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
     def __str__(self):
         return self.gender
-    
+
 
 class CustomUser(AbstractBaseUser , PermissionsMixin):
     email = models.EmailField(
@@ -25,13 +33,6 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
         unique=True
     )
     full_name = models.CharField(max_length=255)
-
-    # # For making relation with django built-in Group
-    # designation =  models.ForeignKey(
-    #     Group, 
-    #     on_delete=models.CASCADE,
-    # )
-
     gender = models.ForeignKey(
         Gender,
         on_delete=models.CASCADE,
@@ -49,18 +50,32 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
+    is_deleted = models.BooleanField(default=False)
 
     USERNAME_FIELD ='email'
     objects = CustomUserManager()
+
+    history = AuditlogHistoryField()  # Required to store log
+
 
     @staticmethod
     def group_check(name: str) -> Group:
         designation, _ = Group.objects.get_or_create(name=name)
         return designation
+    
+    class Meta:
+        permissions = [
+            ('can_admin_access', 'Can Admin Access')
+        ]
 
 
 class Company(models.Model):
     name = models.CharField(max_length=255)
+
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
 
     def __str__(self):
         return self.name
@@ -70,21 +85,34 @@ class hr_assigned_companies(models.Model):
     hr = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
 
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
     def __str__(self):
         return self.hr.full_name + ' ' + self.company.name
+
 
 
 class Designation(models.Model):
     title = models.CharField(max_length=255)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
 
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
     def __str__(self):
-        return self.title + ' ' + self.company
+        return self.title + ' ' + self.company.name
 
 
 class DepartmentTeams(models.Model):
     name = models.CharField(max_length=255)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
 
     def __str__(self):
         return self.name
@@ -92,6 +120,10 @@ class DepartmentTeams(models.Model):
 
 class DepartmentGroups(models.Model):
     name = models.CharField(max_length=255)
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
 
     def __str__(self):
         return self.name
@@ -100,6 +132,10 @@ class DepartmentGroups(models.Model):
 class Section(models.Model):
     name = models.CharField(max_length=255)
     department_group = models.ForeignKey(DepartmentGroups, on_delete=models.CASCADE, null=True)
+
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
         return self.name
@@ -111,6 +147,9 @@ class EmployeeStatus(models.Model):
     #     ('CONTRACT', 'C'),
     # )
     status = models.CharField(max_length=255)
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
         return self.status
@@ -120,6 +159,11 @@ class Formula(models.Model):
     formula_name = models.CharField(max_length=255)
     formula_expression = models.CharField(max_length=255)
 
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
+
     def __str__(self):
         return self.formula_name
     
@@ -127,9 +171,10 @@ class Formula(models.Model):
 class Location(models.Model):
     location = models.CharField(max_length=122)
     code = models.CharField(max_length=50) 
-    
-    def __str__(self):
-        return self.location
+
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
 
 
 class IncrementDetailsSummary(models.Model):
@@ -147,8 +192,58 @@ class IncrementDetailsSummary(models.Model):
     revised_department_salary = models.FloatField(null=True)
     staff_revised_cost = models.FloatField(null=True)
 
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
     def __str__(self):
         return self.department_team.company.name + ' ' + self.department_team.name + ' increment summary'
+
+
+
+class VehicleBrand(models.Model):
+    """Stores vehicle brand details like Toyota, Honda."""
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class VehicleModel(models.Model):
+    """Stores vehicle model details, linked to a brand."""
+    CONDITION_CHOICES = [
+        ('NEW', 'Brand New'),
+        ('USED', 'Used'),
+    ]
+
+    brand = models.ForeignKey(VehicleBrand, on_delete=models.CASCADE, related_name='models')
+    name = models.CharField(max_length=50)
+    year = models.PositiveIntegerField()
+    condition = models.CharField(max_length=10, choices=CONDITION_CHOICES, default='NEW')
+
+    class Meta:
+        unique_together = ('brand', 'name', 'year', 'condition')
+
+    def __str__(self):
+        return f"{self.brand.name} {self.name} ({self.year}) - {self.get_condition_display()}"
+
+
+class VehicleOwnerShipModel(models.Model)   :
+    own_type = models.CharField(max_length=20)
+
+    def __str__(self):
+        return self.own_type
+    
+class VehicleInfo(models.Model):
+    vehicle = models.OneToOneField(VehicleModel, on_delete=models.CASCADE, related_name='info')
+    ownership_type = models.ForeignKey(VehicleOwnerShipModel, on_delete=models.SET_NULL, null=True)
+    color = models.CharField(max_length=20, blank=True)
+    registration_number = models.CharField(max_length=100)
+    mileage_km = models.PositiveIntegerField(default=0, help_text="Total distance travelled in kilometers")
+
+    def __str__(self):
+        return f"Info for {self.vehicle}"
+    
 
 
 class Employee(models.Model):
@@ -170,16 +265,27 @@ class Employee(models.Model):
     remarks = models.TextField(blank=True)
     image = models.FileField(upload_to='employee_images/', blank=True, null=True)
 
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
     def __str__(self):
         return self.fullname
 
 
 class CurrentPackageDetails(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
-    gross_salary = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    vehicle = models.CharField(max_length=40, blank=True, null=True)
-    fuel_limit = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    gross_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    vehicle = models.ForeignKey(VehicleInfo, on_delete=models.SET_NULL, null=True)
+    fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
+    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
+
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
+    def __str__(self):
+        return f"Package for {self.employee.fullname}"
 
     def save(self, *args, **kwargs):
         # Handle only DecimalFields
@@ -196,9 +302,7 @@ class CurrentPackageDetails(models.Model):
 
         # Everything else (CharField, ForeignKey, etc.) is saved as-is
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"Package for {self.employee.fullname}"
+    
 
 
 class ProposedPackageDetails(models.Model):
@@ -209,7 +313,14 @@ class ProposedPackageDetails(models.Model):
     increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     revised_fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    vehicle = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vehicle = models.ForeignKey(VehicleInfo, on_delete=models.SET_NULL, null=True)
+
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
+    def __str__(self):
+        return f"Proposed Package for {self.employee.fullname}"
 
     def save(self, *args, **kwargs):
         # Handle only DecimalFields
@@ -226,9 +337,8 @@ class ProposedPackageDetails(models.Model):
 
         # Everything else (CharField, ForeignKey, etc.) is saved as-is
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"Proposed Package for {self.employee.fullname}"
+    
+    
     
 
 class FinancialImpactPerMonth(models.Model):
@@ -242,6 +352,13 @@ class FinancialImpactPerMonth(models.Model):
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     fuel = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
+
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
+    def __str__(self):
+        return f"Final Impact for {self.employee.fullname}"
 
     def save(self, *args, **kwargs):
         # Handle only DecimalFields
@@ -259,13 +376,16 @@ class FinancialImpactPerMonth(models.Model):
         # Everything else (CharField, ForeignKey, etc.) is saved as-is
         super().save(*args, **kwargs)
         
-    def __str__(self):
-        return f"Final Impact for {self.employee.fullname}"
+    
 
 
 class configurations(models.Model):
     fuel_rate = models.FloatField(null=True)
     as_of_date = models.DateField(null=True)
+
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
         return f"{self.fuel_rate} - {self.as_of_date}"
@@ -278,9 +398,6 @@ class configurations(models.Model):
 
 
 
-
-
-# In app/models.py
 class FieldFormula(models.Model):
     target_model = models.CharField(max_length=255)  # e.g., 'ProposedPackageDetails'
     target_field = models.CharField(max_length=255)  # e.g., 'revised_salary'

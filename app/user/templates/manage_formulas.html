@@ -14,7 +14,7 @@
 <!-- Formula creation form -->
 <h3>Create New Formula</h3>
 <h3>Create New Formula</h3>
-<form method="post" action="{% url 'user:create_formula' %}">
+<form method="post" action="{% url 'create_formula' %}">
     {% csrf_token %}
     <label for="formula_name">Formula Name: <span style="color: red;">*</span></label>
     <input type="text" name="formula_name" required>
@@ -56,7 +56,7 @@
             var modelName = $(this).val();
             if (modelName) {
                 $.ajax({
-                    url: '/pyroll/get-model-fields/',
+                    url: '/payroll/get-model-fields/',
                     data: { 'model_name': modelName },
                     success: function(data) {
                         var fieldSelect = $('#id_target_field');
@@ -77,7 +77,7 @@
             var companyId = $(this).val();
             if (companyId) {
                 $.ajax({
-                    url: '/pyroll/get-company-departments-employees/',
+                    url: '/payroll/get-company-departments-employees/',
                     data: { 'company_id': companyId },
                     success: function(data) {
                         // Update department_team dropdown
@@ -111,7 +111,7 @@
             var companyId = $('#id_company').val();
             if (departmentId && companyId) {
                 $.ajax({
-                    url: '/pyroll/get-department-employees/',
+                    url: '/payroll/get-department-employees/',
                     data: {
                         'company_id': companyId,
                         'department_team_id': departmentId
@@ -187,8 +187,8 @@
             <td>{{ ff.formula.formula_expression }}</td>
             <td>{{ ff.get_aggregate_type_display|default:"None" }}</td>
             <td>
-                <a href="{% url 'user:edit_formula' ff.formula.id %}">Edit Formula</a> |
-                <a href="{% url 'user:edit_field_formula' ff.id %}">Edit Association</a>
+                <a href="{% url 'edit_formula' ff.formula.id %}">Edit Formula</a> |
+                <a href="{% url 'edit_field_formula' ff.id %}">Edit Association</a>
             </td>
         </tr>
         {% endfor %}

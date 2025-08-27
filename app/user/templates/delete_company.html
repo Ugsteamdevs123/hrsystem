@@ -1,0 +1,16 @@
+<form method="POST" action="{% url 'delete_company' company.id %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn-delete">Delete</button>
+</form>
+
+<style>
+    .btn-delete {
+        background-color: #dc3545;
+        color: #fff;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .btn-delete:hover { background-color: #c82333; }
+</style>
