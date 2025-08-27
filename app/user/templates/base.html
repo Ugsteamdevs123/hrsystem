@@ -238,9 +238,11 @@
 
                     <div id="panel-{{ company.company_id }}" class="tree-panel" hidden>
                     <ul class="tree-list">
-                        <li>
+
+                        {% comment %} <li>
                         <a href="{% url 'company_summary' company.company_id %}">Summary</a>
-                        </li>
+                        </li> {% endcomment %}
+                        
                         {% for department in company.departments %}
                         <li class="child">
                             {# IMPORTANT: pass department.id to avoid NoReverseMatch #}
