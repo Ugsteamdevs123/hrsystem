@@ -193,7 +193,6 @@ from .models import (
     DepartmentGroups,
     hr_assigned_companies,
     VehicleModel,
-    VehicleInfo
 )
 from django.contrib.auth.models import Group
 
@@ -360,12 +359,8 @@ class HrAssignedCompaniesForm(forms.ModelForm):
 class VehicleModelForm(forms.ModelForm):
     class Meta:
         model = VehicleModel
-        fields = ["brand", "model_name", "year", "condition"]
+        fields = ["brand", "model_name", "vehicle_type"]
 
 
-class VehicleInfoForm(forms.ModelForm):
-    class Meta:
-        model = VehicleInfo
-        fields = ["ownership_type", "color", "registration_number", "mileage_km"]
 
 

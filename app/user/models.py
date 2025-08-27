@@ -210,39 +210,14 @@ class VehicleBrand(models.Model):
 
 
 class VehicleModel(models.Model):
-    """Stores vehicle model details, linked to a brand."""
-    CONDITION_CHOICES = [
-        ('NEW', 'Brand New'),
-        ('USED', 'Used'),
-    ]
+    # """Stores vehicle model details, linked to a brand."""
 
     brand = models.ForeignKey(VehicleBrand, on_delete=models.CASCADE, related_name='models')
     model_name = models.CharField(max_length=50)
-    year = models.PositiveIntegerField()
-    condition = models.CharField(max_length=10, choices=CONDITION_CHOICES, default='NEW')
-
-    class Meta:
-        unique_together = ('brand', 'model_name', 'year', 'condition')
+    vehicle_type = models.CharField(max_length=50) #For count cc
 
     def __str__(self):
-        return f"{self.brand.name} {self.model_name} ({self.year}) - {self.get_condition_display()}"
-
-
-class VehicleOwnerShipModel(models.Model)   :
-    own_type = models.CharField(max_length=20)
-
-    def __str__(self):
-        return self.own_type
-    
-class VehicleInfo(models.Model):
-    vehicle = models.OneToOneField(VehicleModel, on_delete=models.CASCADE, related_name='info')
-    ownership_type = models.ForeignKey(VehicleOwnerShipModel, on_delete=models.SET_NULL, null=True)
-    color = models.CharField(max_length=20, blank=True)
-    registration_number = models.CharField(max_length=100)
-    mileage_km = models.PositiveIntegerField(default=0, help_text="Total distance travelled in kilometers" , blank=True , null=True)
-
-    def __str__(self):
-        return f"Info for {self.vehicle}"
+        return f"{self.brand.name} {self.model_name} ({self.vehicle_type})"
     
 
 
@@ -276,7 +251,7 @@ class Employee(models.Model):
 class CurrentPackageDetails(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
     gross_salary = models.DecimalField(max_digits=10, decimal_places=2)
-    vehicle = models.ForeignKey(VehicleInfo, on_delete=models.SET_NULL, null=True)
+    vehicle = models.ForeignKey(VehicleModel, on_delete=models.SET_NULL, null=True)
     fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
 
@@ -313,7 +288,7 @@ class ProposedPackageDetails(models.Model):
     increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     revised_fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    vehicle = models.ForeignKey(VehicleInfo, on_delete=models.SET_NULL, null=True)
+    vehicle = models.ForeignKey(VehicleModel, on_delete=models.SET_NULL, null=True)
 
     is_deleted = models.BooleanField(default=False)
 
