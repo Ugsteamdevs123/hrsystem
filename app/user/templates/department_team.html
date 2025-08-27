@@ -1,274 +1,347 @@
 {% extends 'base.html' %}
-{% block title %}Add Department{% endblock %}
+{% block title %}View Departments{% endblock %}
+
 {% block content %}
-    <div class="container mt-5">
-        <h1 class="mb-4 text-primary">Add Department</h1>
-        <div class="card shadow-sm p-4 bg-light">
-            <form id="departmentForm">
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                <div class="mb-3">
-                    <label for="company-select" class="form-label">Select Company</label>
-                    <select id="company-select" class="form-select w-50" name="company_id" required onchange="fetchDepartments()">
-                        <option value="" selected>Select a company</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="department-name" class="form-label">Department Name</label>
-                    <input type="text" class="form-control w-50" id="department-name" name="name" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Add Department</button>
-            </form>
-            <div id="form-message" class="mt-3"></div>
-            <div id="departments-table" class="mt-4">
-                <p class="text-muted">Select a company to view departments.</p>
+<h2>All Departments</h2>
+
+<!-- Add Department Button -->
+{% if perms.user.add_departmentteams %}
+<button class="form-btn btn-add" onclick="openAddModal()">Add New Department</button>
+{% endif %}
+
+<!-- Company Dropdown -->
+<div style="margin-top: 15px; margin-bottom: 15px;">
+    <h3>Select Company To View Its Departments</h3>
+    <select id="company-select" style="width:50%; padding:8px; border-radius:4px; border:1px solid #ced4da; font-size: 14px;">
+        <option value="" selected>Select a company</option>
+    </select>
+</div>
+
+<!-- Departments Table -->
+<div id="departments-table">
+</div> 
+
+<!-- Add/Edit Department Popup -->
+<div id="departmentPopup" class="popup-overlay">
+    <div class="popup-content" style="width: 350px; padding: 30px;">
+        <h5 id="departmentPopupLabel" style="margin-bottom: 20px; font-size: 18px; color: #343a40; text-align: center;">Add Department</h5>
+        <form id="departmentForm">
+            {% csrf_token %}
+            <input type="hidden" id="department-id" name="id">
+
+            <div style="margin-bottom: 15px;">
+                <label for="modal-company-select" style="display: block; margin-bottom: 5px; font-weight: bold; color: #343a40;">Select Company</label>
+                <select id="modal-company-select" name="company_id" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ced4da; font-size: 14px;" required>
+                    <option value="" selected>Select a company</option>
+                </select>
             </div>
-        </div>
-    </div>
 
-    <!-- Confirmation Modal for Delete -->
-    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Deleting this department will also delete associated increment summaries and employee increment details. Are you sure?
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-                </div>
+            <div style="margin-bottom: 15px;">
+                <label for="department-name" style="display: block; margin-bottom: 5px; font-weight: bold; color: #343a40;">Department Name</label>
+                <input type="text" id="department-name" name="name" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ced4da; font-size: 14px;" required>
             </div>
-        </div>
+
+            <div id="form-message" style="margin-bottom: 15px; text-align: center;"></div>
+            <div style="display: flex; justify-content: center; gap: 10px;">
+                <button type="submit" class="popup-btn yes-btn">Save</button>
+                <button type="button" class="popup-btn no-btn" onclick="closeDepartmentPopup()">Cancel</button>
+            </div>
+        </form>
     </div>
+</div>
 
-    <style>
-        .custom-table {
-            border-collapse: collapse;
-        }
-        .custom-table th, .custom-table td {
-            min-width: 120px;
-            max-width: 300px;
-            text-align: left !important;
-            padding: 12px;
-        }
-        .custom-table th {
-            background-color: #e9ecef;
-            font-weight: bold;
-        }
-        .custom-table tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        .custom-table tr:nth-child(odd) {
-            background-color: #ffffff;
-        }
-        .custom-table .editable-cell {
-            background-color: #e6f3ff;
-        }
-        .custom-table .editable-cell:hover {
-            background-color: #cce5ff;
-        }
-        .custom-table .btn-sm {
-            padding: 4px 8px;
-            margin-right: 5px;
-        }
-    </style>
+<style>
+/* Table styling (consistent with view_company.html) */
+table {
+    border-collapse: collapse;
+    margin-top: 15px;
+    width: 100%;
+}
+th, td {
+    text-align: left;
+    padding: 10px;
+    border: 1px solid #dee2e6;
+}
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+tr:nth-child(odd) {
+    background-color: #ffffff;
+}
 
-    <script>
-        let selectedDepartmentId = null;
+/* Buttons (consistent with view_company.html) */
+.form-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+.btn-add {
+    background-color: #28a745;
+    color: #fff;
+}
+.btn-add:hover {
+    background-color: #218838;
+}
 
-        async function fetchCompaniesAndDepartmentTeams() {
-            try {
-                const response = await fetch('/pyroll/get-companies-and-department-teams/', {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                });
-                if (!response.ok) throw new Error('Failed to fetch companies');
-                const data = await response.json();
-                const companySelect = document.getElementById('company-select');
-                const selectedCompanyId = companySelect.value;
-                companySelect.innerHTML = '<option value="" selected>Select a company</option>';
-                window.companyData = data.data;
-                data.data.forEach(company => {
-                    companySelect.innerHTML += `<option value="${company.company_id}">${company.company_name}</option>`;
-                });
-                if (selectedCompanyId) {
-                    companySelect.value = selectedCompanyId;
-                }
-                fetchDepartments();
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('form-message').innerHTML = '<p class="text-danger">Error fetching companies.</p>';
-            }
-        }
+.action-btn {
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-block;
+    margin-right: 5px;
+    border: none; /* Ensure no border on action buttons */
+}
+.edit-btn {
+    background-color: #007bff;
+}
+.edit-btn:hover {
+    background-color: #0056b3;
+}
+.delete-btn {
+    background-color: #dc3545;
+}
+.delete-btn:hover {
+    background-color: #c82333;
+}
 
-        function fetchDepartments() {
-            const companySelect = document.getElementById('company-select');
-            const companyId = companySelect.value;
-            const departmentsTable = document.getElementById('departments-table');
+/* Enhanced Popup Styling */
+.popup-content {
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+.popup-content h5 {
+    color: #343a40;
+    font-weight: bold;
+}
+.popup-content label {
+    color: #343a40;
+}
+.popup-content input, .popup-content select {
+    border: 1px solid #ced4da;
+    transition: border-color 0.2s;
+}
+.popup-content input:focus, .popup-content select:focus {
+    border-color: #007bff;
+    outline: none;
+}
+.popup-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 5px;
+    min-width: 80px;
+}
 
-            if (!companyId) {
-                departmentsTable.innerHTML = '<p class="text-muted">Select a company to view departments.</p>';
-                return;
-            }
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    table, th, td {
+        font-size: 14px;
+    }
+    .form-btn, .action-btn {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+    #company-select {
+        width: 100%;
+    }
+    .popup-content {
+        width: 90%;
+        padding: 20px;
+    }
+    .popup-content div[style*="justify-content: center"] {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+</style>
 
-            const company = window.companyData.find(c => c.company_id == companyId);
-            if (!company || !company.departments || company.departments.length === 0) {
-                departmentsTable.innerHTML = '<p class="text-muted">No departments found for this company.</p>';
-                return;
-            }
+<script>
+let companyData = [];
+let editingDepartmentId = null;
 
-            let html = '<h6 class="mb-3">Registered Departments</h6>';
-            html += '<div class="table-responsive">';
-            html += '<table class="table table-bordered custom-table">';
-            html += '<thead><tr><th class="font-weight-bold border-end">Department Name</th><th class="font-weight-bold border-end">Actions</th></tr></thead><tbody>';
-            company.departments.forEach(department => {
-                html += `<tr data-department-id="${department.id}">`;
-                html += `<td class="border-end editable-cell" contenteditable="false">${department.name}</td>`;
-                html += `<td class="border-end">`;
-                html += `<button class="btn btn-sm btn-primary edit-dept-btn">Edit</button>`;
-                html += `<button class="btn btn-sm btn-success save-dept-btn" style="display: none;">Save</button>`;
-                html += `<button class="btn btn-sm btn-danger delete-dept-btn">Delete</button>`;
-                html += `</td>`;
-                html += '</tr>';
-            });
-            html += '</tbody></table></div>';
-            departmentsTable.innerHTML = html;
+// Fetch companies and populate dropdowns
+async function fetchCompanies() {
+    try {
+        const response = await fetch("{% url 'get_companies_and_department_teams' %}", {
+            method: 'GET',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        if (!response.ok) throw new Error('Failed to fetch companies');
+        const data = await response.json();
+        companyData = data.data;
 
-            // Edit button listeners
-            document.querySelectorAll('.edit-dept-btn').forEach(button => {
-                button.addEventListener('click', function () {
-                    const row = this.closest('tr');
-                    const cell = row.querySelector('.editable-cell');
-                    cell.contentEditable = 'true';
-                    cell.focus();
-                    this.style.display = 'none';
-                    row.querySelector('.save-dept-btn').style.display = 'inline-block';
-                });
-            });
+        const mainSelect = document.getElementById('company-select');
+        const modalSelect = document.getElementById('modal-company-select');
 
-            // Save button listeners
-            document.querySelectorAll('.save-dept-btn').forEach(button => {
-                button.addEventListener('click', async function () {
-                    const row = this.closest('tr');
-                    const id = row.dataset.departmentId;
-                    const value = row.querySelector('.editable-cell').textContent.trim();
-                    if (!value) {
-                        alert('Department name cannot be empty');
-                        fetchDepartments();
-                        return;
-                    }
-                    try {
-                        // formData.append('csrfmiddlewaretoken', document.querySelector('input[name="csrfmiddlewaretoken"]').value);
-                        const response = await fetch('/pyroll/department-team/', {
-                            method: 'PATCH',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ id, name: value })
-                        });
-                        
-                        if (!response.ok) throw new Error('Failed to update');
-                        const result = await response.json();
-                        if (result.error) {
-                            alert(result.error);
-                            fetchDepartments();
-                        } else {
-                            row.querySelector('.editable-cell').contentEditable = 'false';
-                            this.style.display = 'none';
-                            row.querySelector('.edit-dept-btn').style.display = 'inline-block';
-                            fetchCompaniesAndDepartmentTeams();
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        alert('Error updating department');
-                        fetchDepartments();
-                    }
-                });
-            });
+        mainSelect.innerHTML = '<option value="" selected>Select a company</option>';
+        modalSelect.innerHTML = '<option value="" selected>Select a company</option>';
 
-            // Delete button listeners
-            document.querySelectorAll('.delete-dept-btn').forEach(button => {
-                button.addEventListener('click', function () {
-                    selectedDepartmentId = this.closest('tr').dataset.departmentId;
-                    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-                    modal.show();
-                });
-            });
-
-            // Confirm delete button
-            document.getElementById('confirmDeleteBtn').addEventListener('click', async function () {
-                if (!selectedDepartmentId) return;
-                try {
-                    const formData = new FormData();
-                    // formData.append('csrfmiddlewaretoken', document.querySelector('input[name="csrfmiddlewaretoken"]').value);
-                    const response = await fetch('/pyroll/department-team/', {
-                        method: 'DELETE',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ 'id': selectedDepartmentId })
-                    });
-                    if (!response.ok) throw new Error('Failed to delete');
-                    const result = await response.json();
-                    if (result.error) {
-                        alert(result.error);
-                    }
-                    fetchCompaniesAndDepartmentTeams();
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Error deleting department');
-                }
-                selectedDepartmentId = null;
-                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-            });
-        }
-
-        document.getElementById('departmentForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const companyId = document.getElementById('company-select').value;
-            const departmentName = document.getElementById('department-name').value.trim();
-            if (!companyId) {
-                document.getElementById('form-message').innerHTML = '<p class="text-danger">Please select a company.</p>';
-                return;
-            }
-            if (!departmentName) {
-                document.getElementById('form-message').innerHTML = '<p class="text-danger">Please enter a department name.</p>';
-                return;
-            }
-            const formData = new FormData(this);
-            try {
-                const response = await fetch('/pyroll/department-team/', {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: formData
-                });
-                if (!response.ok) throw new Error('Failed to add department');
-                const result = await response.json();
-                if (result.error) {
-                    document.getElementById('form-message').innerHTML = `<p class="text-danger">${result.error}</p>`;
-                } else {
-                    document.getElementById('form-message').innerHTML = '<p class="text-success">Department added successfully!</p>';
-                    document.getElementById('department-name').value = '';
-                    fetchCompaniesAndDepartmentTeams();
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('form-message').innerHTML = '<p class="text-danger">Error adding department.</p>';
-            }
+        companyData.forEach(c => {
+            mainSelect.innerHTML += `<option value="${c.company_id}">${c.company_name}</option>`;
+            modalSelect.innerHTML += `<option value="${c.company_id}">${c.company_name}</option>`;
         });
 
-        window.onload = fetchCompaniesAndDepartmentTeams;
-    </script>
+        // Refresh departments if a company is already selected
+        fetchDepartments();
+    } catch(err) {
+        console.error(err);
+        showSnackbar('Error fetching companies', '#dc3545');
+    }
+}
+
+// Fetch departments when company selected
+function fetchDepartments() {
+    const companySelect = document.getElementById('company-select');
+    const companyId = companySelect.value;
+    const tableDiv = document.getElementById('departments-table');
+
+    if (!companyId) {
+        tableDiv.innerHTML = '<p class="muted">Select a company to view departments.</p>';
+        return;
+    }
+
+    const company = companyData.find(c => c.company_id == companyId);
+    if (!company || !company.departments || company.departments.length === 0) {
+        tableDiv.innerHTML = '<p class="muted">No departments found for this company.</p>';
+        return;
+    }
+
+    let html = `
+        <table border="1" cellpadding="8" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th>SR.No</th>
+                    <th>Department Name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    company.departments.forEach((dept, index) => {
+        html += `
+            <tr data-id="${dept.id}">
+                <td>${index + 1}</td>
+                <td>${dept.name}</td>
+                <td>
+                    {% if perms.user.change_departmentteams %}
+                    <button class="action-btn edit-btn" onclick="openEditModal(${dept.id}, '${dept.name}', ${company.company_id})">Update</button>
+                    {% endif %}
+                    {% if perms.user.delete_departmentteams %}
+                    <button class="action-btn delete-btn" onclick="showConfirmPopup('Are you sure you want to delete this department?', function(){ deleteDepartment(${dept.id}); })">Delete</button>
+                    {% endif %}
+                </td>
+            </tr>
+        `;
+    });
+    html += '</tbody></table>';
+    tableDiv.innerHTML = html;
+}
+
+// Open modal for adding
+function openAddModal() {
+    editingDepartmentId = null;
+    document.getElementById('departmentPopupLabel').innerText = 'Add Department';
+    document.getElementById('departmentForm').reset();
+    document.getElementById('form-message').innerHTML = '';
+    document.getElementById('modal-company-select').value = document.getElementById('company-select').value || '';
+    document.getElementById('departmentPopup').style.display = 'flex';
+}
+
+// Open modal for editing
+function openEditModal(id, name, companyId) {
+    editingDepartmentId = id;
+    document.getElementById('departmentPopupLabel').innerText = 'Edit Department';
+    document.getElementById('department-id').value = id;
+    document.getElementById('department-name').value = name;
+    document.getElementById('modal-company-select').value = companyId;
+    document.getElementById('form-message').innerHTML = '';
+    document.getElementById('departmentPopup').style.display = 'flex';
+}
+
+// Close modal
+function closeDepartmentPopup() {
+    document.getElementById('departmentPopup').style.display = 'none';
+}
+
+// Add/Edit department with confirmation
+document.getElementById('departmentForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const companyId = document.getElementById('modal-company-select').value;
+    const departmentName = document.getElementById('department-name').value.trim();
+    const msg = document.getElementById('form-message');
+    const deptId = editingDepartmentId;
+
+    if (!companyId) {
+        msg.innerHTML = '<p style="color:#dc3545;">Please select a company.</p>';
+        return;
+    }
+    if (!departmentName) {
+        msg.innerHTML = '<p style="color:#dc3545;">Please enter a department name.</p>';
+        return;
+    }
+
+    showConfirmPopup(`Are you sure you want to ${deptId ? 'update' : 'add'} this department?`, async function() {
+        const formData = new FormData(document.getElementById('departmentForm'));
+        if (deptId) formData.append('id', deptId);
+
+        try {
+            const response = await fetch("{% url 'department_team' %}", {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            });
+            if (!response.ok) throw new Error('Failed to save department');
+            const result = await response.json();
+            if (result.error) {
+                msg.innerHTML = `<p style="color:#dc3545;">${result.error}</p>`;
+            } else {
+                showSnackbar(`Department ${deptId ? 'updated' : 'added'} successfully!`, '#28a745');
+                await fetchCompanies(); // Refresh data and table
+                closeDepartmentPopup();
+            }
+        } catch(err) {
+            console.error(err);
+            msg.innerHTML = '<p style="color:#dc3545;">Error saving department.</p>';
+        }
+    });
+});
+
+// Delete department
+async function deleteDepartment(id) {
+    try {
+        const response = await fetch("{% url 'department_team' %}", {
+            method: 'DELETE',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        if (!response.ok) throw new Error('Failed to delete');
+        const result = await response.json();
+        if (result.error) {
+            showSnackbar(result.error, '#dc3545');
+        } else {
+            showSnackbar('Department deleted successfully!', '#28a745');
+            await fetchCompanies(); // Refresh data and table
+        }
+    } catch(err) {
+        console.error(err);
+        showSnackbar('Error deleting department', '#dc3545');
+    }
+}
+
+// Initialize
+window.onload = () => {
+    fetchCompanies();
+    document.getElementById('company-select').addEventListener('change', fetchDepartments);
+};
+</script>
 {% endblock %}

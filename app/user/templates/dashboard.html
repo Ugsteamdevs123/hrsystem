@@ -1,0 +1,45 @@
+
+
+
+
+
+
+
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h2>Welcome to HR Payroll Dashboard</h2>
+
+<button class="form-btn btn-company" onclick="window.location.href='{% url 'add_company' %}'">Add Company</button>
+<button class="form-btn btn-other" onclick="window.location.href='{% url 'add_hr' %}'">Add HR</button>
+
+<style>
+    .form-btn {
+        padding: 15px 25px;
+        font-size: 18px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 10px; /* Added space around buttons */
+    }
+
+    .btn-company { background-color: #28a745; color: #fff; }
+    .btn-other { background-color: #007bff; color: #fff; }
+
+    .form-btn:hover {
+        opacity: 0.8;
+    }
+
+    @media screen and (max-width: 500px) {
+        .form-btn {
+            padding: 12px 20px;
+            font-size: 16px;
+            margin: 8px; /* smaller margin for mobile */
+        }
+    }
+</style>
+{% endblock %}
+
+
+

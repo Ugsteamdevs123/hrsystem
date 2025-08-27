@@ -53,6 +53,9 @@ INSTALLED_APPS = [
     # Rest Framework
     'rest_framework',
 
+    # For Audit Log Config
+    'auditlog',
+
     # App name
     'user',
 
@@ -66,6 +69,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # For csrf middleware
+    'django.middleware.csrf.CsrfViewMiddleware',
 ]
 
 ROOT_URLCONF = 'pyroll.urls'
@@ -162,11 +168,27 @@ AUTH_USER_MODEL = "user.CustomUser"
 # SESSION_COOKIE_AGE = 1209600
 # SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
-# Security settings
-# SECURE_SSL_REDIRECT = True
-# SECURE_HSTS_SECONDS = 31536000
-# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-# SECURE_HSTS_PRELOAD = True
-# SECURE_BROWSER_XSS_FILTER = True
-# SECURE_CONTENT_TYPE_NOSNIFF = True
-# X_FRAME_OPTIONS = 'DENY'
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# CSRF Token Authentication
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
+
+
+
+
+
+
+
+
+

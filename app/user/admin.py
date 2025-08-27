@@ -87,3 +87,11 @@ admin.site.register(models.FinancialImpactPerMonth)
 admin.site.register(models.Formula)
 admin.site.register(models.FieldFormula)
 admin.site.register(models.configurations)
+
+admin.site.register(models.Employee)
+admin.site.register(models.VehicleInfo)
+
+admin.site.register(models.VehicleBrand)
+admin.site.register(models.VehicleModel)
+admin.site.register(models.VehicleOwnerShipModel)
+

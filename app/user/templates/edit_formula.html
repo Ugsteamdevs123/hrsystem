@@ -49,7 +49,7 @@
             var modelName = $(this).val();
             if (modelName) {
                 $.ajax({
-                    url: '/pyroll/get-model-fields/',
+                    url: '/payroll/get-model-fields/',
                     data: { 'model_name': modelName },
                     success: function(data) {
                         var fieldSelect = $('#id_target_field');
@@ -70,7 +70,7 @@
             var companyId = $(this).val();
             if (companyId) {
                 $.ajax({
-                    url: '/pyroll/get-company-departments-employees/',
+                    url: '/payroll/get-company-departments-employees/',
                     data: { 'company_id': companyId },
                     success: function(data) {
                         // Update department_team dropdown
@@ -104,7 +104,7 @@
             var companyId = $('#id_company').val();
             if (departmentId && companyId) {
                 $.ajax({
-                    url: '/pyroll/get-department-employees/',
+                    url: '/payroll/get-department-employees/',
                     data: {
                         'company_id': companyId,
                         'department_team_id': departmentId

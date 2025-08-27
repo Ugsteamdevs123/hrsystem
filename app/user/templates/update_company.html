@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Update Company{% endblock %}
+
+{% block content %}
+<h2>Update Company</h2>
+
+<form id="updateCompanyForm" method="POST">
+    {% csrf_token %}
+
+    <!-- Company Name -->
+    <div class="form-field">
+        {{ form.name.label_tag }}
+        {{ form.name }}
+    </div>
+
+    <!-- Buttons -->
+    <div class="button-group">
+        <button type="button" class="form-btn btn-submit"
+            onclick="showConfirmPopup('Are you sure you want to update this company?', function(){ 
+                document.getElementById('updateCompanyForm').submit(); 
+            })">
+            Update Company
+        </button>
+        <button type="button" class="form-btn btn-back"
+            onclick="window.location.href='{% url 'view_company' %}'">
+            Back
+        </button>
+    </div>
+</form>
+
+<style>
+/* Form fields styling */
+.form-field {
+    margin-bottom: 15px;
+    text-align: left;
+}
+.form-field input, .form-field select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+/* Buttons */
+.form-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+}
+.btn-submit { background-color: #007bff; color: #fff; }
+.btn-submit:hover { background-color: #0056b3; }
+.btn-back { background-color: #6c757d; color: #fff; }
+.btn-back:hover { background-color: #5a6268; }
+
+/* Responsive */
+@media screen and (max-width: 500px) {
+    .form-btn { font-size: 12px; padding: 10px; }
+    .form-field input, .form-field select { font-size: 14px; padding: 10px; }
+}
+</style>
+
+{% endblock %}
