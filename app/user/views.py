@@ -1278,26 +1278,23 @@ from .models import FieldFormula, FieldReference
 from .forms import FieldFormulaForm, FormulaForm
 from django.apps import apps
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db import models
 
 
 def manage_formulas(request):
     company_data = get_companies_and_department_teams(request.user)
-
-    field_formulas = FieldFormula.objects.all()
-    field_references = FieldReference.objects.all()
+    form = FieldFormulaForm(user=request.user)  # Pass user
     if request.method == 'POST':
-        form = FieldFormulaForm(request.POST)
+        form = FieldFormulaForm(data=request.POST, user=request.user)
         if form.is_valid():
+            print("Values before saving:", form.cleaned_data)  # Inspect values
             form.save()
             return redirect('manage_formulas')
-        else:
-            print(form.errors)
-    else:
-        form = FieldFormulaForm()
+    field_formulas = FieldFormula.objects.filter(company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company'))
     return render(request, 'manage_formulas.html', {
         'form': form,
         'field_formulas': field_formulas,
-        'field_references': field_references,
+        'field_references': FieldReference.objects.all(),
         'company_data': company_data
     })
 
@@ -1340,39 +1337,40 @@ def edit_formula(request, pk):
         form = FormulaForm(instance=formula)
     return render(request, 'edit_formula.html', {'form': form, 'field_references': FieldReference.objects.all()})
 
+
 def edit_field_formula(request, pk):
-    field_formula = get_object_or_404(FieldFormula, pk=pk)
+    field_formula = FieldFormula.objects.get(pk=pk, company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company'))
+    form = FieldFormulaForm(instance=field_formula, user=request.user)
     if request.method == 'POST':
-        form = FieldFormulaForm(request.POST, instance=field_formula)
+        form = FieldFormulaForm(data=request.POST, instance=field_formula, user=request.user)
         if form.is_valid():
+            print("Values before saving:", form.cleaned_data)  # Inspect values
             form.save()
             return redirect('manage_formulas')
-    else:
-        form = FieldFormulaForm(instance=field_formula)
     return render(request, 'edit_field_formula.html', {'form': form})
 
-from django.db import models 
 
 def get_company_departments_employees(request):
     company_id = request.GET.get('company_id')
-    if company_id:
+    if company_id and hr_assigned_companies.objects.filter(hr=request.user, company_id=company_id).exists():
         department_teams = DepartmentTeams.objects.filter(company_id=company_id).values('id', 'name')
         employees = Employee.objects.filter(company_id=company_id).values('emp_id', name=models.F('fullname'))
-        
         return JsonResponse({
             'department_teams': list(department_teams),
             'employees': list(employees)
         })
     return JsonResponse({'department_teams': [], 'employees': []})
 
+
 def get_department_employees(request):
     company_id = request.GET.get('company_id')
     department_team_id = request.GET.get('department_team_id')
-    if company_id and department_team_id:
+    if (company_id and department_team_id and 
+        hr_assigned_companies.objects.filter(hr=request.user, company_id=company_id).exists() and
+        DepartmentTeams.objects.filter(id=department_team_id, company_id=company_id).exists()):
         employees = Employee.objects.filter(
             company_id=company_id,
             department_team_id=department_team_id
         ).values('emp_id', name=models.F('fullname'))
-        
         return JsonResponse({'employees': list(employees)})
     return JsonResponse({'employees': []})

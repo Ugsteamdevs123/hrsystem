@@ -13,23 +13,21 @@ class FormulaForm(forms.ModelForm):
             'formula_expression': forms.Textarea(attrs={'rows': 4, 'id': 'formula-expression'}),
         }
 
-class FieldFormulaForm(forms.ModelForm):
-    target_field = forms.ChoiceField(choices=[])
 
+class FieldFormulaForm(forms.ModelForm):
+    target_field = forms.ChoiceField(choices=[], required=True)
+    company = forms.ModelChoiceField(
+        queryset=Company.objects.none(),  # Will be set dynamically
+        required=True,
+        empty_label="Select a company",
+        help_text="Choose the company for this formula."
+    )
     employee = forms.ModelChoiceField(
         queryset=Employee.objects.all(),
         required=False,
         empty_label="Select an employee (optional)",
         help_text="Choose an employee for a specific formula, or leave blank for department-wide."
     )
-
-    company = forms.ModelChoiceField(
-        queryset=Company.objects.all(),
-        required=True,
-        empty_label="Select a company",
-        help_text="Choose the company for this formula."
-    )
-
     department_team = forms.ModelChoiceField(
         queryset=DepartmentTeams.objects.all(),
         required=False,
@@ -43,32 +41,30 @@ class FieldFormulaForm(forms.ModelForm):
         widgets = {
             'target_model': forms.Select(
                 choices=[
-                    ('', 'None'),
+                    ('', 'Select a model'),
                     ('ProposedPackageDetails', 'Proposed Package Details'),
                     ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
                     ('IncrementDetailsSummary', 'Increment Details Summary'),
                 ],
-                attrs={'required': 'true'}  # HTML required attribute for UI
+                attrs={'required': 'true'}
             ),
-            'target_field': forms.Select(
-                attrs={'required': 'true'}  # HTML required attribute
-            ),
-            'formula': forms.Select(
-                attrs={'required': 'true'}  # HTML required attribute
-            ),
+            'target_field': forms.Select(attrs={'required': 'true'}),
+            'formula': forms.Select(attrs={'required': 'true'}),
+            'description': forms.Textarea(attrs={'rows': 3}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, user=None, *args, **kwargs):  # Add user parameter
         super().__init__(*args, **kwargs)
-				 
-        model_name = None
-        if 'target_model' in self.data:
-            model_name = self.data.get('target_model')
-        elif self.instance.pk:
-            model_name = self.instance.target_model
+        self.user = user
 
+        # Filter companies by hr_assigned_companies
+        if self.user:
+            assigned_companies = hr_assigned_companies.objects.filter(hr=self.user).values('company')
+            self.fields['company'].queryset = Company.objects.filter(id__in=assigned_companies)
+
+        # Filter target_field based on target_model
+        model_name = self.data.get('target_model') if 'target_model' in self.data else (self.instance.target_model if self.instance.pk else None)
         if model_name:
-		  
             try:
                 model = apps.get_model("user", model_name)
                 fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
@@ -78,7 +74,6 @@ class FieldFormulaForm(forms.ModelForm):
 
         # Filter department_team and employee based on company
         company_id = self.data.get('company') if 'company' in self.data else (self.instance.company_id if self.instance.pk else None)
-												 
         if company_id:
             self.fields['department_team'].queryset = DepartmentTeams.objects.filter(company_id=company_id)
             self.fields['employee'].queryset = Employee.objects.filter(company_id=company_id)
@@ -103,7 +98,6 @@ class FieldFormulaForm(forms.ModelForm):
         employee = cleaned_data.get('employee')
         department_team = cleaned_data.get('department_team')
         company = cleaned_data.get('company')
-        # print("cleaned_data: ", cleaned_data)
         if not company:
             raise forms.ValidationError("A company must be selected.")
         if not employee and not department_team:
