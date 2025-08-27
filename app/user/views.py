@@ -841,6 +841,108 @@ class CompanySummaryView(View):
 # xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 
+# class DepartmentTableView(View):
+#     @classmethod
+#     def as_view(cls, **initkwargs):
+#         view = super().as_view(**initkwargs)
+#         view = login_required(view)
+#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+#         view = ensure_csrf_cookie(view)
+#         return view
+
+#     def get(self, request, department_id):
+#         department = DepartmentTeams.objects.filter(
+#             id=department_id,
+#             company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+#         ).first()
+#         if not department:
+#             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
+
+#         company_data = get_companies_and_department_teams(request.user)
+
+#         employees = Employee.objects.filter(department_team=department)
+#         joined_data = []
+#         for employee in employees:
+#             current_package = CurrentPackageDetails.objects.filter(employee=employee).first() or {}
+#             proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first() or {}
+#             financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first() or {}
+            
+#             joined_data.append({
+#                 'employee_id': employee.emp_id,
+#                 'fullname': employee.fullname,
+#                 'company': employee.company.name,
+#                 'department_team': employee.department_team.name if employee.department_team else '',
+#                 'department_group': employee.department_group.name if employee.department_group else '',
+#                 'section': employee.section.name if employee.section else '',
+#                 'designation': employee.designation.title if employee.designation else '',
+#                 'location': employee.location.location if employee.location else '',
+#                 'date_of_joining': employee.date_of_joining or '',
+#                 'resign': employee.resign,
+#                 'date_of_resignation': employee.date_of_resignation or '',
+#                 'remarks': employee.remarks or '',
+#                 'image': employee.image.url if employee.image else '',
+#                 'gross_salary': current_package.gross_salary if current_package else '',
+                
+#                 # 'vehicle': current_package.vehicle if current_package else '',
+#                 # 'vehicle': current_package.vehicle.vehicle_model.name if current_package and current_package.vehicle else '',
+#                 'vehicle': current_package.vehicle.vehicle.brand.name if current_package and current_package.vehicle else '',
+
+#                 'fuel_limit': current_package.fuel_limit if current_package else '',
+#                 'mobile_allowance_current': current_package.mobile_allowance if current_package else '',
+#                 'increment_percentage': proposed_package.increment_percentage if proposed_package else '',
+#                 # 'increased_amount': proposed_package.increased_amount.formula if proposed_package and proposed_package.increased_amount else '',
+#                 # 'revised_salary': proposed_package.revised_salary.formula if proposed_package and proposed_package.revised_salary else '',
+#                 'increased_amount': proposed_package.increased_amount if proposed_package and proposed_package.increased_amount else '',
+#                 'revised_salary': proposed_package.revised_salary if proposed_package and proposed_package.revised_salary else '',
+#                 'increased_fuel_amount': proposed_package.increased_fuel_amount if proposed_package else '',
+#                 # 'revised_fuel_allowance': proposed_package.revised_fuel_allowance.formula if proposed_package and proposed_package.revised_fuel_allowance else '',
+#                 'revised_fuel_allowance': proposed_package.revised_fuel_allowance if proposed_package and proposed_package.revised_fuel_allowance else '',
+#                 'mobile_allowance_proposed': proposed_package.mobile_allowance if proposed_package else '',
+                
+#                 # 'vehicle_proposed': proposed_package.vehicle if proposed_package else '',
+#                 'vehicle_proposed': proposed_package.vehicle.vehicle.brand.name if proposed_package and proposed_package.vehicle else '',
+
+#                 'emp_status': financial_impact.emp_status.status if financial_impact and financial_impact.emp_status else '',
+#                 'serving_years': financial_impact.serving_years if financial_impact else '',
+#                 'salary': financial_impact.salary if financial_impact else '',
+#                 # 'gratuity': financial_impact.gratuity.formula if financial_impact and financial_impact.gratuity else '',
+#                 # 'bonus': financial_impact.bonus.formula if financial_impact and financial_impact.bonus else '',
+#                 # 'leave_encashment': financial_impact.leave_encashment.formula if financial_impact and financial_impact.leave_encashment else '',
+#                 # 'mobile_allowance_financial': financial_impact.mobile_allowance.formula if financial_impact and financial_impact.mobile_allowance else '',
+#                 'gratuity': financial_impact.gratuity if financial_impact and financial_impact.gratuity else '',
+#                 'bonus': financial_impact.bonus if financial_impact and financial_impact.bonus else '',
+#                 'leave_encashment': financial_impact.leave_encashment if financial_impact and financial_impact.leave_encashment else '',
+#                 'mobile_allowance_financial': financial_impact.mobile_allowance if financial_impact and financial_impact.mobile_allowance else '',
+#                 'fuel': financial_impact.fuel if financial_impact else '',
+#                 # 'total': financial_impact.total.formula if financial_impact and financial_impact.total else '',
+#                 'total': financial_impact.total if financial_impact and financial_impact.total else '',
+#             })
+
+#         if joined_data:
+#             table_html = '<div class="table-responsive"><table class="table table-striped table-hover">'
+#             table_html += '<thead><tr>'
+#             for key in joined_data[0].keys():
+#                 table_html += f'<th>{key.replace("_", " ").title()}</th>'
+#             table_html += '<th>Actions</th></tr></thead><tbody>'
+#             for row in joined_data:
+#                 table_html += f'<tr data-employee-id="{row["employee_id"]}">'
+#                 for value in row.values():
+#                     table_html += f'<td>{value if value is not None else ""}</td>'
+#                 table_html += f'<td><button class="btn btn-sm btn-primary edit-employee-btn" onclick="console.log(\'Edit button clicked for employee: {row["employee_id"]}\')">Edit</button> <button class="btn btn-sm btn-danger delete-employee-btn" onclick="console.log(\'Delete button clicked for employee: {row["employee_id"]}\')">Delete</button></td>'
+#                 table_html += '</tr>'
+#             table_html += '</tbody></table></div>'
+#         else:
+#             table_html = '<p>No data available for this department.</p>'
+
+#         return render(request, 'department_table.html', {
+#             'department': department,
+#             'table_html': table_html,
+#             'department_id': department_id,
+#             'company_data': company_data
+#         })
+
+
+
 class DepartmentTableView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -851,6 +953,7 @@ class DepartmentTableView(View):
         return view
 
     def get(self, request, department_id):
+        # Fetch department with permission check
         department = DepartmentTeams.objects.filter(
             id=department_id,
             company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
@@ -858,88 +961,85 @@ class DepartmentTableView(View):
         if not department:
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
 
+        # Get company data
         company_data = get_companies_and_department_teams(request.user)
 
-        employees = Employee.objects.filter(department_team=department)
-        joined_data = []
-        for employee in employees:
-            current_package = CurrentPackageDetails.objects.filter(employee=employee).first() or {}
-            proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first() or {}
-            financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first() or {}
-            
-            joined_data.append({
-                'employee_id': employee.emp_id,
-                'fullname': employee.fullname,
-                'company': employee.company.name,
-                'department_team': employee.department_team.name if employee.department_team else '',
-                'department_group': employee.department_group.name if employee.department_group else '',
-                'section': employee.section.name if employee.section else '',
-                'designation': employee.designation.title if employee.designation else '',
-                'location': employee.location.location if employee.location else '',
-                'date_of_joining': employee.date_of_joining or '',
-                'resign': employee.resign,
-                'date_of_resignation': employee.date_of_resignation or '',
-                'remarks': employee.remarks or '',
-                'image': employee.image.url if employee.image else '',
-                'gross_salary': current_package.gross_salary if current_package else '',
-                
-                # 'vehicle': current_package.vehicle if current_package else '',
-                # 'vehicle': current_package.vehicle.vehicle_model.name if current_package and current_package.vehicle else '',
-                'vehicle': current_package.vehicle.vehicle.brand.name if current_package and current_package.vehicle else '',
-
-                'fuel_limit': current_package.fuel_limit if current_package else '',
-                'mobile_allowance_current': current_package.mobile_allowance if current_package else '',
-                'increment_percentage': proposed_package.increment_percentage if proposed_package else '',
-                # 'increased_amount': proposed_package.increased_amount.formula if proposed_package and proposed_package.increased_amount else '',
-                # 'revised_salary': proposed_package.revised_salary.formula if proposed_package and proposed_package.revised_salary else '',
-                'increased_amount': proposed_package.increased_amount if proposed_package and proposed_package.increased_amount else '',
-                'revised_salary': proposed_package.revised_salary if proposed_package and proposed_package.revised_salary else '',
-                'increased_fuel_amount': proposed_package.increased_fuel_amount if proposed_package else '',
-                # 'revised_fuel_allowance': proposed_package.revised_fuel_allowance.formula if proposed_package and proposed_package.revised_fuel_allowance else '',
-                'revised_fuel_allowance': proposed_package.revised_fuel_allowance if proposed_package and proposed_package.revised_fuel_allowance else '',
-                'mobile_allowance_proposed': proposed_package.mobile_allowance if proposed_package else '',
-                
-                # 'vehicle_proposed': proposed_package.vehicle if proposed_package else '',
-                'vehicle_proposed': proposed_package.vehicle.vehicle.brand.name if proposed_package and proposed_package.vehicle else '',
-
-                'emp_status': financial_impact.emp_status.status if financial_impact and financial_impact.emp_status else '',
-                'serving_years': financial_impact.serving_years if financial_impact else '',
-                'salary': financial_impact.salary if financial_impact else '',
-                # 'gratuity': financial_impact.gratuity.formula if financial_impact and financial_impact.gratuity else '',
-                # 'bonus': financial_impact.bonus.formula if financial_impact and financial_impact.bonus else '',
-                # 'leave_encashment': financial_impact.leave_encashment.formula if financial_impact and financial_impact.leave_encashment else '',
-                # 'mobile_allowance_financial': financial_impact.mobile_allowance.formula if financial_impact and financial_impact.mobile_allowance else '',
-                'gratuity': financial_impact.gratuity if financial_impact and financial_impact.gratuity else '',
-                'bonus': financial_impact.bonus if financial_impact and financial_impact.bonus else '',
-                'leave_encashment': financial_impact.leave_encashment if financial_impact and financial_impact.leave_encashment else '',
-                'mobile_allowance_financial': financial_impact.mobile_allowance if financial_impact and financial_impact.mobile_allowance else '',
-                'fuel': financial_impact.fuel if financial_impact else '',
-                # 'total': financial_impact.total.formula if financial_impact and financial_impact.total else '',
-                'total': financial_impact.total if financial_impact and financial_impact.total else '',
-            })
-
-        if joined_data:
-            table_html = '<div class="table-responsive"><table class="table table-striped table-hover">'
-            table_html += '<thead><tr>'
-            for key in joined_data[0].keys():
-                table_html += f'<th>{key.replace("_", " ").title()}</th>'
-            table_html += '<th>Actions</th></tr></thead><tbody>'
-            for row in joined_data:
-                table_html += f'<tr data-employee-id="{row["employee_id"]}">'
-                for value in row.values():
-                    table_html += f'<td>{value if value is not None else ""}</td>'
-                table_html += f'<td><button class="btn btn-sm btn-primary edit-employee-btn" onclick="console.log(\'Edit button clicked for employee: {row["employee_id"]}\')">Edit</button> <button class="btn btn-sm btn-danger delete-employee-btn" onclick="console.log(\'Delete button clicked for employee: {row["employee_id"]}\')">Delete</button></td>'
-                table_html += '</tr>'
-            table_html += '</tbody></table></div>'
-        else:
-            table_html = '<p>No data available for this department.</p>'
+        # Fetch employees with related data
+        employees = Employee.objects.filter(department_team=department).select_related(
+            'company', 'department_team', 'department_group', 'section', 'designation', 'location'
+        ).prefetch_related('currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth')
 
         return render(request, 'department_table.html', {
             'department': department,
-            'table_html': table_html,
+            'employees': employees,
             'department_id': department_id,
             'company_data': company_data
         })
+
+
+
+class GetEmployeeDataView(View):
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
+        return view
+
+    def get(self, request, employee_id):
+        try:
+            employee = Employee.objects.get(emp_id=employee_id)
+            current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
+            proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
+            financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
+
+            return JsonResponse({
+                'data': {
+                    'employee': {
+                        'fullname': employee.fullname,
+                        'department_group_id': employee.department_group.id if employee.department_group else None,
+                        'section_id': employee.section.id if employee.section else None,
+                        'designation_id': employee.designation.id if employee.designation else None,
+                        'location_id': employee.location.id if employee.location else None,
+                        'date_of_joining': employee.date_of_joining.strftime('%Y-%m-%d') if employee.date_of_joining else '',
+                        'resign': employee.resign,
+                        'date_of_resignation': employee.date_of_resignation.strftime('%Y-%m-%d') if employee.date_of_resignation else '',
+                        'remarks': employee.remarks or ''
+                    },
+                    'current_package': {
+                        'gross_salary': float(current_package.gross_salary) if current_package and current_package.gross_salary else '',
+                        'vehicle_id': current_package.vehicle.id if current_package and current_package.vehicle else '',
+                        'fuel_limit': float(current_package.fuel_limit) if current_package and current_package.fuel_limit else '',
+                        'mobile_allowance': float(current_package.mobile_allowance) if current_package and current_package.mobile_allowance else ''
+                    },
+                    'proposed_package': {
+                        'increment_percentage': float(proposed_package.increment_percentage) if proposed_package and proposed_package.increment_percentage else '',
+                        'increased_amount': float(proposed_package.increased_amount) if proposed_package and proposed_package.increased_amount else '',
+                        'revised_salary': float(proposed_package.revised_salary) if proposed_package and proposed_package.revised_salary else '',
+                        'increased_fuel_amount': float(proposed_package.increased_fuel_amount) if proposed_package and proposed_package.increased_fuel_amount else '',
+                        'revised_fuel_allowance': float(proposed_package.revised_fuel_allowance) if proposed_package and proposed_package.revised_fuel_allowance else '',
+                        'mobile_allowance': float(proposed_package.mobile_allowance) if proposed_package and proposed_package.mobile_allowance else '',
+                        'vehicle_id': proposed_package.vehicle.id if proposed_package and proposed_package.vehicle else ''
+                    },
+                    'financial_impact': {
+                        'emp_status_id': financial_impact.emp_status.id if financial_impact and financial_impact.emp_status else '',
+                        'serving_years': financial_impact.serving_years if financial_impact else '',
+                        'salary': float(financial_impact.salary) if financial_impact and financial_impact.salary else '',
+                        'gratuity': float(financial_impact.gratuity) if financial_impact and financial_impact.gratuity else '',
+                        'bonus': float(financial_impact.bonus) if financial_impact and financial_impact.bonus else '',
+                        'leave_encashment': float(financial_impact.leave_encashment) if financial_impact and financial_impact.leave_encashment else '',
+                        'mobile_allowance': float(financial_impact.mobile_allowance) if financial_impact and financial_impact.mobile_allowance else '',
+                        'fuel': float(financial_impact.fuel) if financial_impact and financial_impact.fuel else '',
+                        'total': float(financial_impact.total) if financial_impact and financial_impact.total else ''
+                    }
+                }
+            })
+        except Employee.DoesNotExist:
+            return JsonResponse({'error': 'Employee not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
 
 
 # View for create employee data

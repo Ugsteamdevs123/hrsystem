@@ -51,7 +51,11 @@ urlpatterns = [
     path('get-companies-and-department-teams/', views.GetCompaniesAndDepartmentTeamsView.as_view(), name='get_companies_and_department_teams'),
     
     path('company-summary/<int:company_id>/', views.CompanySummaryView.as_view(), name='company_summary'),
+
     path('department-table/<int:department_id>/', views.DepartmentTableView.as_view(), name='department_table'),
+    path('get-data/employee/<int:employee_id>/', views.GetEmployeeDataView.as_view(), name='get_employee_data'),
+    
+    
     path('create-data/<int:department_id>/', views.CreateDataView.as_view(), name='create_data'),
     path('get-data/<str:table>/<str:id>/', views.GetDataView.as_view(), name='get_data'),
     path('update-data/<int:department_id>/', views.UpdateDataView.as_view(), name='update_data'),
