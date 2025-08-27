@@ -2,14 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 
-from .serializers import (
-    UserLoginSerializer,
-)
 from .models import (
     CustomUser,
     Company,
     Section,
-    VehicleInfo,
+    # VehicleInfo,
     VehicleModel
 )
 
@@ -34,7 +31,7 @@ from .forms import (
     SectionForm,
     DepartmentGroupsForm,
     HrAssignedCompaniesForm,
-    VehicleInfoForm,
+    # VehicleInfoForm,
     VehicleModelForm
 
 )
@@ -436,86 +433,61 @@ class DeleteHrAssignedCompanyView(PermissionRequiredMixin, View):
 
 # --- VIEW VEHICLES ---
 class ViewVehicleListView(PermissionRequiredMixin, View):
-    permission_required = "user.view_vehicleinfo"
+    permission_required = "user.view_vehiclemodel"
     template_name = "view_vehicle_list.html"
 
     def get(self, request):
-        vehicles = VehicleInfo.objects.select_related("vehicle", "ownership_type").all()
+        vehicles = VehicleModel.objects.select_related("brand").all()
         return render(request, self.template_name, {"vehicles": vehicles})
 
 
 # --- ADD VEHICLE ---
 class AddVehicleView(PermissionRequiredMixin, View):
-    permission_required = "user.add_vehicleinfo"
+    permission_required = "user.add_vehiclemodel"
     template_name = "add_vehicle.html"
 
     def get(self, request):
-        vehicle_form = VehicleModelForm()
-        info_form = VehicleInfoForm()
-        return render(request, self.template_name, {
-            "vehicle_form": vehicle_form,
-            "info_form": info_form
-        })
+        form = VehicleModelForm()
+        return render(request, self.template_name, {"form": form})
 
     def post(self, request):
-        vehicle_form = VehicleModelForm(request.POST)
-        info_form = VehicleInfoForm(request.POST)
-        if vehicle_form.is_valid() and info_form.is_valid():
-            vehicle = vehicle_form.save()
-            info = info_form.save(commit=False)
-            info.vehicle = vehicle
-            info.save()
+        form = VehicleModelForm(request.POST)
+        if form.is_valid():
+            form.save()
             messages.success(request, "Vehicle added successfully!")
             return redirect("view_vehicles")
-        return render(request, self.template_name, {
-            "vehicle_form": vehicle_form,
-            "info_form": info_form
-        })
+        return render(request, self.template_name, {"form": form})
 
 
 # --- UPDATE VEHICLE ---
 class UpdateVehicleView(PermissionRequiredMixin, View):
-    permission_required = "user.change_vehicleinfo"
+    permission_required = "user.change_vehiclemodel"
     template_name = "update_vehicle.html"
 
     def get(self, request, pk):
-        vehicle_info = get_object_or_404(VehicleInfo, pk=pk)
-        vehicle_form = VehicleModelForm(instance=vehicle_info.vehicle)
-        info_form = VehicleInfoForm(instance=vehicle_info)
-        return render(request, self.template_name, {
-            "vehicle_form": vehicle_form,
-            "info_form": info_form,
-            "vehicle_info": vehicle_info
-        })
+        vehicle = get_object_or_404(VehicleModel, pk=pk)
+        form = VehicleModelForm(instance=vehicle)
+        return render(request, self.template_name, {"form": form, "vehicle": vehicle})
 
     def post(self, request, pk):
-        vehicle_info = get_object_or_404(VehicleInfo, pk=pk)
-        vehicle_form = VehicleModelForm(request.POST, instance=vehicle_info.vehicle)
-        info_form = VehicleInfoForm(request.POST, instance=vehicle_info)
-        if vehicle_form.is_valid() and info_form.is_valid():
-            vehicle_form.save()
-            info_form.save()
+        vehicle = get_object_or_404(VehicleModel, pk=pk)
+        form = VehicleModelForm(request.POST, instance=vehicle)
+        if form.is_valid():
+            form.save()
             messages.success(request, "Vehicle updated successfully!")
             return redirect("view_vehicles")
-        return render(request, self.template_name, {
-            "vehicle_form": vehicle_form,
-            "info_form": info_form,
-            "vehicle_info": vehicle_info
-        })
+        return render(request, self.template_name, {"form": form, "vehicle": vehicle})
 
 
 # --- DELETE VEHICLE ---
 class DeleteVehicleView(PermissionRequiredMixin, View):
-    permission_required = "user.delete_vehicleinfo"
+    permission_required = "user.delete_vehiclemodel"
 
     def get(self, request, pk):
-        vehicle_info = get_object_or_404(VehicleInfo, pk=pk)
-        vehicle_info.delete()  # Hard delete, or you can soft delete by adding a flag
+        vehicle = get_object_or_404(VehicleModel, pk=pk)
+        vehicle.delete()
         messages.success(request, "Vehicle deleted successfully!")
         return redirect("view_vehicles")
-
-
-
 
 
 
@@ -566,7 +538,7 @@ from .serializer import (
     DesignationCreateSerializer,
     LocationsSerializer,
     EmployeeStatusSerializer,
-    VehicleInfoDropdownSerializer
+    # VehicleInfoDropdownSerializer
 
 )
 
