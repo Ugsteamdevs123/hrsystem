@@ -217,15 +217,15 @@ class VehicleModel(models.Model):
     ]
 
     brand = models.ForeignKey(VehicleBrand, on_delete=models.CASCADE, related_name='models')
-    name = models.CharField(max_length=50)
+    model_name = models.CharField(max_length=50)
     year = models.PositiveIntegerField()
     condition = models.CharField(max_length=10, choices=CONDITION_CHOICES, default='NEW')
 
     class Meta:
-        unique_together = ('brand', 'name', 'year', 'condition')
+        unique_together = ('brand', 'model_name', 'year', 'condition')
 
     def __str__(self):
-        return f"{self.brand.name} {self.name} ({self.year}) - {self.get_condition_display()}"
+        return f"{self.brand.name} {self.model_name} ({self.year}) - {self.get_condition_display()}"
 
 
 class VehicleOwnerShipModel(models.Model)   :
@@ -239,7 +239,7 @@ class VehicleInfo(models.Model):
     ownership_type = models.ForeignKey(VehicleOwnerShipModel, on_delete=models.SET_NULL, null=True)
     color = models.CharField(max_length=20, blank=True)
     registration_number = models.CharField(max_length=100)
-    mileage_km = models.PositiveIntegerField(default=0, help_text="Total distance travelled in kilometers")
+    mileage_km = models.PositiveIntegerField(default=0, help_text="Total distance travelled in kilometers" , blank=True , null=True)
 
     def __str__(self):
         return f"Info for {self.vehicle}"
