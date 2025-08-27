@@ -204,10 +204,10 @@ class CurrentPackageDetails(models.Model):
 class ProposedPackageDetails(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
     increment_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    increased_amount = models.ForeignKey(Formula, related_name='increased_amount', on_delete=models.SET_NULL, null=True)
-    revised_salary = models.ForeignKey(Formula, related_name='revised_salary', on_delete=models.SET_NULL, null=True)
+    increased_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
+    revised_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    revised_fuel_allowance = models.ForeignKey(Formula, related_name='revised_fuel_allowance', on_delete=models.SET_NULL, null=True)
+    revised_fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
@@ -236,12 +236,12 @@ class FinancialImpactPerMonth(models.Model):
     emp_status = models.ForeignKey(EmployeeStatus, on_delete=models.CASCADE, null=True, blank=True)
     serving_years = models.IntegerField(null=True, blank=True)
     salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    gratuity = models.ForeignKey(Formula, related_name='gratuity', on_delete=models.SET_NULL, null=True)
-    bonus = models.ForeignKey(Formula, related_name='bonus', on_delete=models.SET_NULL, null=True)
-    leave_encashment = models.ForeignKey(Formula, related_name='le', on_delete=models.SET_NULL, null=True)
-    mobile_allowance = models.ForeignKey(Formula, related_name='mobile_allowance', on_delete=models.SET_NULL, null=True)
+    gratuity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
+    bonus = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
+    leave_encashment = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
+    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     fuel = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    total = models.ForeignKey(Formula, related_name='total', on_delete=models.SET_NULL, null=True)
+    total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
 
     def save(self, *args, **kwargs):
         # Handle only DecimalFields
@@ -269,3 +269,73 @@ class configurations(models.Model):
 
     def __str__(self):
         return f"{self.fuel_rate} - {self.as_of_date}"
+    
+
+
+
+
+
+
+
+
+
+
+# In app/models.py
+class FieldFormula(models.Model):
+    target_model = models.CharField(max_length=255)  # e.g., 'ProposedPackageDetails'
+    target_field = models.CharField(max_length=255)  # e.g., 'revised_salary'
+    formula = models.ForeignKey(Formula, on_delete=models.CASCADE, null=True, blank=True, default=None)
+    description = models.TextField(blank=True)  # Optional help text
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Optional: Formula applies to this employee only."
+    )
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        help_text="Required: Formula applies to this company."
+    )
+
+    department_team = models.ForeignKey(
+        DepartmentTeams,
+        on_delete=models.CASCADE,
+        help_text="Required if no employee: Formula applies to this department team."
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(models.Q(employee__isnull=True, department_team__isnull=False) |
+                       models.Q(employee__isnull=False)),
+                name='employee_or_department_required'
+            )
+        ]
+
+    def __str__(self):
+        scope = self.employee or self.department_team or "Global"
+        return f"{self.target_model}.{self.target_field}: {self.formula} ({scope})"
+
+
+class FieldReference(models.Model):
+    MODEL_CHOICES = [
+        ('CurrentPackageDetails', 'Current Package Details'),
+        ('ProposedPackageDetails', 'Proposed Package Details'),
+        ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
+        ('IncrementDetailsSummary', 'Increment Details Summary'),
+        ('Employee', 'Employee'),
+    ]
+
+    model_name = models.CharField(max_length=255, choices=MODEL_CHOICES)
+    field_name = models.CharField(max_length=255)
+    display_name = models.CharField(max_length=255)
+    path = models.CharField(max_length=255)
+
+    class Meta:
+        unique_together = ('model_name', 'field_name')
+
+    def __str__(self):
+        return f"{self.model_name}: {self.display_name}"

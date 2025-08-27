@@ -2,6 +2,11 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .import models
 from django.utils.translation import gettext_lazy as _
+from .forms import FieldReferenceAdminForm
+from django.contrib import admin
+from django.urls import path
+from django.http import JsonResponse
+from .forms import get_model_by_name, list_fields
 
 # Register your models here.
 
@@ -39,6 +44,34 @@ class CustomUserAdmin(UserAdmin):
     ordering = ("email",)
 
 
+@admin.register(models.FieldReference)
+class FieldReferenceAdmin(admin.ModelAdmin):
+    form = FieldReferenceAdminForm
+    list_display = ("model_name", "field_name", "display_name", "path")
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "get-fields/",
+                self.admin_site.admin_view(self.get_fields_view),
+                name="fieldreference_get_fields",
+            ),
+        ]
+        return custom + urls
+
+    def get_fields_view(self, request):
+        model_name = request.GET.get("model")
+        _, model_cls = get_model_by_name(model_name)
+        fields = list_fields(model_cls)
+        # Return as [["value","label"], ...]
+        return JsonResponse([[f, f] for f in fields], safe=False)
+
+    class Media:
+        # No template override needed; admin will auto-include this JS
+        js = ("admin/js/fieldreference.js",)
+    
+
 admin.site.register(models.Location)
 admin.site.register(models.IncrementDetailsSummary)
 admin.site.register(models.hr_assigned_companies)
@@ -51,3 +84,6 @@ admin.site.register(models.EmployeeStatus)
 admin.site.register(models.CurrentPackageDetails)
 admin.site.register(models.ProposedPackageDetails)
 admin.site.register(models.FinancialImpactPerMonth)
+admin.site.register(models.Formula)
+admin.site.register(models.FieldFormula)
+admin.site.register(models.configurations)

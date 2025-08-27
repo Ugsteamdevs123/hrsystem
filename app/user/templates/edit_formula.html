@@ -1,0 +1,160 @@
+<!-- In templates/edit_formula.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Edit Formula</h2>
+<form method="post">
+    {% csrf_token %}
+    <label for="formula_name">Formula Name: <span style="color: red;">*</span></label>
+    <input type="text" name="formula_name" value="{{ form.formula_name.value }}" required>
+    <label for="formula-expression">Formula Expression: <span style="color: red;">*</span></label>
+    <textarea id="formula-expression" name="formula_expression" rows="4" style="width: 100%" required>{{ form.formula_expression.value }}</textarea>
+    <label for="field-selector">Insert Field:</label>
+    <small style="color: gray; display: block;">
+        Choose how to combine values from other tables (e.g., Sum for total salaries) by choosing an option from 'Combine Values'.
+    </small>
+    <label for="aggregate-selector">Combine Values:</label>
+    <select id="aggregate-selector" style="width: 100px;">
+        <option value="">None</option>
+        <option value="SUM">Sum</option>
+        <option value="AVG">Average</option>
+        <option value="COUNT">Count</option>
+    </select>
+    <select id="field-selector" style="width: 300px;">
+        <option selected disabled value="[Model: Field]">[Model: Field]</option>
+        {% for ref in field_references %}
+            <option value="[{{ ref.model_name }}: {{ ref.display_name }}]">{{ ref }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Save Changes</button>
+</form>
+
+<!-- <script src="/static/admin/js/jquery.min.js"></script>
+<script src="/static/admin/js/select2.min.js"></script>
+<link rel="stylesheet" href="/static/admin/css/select2.min.css"> -->
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        let lastInsertedField = null;
+
+        // Initialize Select2 for dropdowns
+        $('#field-selector, #id_company, #id_employee, #id_department_team').select2();
+
+        // Update target_field based on target_model
+        $('#id_target_model').on('change', function() {
+            var modelName = $(this).val();
+            if (modelName) {
+                $.ajax({
+                    url: '/pyroll/get-model-fields/',
+                    data: { 'model_name': modelName },
+                    success: function(data) {
+                        var fieldSelect = $('#id_target_field');
+                        fieldSelect.empty();
+                        data.fields.forEach(function(field) {
+                            fieldSelect.append(new Option(field, field));
+                        });
+                        fieldSelect.trigger('change');
+                    }
+                });
+            } else {
+                $('#id_target_field').empty().append('<option value="">Select a field</option>');
+            }
+        });
+
+        // Update department_team and employee based on company
+        $('#id_company').on('change', function() {
+            var companyId = $(this).val();
+            if (companyId) {
+                $.ajax({
+                    url: '/pyroll/get-company-departments-employees/',
+                    data: { 'company_id': companyId },
+                    success: function(data) {
+                        // Update department_team dropdown
+                        var deptSelect = $('#id_department_team');
+                        deptSelect.empty();
+                        deptSelect.append('<option value="">Select a department team</option>');
+                        $.each(data.department_teams, function(index, dept) {
+                            deptSelect.append($('<option>', {
+                                value: dept.id,
+                                text: dept.name
+                            }));
+                        });
+                        deptSelect.trigger('change');
+
+                        // Clear employee dropdown until department is selected
+                        var empSelect = $('#id_employee');
+                        empSelect.empty();
+                        empSelect.append('<option value="">Select an employee (optional)</option>');
+                        empSelect.trigger('change');
+                    }
+                });
+            } else {
+                $('#id_department_team').empty().append('<option value="">Select a department team</option>');
+                $('#id_employee').empty().append('<option value="">Select an employee (optional)</option>');
+            }
+        });
+
+        // Update employee based on department_team and company
+        $('#id_department_team').on('change', function() {
+            var departmentId = $(this).val();
+            var companyId = $('#id_company').val();
+            if (departmentId && companyId) {
+                $.ajax({
+                    url: '/pyroll/get-department-employees/',
+                    data: {
+                        'company_id': companyId,
+                        'department_team_id': departmentId
+                    },
+                    success: function(data) {
+                        var empSelect = $('#id_employee');
+                        empSelect.empty();
+                        empSelect.append('<option value="">Select an employee (optional)</option>');
+                        $.each(data.employees, function(index, emp) {
+                            empSelect.append($('<option>', {
+                                value: emp.id,
+                                text: emp.name
+                            }));
+                        });
+                        empSelect.trigger('change');
+                    }
+                });
+            } else {
+                $('#id_employee').empty().append('<option value="">Select an employee (optional)</option>');
+            }
+        });
+        
+        $('#field-selector').on('select2:select', function(e) {
+            var insertText = e.params.data.id; // e.g., [CurrentPackageDetails: Gross Salary]
+            var aggregate = $('#aggregate-selector').val();
+            if (aggregate) {
+                insertText = `${aggregate}${insertText}`; // Single bracket: SUM[Model: Field]
+            }
+            lastInsertedField = insertText;
+            var textarea = $('#formula-expression');
+            var current = textarea.val();
+            var cursorPos = textarea.prop('selectionStart');
+            var newText = current.substring(0, cursorPos) + insertText + current.substring(cursorPos);
+            textarea.val(newText);
+            textarea.focus();
+            textarea[0].setSelectionRange(cursorPos + insertText.length, cursorPos + insertText.length);
+        });
+
+        $('#aggregate-selector').on('change', function() {
+            if (!lastInsertedField) return;
+            var newAggregate = $(this).val();
+            var textarea = $('#formula-expression');
+            var current = textarea.val();
+            var baseField = lastInsertedField.match(/\[.*?\]/)[0] || lastInsertedField;
+            var newText = newAggregate ? `${newAggregate}${baseField}` : baseField.replace(/^(SUM|AVG|COUNT)/, '');
+            var updatedText = current.replace(lastInsertedField, newText);
+            textarea.val(updatedText);
+            lastInsertedField = newText;
+            textarea.focus();
+        });
+    });
+</script>
+{% endblock %}
