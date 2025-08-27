@@ -354,7 +354,7 @@ class HrAssignedCompaniesForm(forms.ModelForm):
 class VehicleModelForm(forms.ModelForm):
     class Meta:
         model = VehicleModel
-        fields = ["brand", "name", "year", "condition"]
+        fields = ["brand", "model_name", "year", "condition"]
 
 
 class VehicleInfoForm(forms.ModelForm):
