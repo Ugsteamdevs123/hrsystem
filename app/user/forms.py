@@ -1,7 +1,24 @@
 # In app/forms.py
 from django import forms
 from django.apps import apps
-from .models import Formula, FieldFormula, FieldReference, Employee, Company, DepartmentTeams
+from django.contrib.auth.models import Group
+
+from .utils import iter_allowed_models, get_model_by_name, list_fields
+
+from .models import (
+    Company , 
+    CustomUser , 
+    Section,
+    DepartmentGroups,
+    hr_assigned_companies,
+    VehicleBrand,
+    VehicleModel,
+    Formula, 
+    FieldFormula,
+    FieldReference,
+    Employee,
+    DepartmentTeams
+)
 
 
 class FormulaForm(forms.ModelForm):
@@ -112,16 +129,9 @@ class FieldFormulaForm(forms.ModelForm):
     
     # def save(self, commit=True):
     #     print("Values before saving:", self.cleaned_data)  # Inspect values
-    #     return super().save(commit)
-            
+    #     return super().save(commit)            
 
 
-
-
-
-
-
-from .utils import iter_allowed_models, get_model_by_name, list_fields
 class FieldReferenceAdminForm(forms.ModelForm):
     # keep as ChoiceField so admin shows dropdowns
     model_name = forms.ChoiceField(choices=[], required=True)
@@ -178,20 +188,6 @@ class FieldReferenceAdminForm(forms.ModelForm):
         if commit:
             obj.save()
         return obj
-from django import forms
-from .models import (
-    Company , 
-    CustomUser , 
-    Gender,
-    Section,
-    DepartmentGroups,
-    hr_assigned_companies,
-    VehicleModel,
-)
-from django.contrib.auth.models import Group
-
-
-
 
 
 class CustomUserForm(forms.ModelForm):
@@ -268,26 +264,6 @@ class CustomUserUpdateForm(forms.ModelForm):
         return user
 
 
-
-
-    # def save(self, commit=True):
-    #     user = super().save(commit=False)
-
-    #     # only update password if provided
-    #     if self.cleaned_data.get("password"):
-    #         user.set_password(self.cleaned_data["password"])
-
-    #     if commit:
-    #         user.save()
-
-    #         # update group assignment
-    #         user.groups.clear()  # remove old groups
-    #         if self.cleaned_data.get("groups"):
-    #             user.groups.add(self.cleaned_data["groups"])
-
-    #     return user
-
-
 class CompanyForm(forms.ModelForm):
     class Meta:
         model = Company
@@ -351,10 +327,38 @@ class HrAssignedCompaniesForm(forms.ModelForm):
 
 
 class VehicleModelForm(forms.ModelForm):
+    new_brand = forms.CharField(max_length=50, required=False, label="New Brand Name")
+
     class Meta:
         model = VehicleModel
         fields = ["brand", "model_name", "vehicle_type"]
 
+    def clean(self):
+        cleaned_data = super().clean()
+        brand = cleaned_data.get("brand")
+        new_brand = cleaned_data.get("new_brand")
+        brand_option = self.data.get("brand_option")
+
+        # Debugging log
+        print(f"Cleaning form: brand_option={brand_option}, brand={brand}, new_brand={new_brand}")
+
+        if brand_option == "new":
+            if not new_brand:
+                self.add_error("new_brand", "New brand name is required when adding a new brand.")
+            else:
+                # Create or get the brand and set it in cleaned_data
+                brand, created = VehicleBrand.objects.get_or_create(name=new_brand.strip())
+                cleaned_data["brand"] = brand
+                # Clear any errors on the brand field to avoid "required" error
+                if "brand" in self.errors:
+                    del self.errors["brand"]
+        elif brand_option == "existing" and not brand:
+            self.add_error("brand", "Please select an existing brand.")
+
+        return cleaned_data
 
 
-
+class VehicleBrandForm(forms.ModelForm):
+    class Meta:
+        model = VehicleBrand
+        fields = ["name"]
