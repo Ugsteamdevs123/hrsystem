@@ -7,22 +7,57 @@
 <form id="updateVehicleForm" method="POST">
     {% csrf_token %}
 
-    <!-- Vehicle Brand -->
-    <div class="form-field">
-        {{ form.brand.label_tag }}
-        {{ form.brand }}
+    <!-- Brand Selection -->
+    <div class="brand-selection-card">
+        <h3>Brand Option</h3>
+        <div class="radio-group">
+            <label class="radio-label">
+                <input type="radio" name="brand_option" value="existing" checked onclick="toggleBrandInput()">
+                <span class="radio-custom"></span>
+                Select Existing Brand
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="brand_option" value="new" onclick="toggleBrandInput()">
+                <span class="radio-custom"></span>
+                Add New Brand
+            </label>
+        </div>
+
+        <!-- Existing Brand Dropdown -->
+        <div class="form-field" id="existing_brand_field">
+            {{ form.brand.label_tag }}
+            {{ form.brand }}
+            {% if form.brand.errors %}
+                <div class="error">{{ form.brand.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- New Brand Input -->
+        <div class="form-field" id="new_brand_field" style="display: none;">
+            {{ form.new_brand.label_tag }}
+            {{ form.new_brand }}
+            {% if form.new_brand.errors %}
+                <div class="error">{{ form.new_brand.errors }}</div>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Vehicle Model Name -->
     <div class="form-field">
         {{ form.model_name.label_tag }}
         {{ form.model_name }}
+        {% if form.model_name.errors %}
+            <div class="error">{{ form.model_name.errors }}</div>
+        {% endif %}
     </div>
 
     <!-- Vehicle Type -->
     <div class="form-field">
         {{ form.vehicle_type.label_tag }}
         {{ form.vehicle_type }}
+        {% if form.vehicle_type.errors %}
+            <div class="error">{{ form.vehicle_type.errors }}</div>
+        {% endif %}
     </div>
 
     <!-- Buttons -->
@@ -37,14 +72,42 @@
             onclick="window.location.href='{% url 'view_vehicles' %}'">
             Back
         </button>
+        <button type="button" class="form-btn btn-manage-brands" 
+            onclick="window.location.href='{% url 'add_vehicle_brand' %}'">
+            Manage Brands
+        </button>
     </div>
 </form>
+
+<script>
+function toggleBrandInput() {
+    const existingBrandField = document.getElementById('existing_brand_field');
+    const newBrandField = document.getElementById('new_brand_field');
+    const brandOption = document.querySelector('input[name="brand_option"]:checked').value;
+    
+    console.log('Brand option selected:', brandOption); // Debugging line
+    
+    if (brandOption === 'existing') {
+        existingBrandField.style.display = 'block';
+        newBrandField.style.display = 'none';
+    } else if (brandOption === 'new') {
+        existingBrandField.style.display = 'none';
+        newBrandField.style.display = 'block';
+    }
+}
+</script>
 
 <style>
 /* Form fields styling */
 .form-field {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     text-align: left;
+}
+.form-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
 }
 .form-field input, .form-field select, .form-field textarea {
     width: 100%;
@@ -53,6 +116,67 @@
     border-radius: 6px;
     font-size: 14px;
     box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+    border-color: #28a745;
+    outline: none;
+}
+
+/* Brand selection card */
+.brand-selection-card {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.brand-selection-card h3 {
+    margin: 0 0 15px;
+    font-size: 16px;
+    color: #333;
+}
+
+/* Radio buttons */
+.radio-group {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.radio-label {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    cursor: pointer;
+}
+.radio-label input[type="radio"] {
+    display: none;
+}
+.radio-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #28a745;
+    border-radius: 50%;
+    margin-right: 10px;
+    position: relative;
+    transition: all 0.3s;
+}
+.radio-custom::after {
+    content: '';
+    width: 12px;
+    height: 12px;
+    background: #28a745;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.radio-label input:checked + .radio-custom::after {
+    opacity: 1;
 }
 
 /* Buttons */
@@ -63,17 +187,29 @@
     cursor: pointer;
     font-size: 14px;
     margin-right: 10px;
+    transition: background-color 0.3s;
 }
 .btn-submit { background-color: #28a745; color: #fff; }
 .btn-submit:hover { background-color: #218838; }
 .btn-back { background-color: #6c757d; color: #fff; }
 .btn-back:hover { background-color: #5a6268; }
+.btn-manage-brands { background-color: #007bff; color: #fff; }
+.btn-manage-brands:hover { background-color: #0056b3; }
+
+/* Error messages */
+.error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 5px;
+}
 
 /* Responsive */
 @media screen and (max-width: 500px) {
     .form-btn { font-size: 12px; padding: 10px; }
     .form-field input, .form-field select, .form-field textarea { font-size: 14px; padding: 10px; }
+    .brand-selection-card { padding: 15px; }
+    .radio-group { flex-direction: column; gap: 10px; }
+    .radio-label { font-size: 13px; }
 }
 </style>
-
 {% endblock %}

@@ -6,15 +6,13 @@
     <!-- Page Heading -->
     <div class="section-head">
         <h2>Department — {{ department.name }}</h2>
-    </div>
-
-    <!-- Add New Employee Button -->
-    <div class="button-group">
-        {% if perms.user.add_employee %}
-            <button type="button" class="form-btn btn-submit" onclick="openModal('create')">
-                Add New Employee
-            </button>
-        {% endif %}
+        <div class="button-group">
+            {% if perms.user.add_employee %}
+                <button type="button" class="form-btn btn-submit" onclick="openModal('create')">Add New Employee</button>
+            {% endif %}
+            <button type="button" class="form-btn btn-submit" id="saveDraftBtn">Save Draft</button>
+            <button type="button" class="form-btn btn-submit" id="saveBtn">Save</button>
+        </div>
     </div>
 
     <!-- Tabbed Interface -->
@@ -48,18 +46,18 @@
                         </thead>
                         <tbody>
                             {% for employee in employees %}
-                                <tr data-employee-id="{{ employee.emp_id }}">
+                                <tr data-employee-id="{{ employee.emp_id }}" class="{% if employee.is_draft %}draft-row{% endif %}">
                                     <td>{{ forloop.counter }}</td>
-                                    <td>{{ employee.fullname|default:"-" }}</td>
+                                    <td class="editable" data-field="fullname" data-type="text">{{ employee.fullname|default:"-" }}</td>
                                     <td>{{ employee.company.company_name|default:"-" }}</td>
-                                    <td>{{ employee.department_group.name|default:"-" }}</td>
-                                    <td>{{ employee.section.name|default:"-" }}</td>
-                                    <td>{{ employee.designation.title|default:"-" }}</td>
-                                    <td>{{ employee.location.location|default:"-" }}</td>
-                                    <td>{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
-                                    <td>{{ employee.resign|yesno:"Yes,No,-" }}</td>
-                                    <td>{{ employee.date_of_resignation|date:"Y-m-d"|default:"-" }}</td>
-                                    <td>{{ employee.remarks|default:"-" }}</td>
+                                    <td class="editable" data-field="department_group_id" data-type="select" data-endpoint="/payroll/department-groups-sections/">{{ employee.department_group.name|default:"-" }}</td>
+                                    <td class="editable" data-field="section_id" data-type="select" data-depends="department_group_id">{{ employee.section.name|default:"-" }}</td>
+                                    <td class="editable" data-field="designation_id" data-type="select" data-endpoint="/payroll/designations/?company_id={{ department.company.id }}">{{ employee.designation.title|default:"-" }}</td>
+                                    <td class="editable" data-field="location_id" data-type="select" data-endpoint="/payroll/locations/">{{ employee.location.location|default:"-" }}</td>
+                                    <td class="editable" data-field="date_of_joining" data-type="date">{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
+                                    <td class="editable" data-field="resign" data-type="select" data-options='[{"value": "false", "label": "No"}, {"value": "true", "label": "Yes"}]'>{{ employee.resign|yesno:"Yes,No,-" }}</td>
+                                    <td class="editable" data-field="date_of_resignation" data-type="date">{{ employee.date_of_resignation|date:"Y-m-d"|default:"-" }}</td>
+                                    <td class="editable" data-field="remarks" data-type="textarea">{{ employee.remarks|default:"-" }}</td>
                                     <td>
                                         {% if perms.user.change_employee %}
                                             <a href="#" class="action-btn edit-btn edit-employee-btn" data-employee-id="{{ employee.emp_id }}">Edit</a>
@@ -95,13 +93,13 @@
                         <tbody>
                             {% for employee in employees %}
                                 {% with current_package=employee.currentpackagedetails %}
-                                    <tr data-employee-id="{{ employee.emp_id }}">
+                                    <tr data-employee-id="{{ employee.emp_id }}" class="{% if employee.is_draft %}draft-row{% endif %}">
                                         <td>{{ forloop.counter }}</td>
                                         <td>{{ employee.fullname|default:"-" }}</td>
-                                        <td>{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
-                                        <td>{{ current_package.vehicle|default:"-" }}</td>
-                                        <td>{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td>
-                                        <td>{{ current_package.mobile_allowance|floatformat:2|default:"-" }}</td>
+                                        <td class="editable" data-field="gross_salary" data-type="number" data-step="0.01">{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
+                                        <td class="editable" data-field="vehicle_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ current_package.vehicle|default:"-" }}</td>
+                                        <td class="editable" data-field="fuel_limit" data-type="number" data-step="0.01">{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td>
+                                        <td class="editable" data-field="mobile_allowance" data-type="number" data-step="0.01">{{ current_package.mobile_allowance|floatformat:2|default:"-" }}</td>
                                     </tr>
                                 {% endwith %}
                             {% empty %}
@@ -133,16 +131,16 @@
                         <tbody>
                             {% for employee in employees %}
                                 {% with proposed_package=employee.proposedpackagedetails %}
-                                    <tr data-employee-id="{{ employee.emp_id }}">
+                                    <tr data-employee-id="{{ employee.emp_id }}" class="{% if employee.is_draft %}draft-row{% endif %}">
                                         <td>{{ forloop.counter }}</td>
                                         <td>{{ employee.fullname|default:"-" }}</td>
-                                        <td>{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
+                                        <td class="editable" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
                                         <td>{{ proposed_package.increased_amount|floatformat:2|default:"-" }}</td>
                                         <td>{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
-                                        <td>{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td>
+                                        <td class="editable" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td>
                                         <td>{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
-                                        <td>{{ proposed_package.mobile_allowance|floatformat:2|default:"-" }}</td>
-                                        <td>{{ proposed_package.vehicle|default:"-" }}</td>
+                                        <td class="editable" data-field="mobile_allowance_proposed" data-type="number" data-step="0.01">{{ proposed_package.mobile_allowance|floatformat:2|default:"-" }}</td>
+                                        <td class="editable" data-field="vehicle_proposed_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ proposed_package.vehicle|default:"-" }}</td>
                                     </tr>
                                 {% endwith %}
                             {% empty %}
@@ -176,10 +174,10 @@
                         <tbody>
                             {% for employee in employees %}
                                 {% with financial_impact=employee.financialimpactpermonth %}
-                                    <tr data-employee-id="{{ employee.emp_id }}">
+                                    <tr data-employee-id="{{ employee.emp_id }}" class="{% if employee.is_draft %}draft-row{% endif %}">
                                         <td>{{ forloop.counter }}</td>
                                         <td>{{ employee.fullname|default:"-" }}</td>
-                                        <td>{{ financial_impact.emp_status.status|default:"-" }}</td>
+                                        <td class="editable" data-field="emp_status_id" data-type="select" data-endpoint="/payroll/employee-status-choices/">{{ financial_impact.emp_status.status|default:"-" }}</td>
                                         <td>{{ financial_impact.serving_years|default:"-" }}</td>
                                         <td>{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
                                         <td>{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
@@ -212,7 +210,6 @@
             <div class="modal-body">
                 <form id="createForm" method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
-                    
                     <!-- Step 1: Employee Details -->
                     <div class="step" id="step-employee">
                         <h4 class="step-title">Step 1: Employee Details</h4>
@@ -280,7 +277,6 @@
                             <input type="file" id="image" name="image" accept="image/*">
                         </div>
                     </div>
-                    
                     <!-- Step 2: Current Package -->
                     <div class="step hidden" id="step-current_package">
                         <h4 class="step-title">Step 2: Current Package Details</h4>
@@ -303,7 +299,6 @@
                             <input type="number" id="mobile_allowance" name="mobile_allowance" step="0.01">
                         </div>
                     </div>
-                    
                     <!-- Step 3: Proposed Package -->
                     <div class="step hidden" id="step-proposed_package">
                         <h4 class="step-title">Step 3: Proposed Package Details</h4>
@@ -326,7 +321,6 @@
                             </select>
                         </div>
                     </div>
-                    
                     <!-- Step 4: Financial Impact -->
                     <div class="step hidden" id="step-financial_impact">
                         <h4 class="step-title">Step 4: Financial Impact Details</h4>
@@ -337,7 +331,6 @@
                             </select>
                         </div>
                     </div>
-                    
                     <!-- Hidden Fields -->
                     <input type="hidden" name="step" id="step">
                     <input type="hidden" name="employee_id" id="employee_id">
@@ -354,14 +347,7 @@
     </div>
 
     <style>
-        /* Adding button-group to match Add User styling */
-        .button-group {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
-
-        /* Section Heading */
+        /* Existing styles with additions for inline editing and draft highlighting */
         .section-head {
             display: flex;
             justify-content: space-between;
@@ -373,8 +359,11 @@
             font-size: 24px;
             color: #343a40;
         }
-
-        /* Table Styling */
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
         table {
             border-collapse: collapse;
             margin-top: 15px;
@@ -395,8 +384,12 @@
         tr:hover {
             background-color: #f1f3f5;
         }
-
-        /* Tabbed Interface */
+        .draft-row {
+            border-left: 4px solid #ffc107;
+        }
+        .editable.edited {
+            background-color: #fff3cd;
+        }
         .tab-container {
             background: #fff;
             border-radius: 8px;
@@ -436,8 +429,6 @@
             width: 100%;
             overflow-x: auto;
         }
-
-        /* Buttons */
         .form-btn {
             padding: 12px 20px;
             border: none;
@@ -446,13 +437,6 @@
             font-size: 14px;
             margin: 5px;
             transition: background-color 0.2s;
-        }
-        .btn-add {
-            background-color: #28a745;
-            color: #fff;
-        }
-        .btn-add:hover {
-            background-color: #218838;
         }
         .btn-submit {
             background-color: #28a745;
@@ -491,8 +475,22 @@
         .delete-btn:hover {
             background-color: #c82333;
         }
-
-        /* Modal Styling */
+        .editable:hover {
+            cursor: pointer;
+            background-color: #e9ecef;
+        }
+        .editable select, .editable input, .editable textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .editable textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
         .popup-overlay {
             position: fixed;
             inset: 0;
@@ -540,8 +538,6 @@
             gap: 8px;
             justify-content: flex-end;
         }
-
-        /* Confirmation Modal Styling */
         .confirm-popup {
             background: #fff;
             width: min(960px, 94vw);
@@ -558,8 +554,6 @@
         .confirm-popup .form-btn {
             min-width: 100px;
         }
-
-        /* Form Fields */
         .form-field {
             margin-bottom: 15px;
             text-align: left;
@@ -613,8 +607,6 @@
             grid-template-columns: 1fr 1fr;
             gap: 12px;
         }
-
-        /* Responsive Design */
         @media screen and (max-width: 768px) {
             table, th, td {
                 font-size: 14px;
@@ -659,7 +651,8 @@
         const cancelBtn = document.getElementById('modalCancelBtn');
         const modalTitle = document.getElementById('createModalLabel');
         const form = document.getElementById('createForm');
-        const formDataStore = {}; // Store form data for each step
+        const formDataStore = {};
+        let currentStep = 0;
 
         function openModal(mode = 'create') {
             modal.dataset.mode = mode;
@@ -670,6 +663,14 @@
             showStep(currentStep);
             updateResignationFieldVisibility();
             updateDesignationFieldVisibility();
+            if (mode === 'create') {
+                modalTitle.textContent = 'Create New Record';
+                form.reset();
+                document.getElementById('employee_id').value = '';
+            } else {
+                modalTitle.textContent = 'Edit Record - Step 1';
+            }
+            fetchDropdownData();
         }
 
         function closeModal() {
@@ -687,7 +688,7 @@
             updateResignationFieldVisibility();
             updateDesignationFieldVisibility();
             currentStep = 0;
-            Object.keys(formDataStore).forEach(key => delete formDataStore[key]); // Clear stored data
+            Object.keys(formDataStore).forEach(key => delete formDataStore[key]);
             showStep(currentStep);
         }
 
@@ -714,7 +715,6 @@
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
             try {
-                console.log(`Fetching URL: ${url}`);
                 const res = await fetch(url, {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
@@ -725,9 +725,7 @@
                 });
                 clearTimeout(timeoutId);
                 if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-                const data = await res.json();
-                console.log(`Response from ${url}:`, data);
-                return data;
+                return await res.json();
             } catch (err) {
                 clearTimeout(timeoutId);
                 console.error(`Error fetching ${url}:`, err);
@@ -737,19 +735,15 @@
         }
 
         function asArray(payload) {
-            console.log('Processing payload:', payload);
             if (Array.isArray(payload)) return payload;
             if (payload && Array.isArray(payload.data)) return payload.data;
             if (payload && Array.isArray(payload.results)) return payload.results;
             if (payload && Array.isArray(payload.items)) return payload.items;
-            console.warn('No array found in payload, returning empty array');
             return [];
         }
 
         async function fetchDropdownData() {
-            console.log('Fetching dropdown data for company:', companyId);
             if (!companyId) {
-                console.error('Company ID is missing');
                 showSnackbar('Company ID is missing', '#dc3545');
                 return;
             }
@@ -757,15 +751,12 @@
                 const raw = await fetchJSON('/payroll/department-groups-sections/');
                 const list = asArray(raw);
                 if (!Array.isArray(list)) {
-                    console.error('Invalid department groups data:', raw);
                     showSnackbar('No department groups available', '#dc3545');
                     window.departmentGroups = [];
                     return;
                 }
-                console.log('Department groups:', list);
                 populateDepartmentGroups(list);
             } catch (e) {
-                console.error('Error fetching department groups:', e);
                 showSnackbar('Error loading department groups', '#dc3545');
                 window.departmentGroups = [];
             }
@@ -782,37 +773,27 @@
                 const vehicles = asArray(vehiclesRaw);
                 const statuses = asArray(statusRaw);
 
-                console.log('Designations:', designations);
-                console.log('Locations:', locations);
-                console.log('Vehicles:', vehicles);
-                console.log('Statuses:', statuses);
-
                 if (designationsRaw.error || !designations) {
-                    console.error('Invalid designations data:', designationsRaw);
                     showSnackbar(designationsRaw.error || 'Invalid designations data', '#dc3545');
                 } else {
                     populateDesignations(designations);
                 }
                 if (locationsRaw.error || !locations) {
-                    console.error('Invalid locations data:', locationsRaw);
                     showSnackbar(locationsRaw.error || 'Invalid locations data', '#dc3545');
                 } else {
                     populateLocations(locations);
                 }
                 if (vehiclesRaw.error || !vehicles) {
-                    console.error('Invalid vehicles data:', vehiclesRaw);
                     showSnackbar('No vehicles available', '#dc3545');
                 } else {
                     populateVehicles(vehicles);
                 }
                 if (statusRaw.error || !statuses) {
-                    console.error('Invalid employee status data:', statusRaw);
                     showSnackbar(statusRaw.error || 'No employee status choices available', '#dc3545');
                 } else {
                     populateEmployeeStatusDropdown(statuses);
                 }
             } catch (e) {
-                console.error('Error fetching dropdown data:', e);
                 showSnackbar('Error loading dropdown data', '#dc3545');
             }
         }
@@ -828,7 +809,6 @@
                 select.appendChild(opt);
                 window.departmentGroups.push({ id: dept.id, name: dept.name, sections: dept.sections || [] });
             });
-            console.log('Populated department groups:', window.departmentGroups);
         }
 
         function populateDesignations(data) {
@@ -840,7 +820,6 @@
                 opt.textContent = d.title;
                 select.appendChild(opt);
             });
-            console.log('Populated designations:', data);
         }
 
         function populateLocations(data) {
@@ -852,7 +831,6 @@
                 opt.textContent = l.location;
                 select.appendChild(opt);
             });
-            console.log('Populated locations:', data);
         }
 
         function populateVehicles(data) {
@@ -870,7 +848,6 @@
                 const opt2 = opt1.cloneNode(true);
                 proposedSelect.appendChild(opt2);
             });
-            console.log('Populated vehicles:', data);
         }
 
         function populateEmployeeStatusDropdown(data) {
@@ -884,14 +861,12 @@
                 select.appendChild(opt);
                 window.employeeStatusChoices.push({ id: choice.id, status: choice.status });
             });
-            console.log('Populated employee statuses:', data);
         }
 
         function populateSections(groupId) {
             const select = document.getElementById('section_id');
             select.innerHTML = '<option value="">Select Section</option>';
             if (!window.departmentGroups) {
-                console.error('window.departmentGroups is undefined');
                 showSnackbar('Department groups not loaded', '#dc3545');
                 return;
             }
@@ -904,9 +879,6 @@
                         opt.textContent = section.name;
                         select.appendChild(opt);
                     });
-                    console.log('Populated sections for group', groupId, ':', group.sections);
-                } else {
-                    console.warn('No sections found for group ID:', groupId);
                 }
             }
         }
@@ -968,10 +940,8 @@
                     showSnackbar(result.error, '#dc3545');
                     return null;
                 }
-                console.log('Created new designation:', result);
                 return result;
             } catch (e) {
-                console.error('Error creating designation:', e);
                 showSnackbar('Error creating designation', '#dc3545');
                 return null;
             }
@@ -994,22 +964,18 @@
         async function fetchEmployeeData(employeeId) {
             try {
                 const data = await fetchJSON(`/payroll/get-data/employee/${employeeId}/`);
-                console.log('Fetched employee data:', data);
                 if (data.error || !data.data || !data.data.employee) {
-                    console.error('Invalid response structure:', data);
                     showSnackbar(data.error || 'Invalid employee data', '#dc3545');
                     return null;
                 }
                 return data.data;
             } catch (e) {
-                console.error('Error fetching employee data:', e);
                 showSnackbar('Error fetching employee data', '#dc3545');
                 return null;
             }
         }
 
         function populateForm(data) {
-            console.log('Populating form with data:', data);
             if (!data || !data.employee) {
                 showSnackbar('No employee data available', '#dc3545');
                 return;
@@ -1037,25 +1003,16 @@
             q('#mobile_allowance_proposed').value = data.proposed_package?.mobile_allowance || '';
             q('#vehicle_proposed_id').value = data.proposed_package?.vehicle_id || '';
             q('#emp_status_id').value = data.financial_impact?.emp_status_id || '';
-            // Store initial data for edit mode
             if (modal.dataset.mode === 'edit') {
                 formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, resign: q('#resign').value, date_of_resignation: q('#date_of_resignation').value, remarks: q('#remarks').value };
                 formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, vehicle_id: q('#vehicle_id').value, fuel_limit: q('#fuel_limit').value, mobile_allowance: q('#mobile_allowance').value };
                 formDataStore[2] = { ...formDataStore[2], increment_percentage: q('#increment_percentage').value, increased_fuel_amount: q('#increased_fuel_amount').value, mobile_allowance_proposed: q('#mobile_allowance_proposed').value, vehicle_proposed_id: q('#vehicle_proposed_id').value };
                 formDataStore[3] = { ...formDataStore[3], emp_status_id: q('#emp_status_id').value };
             }
-            console.log('Form populated, checking values:', {
-                fullname: q('#fullname').value,
-                department_group_id: q('#department_group_id').value,
-                section_id: q('#section_id').value,
-                designation_id: q('#designation_id').value,
-                location_id: q('#location_id').value,
-            });
         }
 
         // Multi-step Form Logic
         const steps = ['employee', 'current_package', 'proposed_package', 'financial_impact'];
-        let currentStep = 0;
 
         function showStep(stepIndex) {
             document.querySelectorAll('.step').forEach((el, i) => {
@@ -1067,7 +1024,6 @@
             document.getElementById('submitBtn').classList.toggle('hidden', stepIndex !== steps.length - 1);
             const mode = modal.dataset.mode === 'edit' ? 'Edit Record' : 'Create New Record';
             modalTitle.textContent = `${mode} - Step ${stepIndex + 1}`;
-            // Repopulate form with stored data
             if (formDataStore[stepIndex]) {
                 const q = sel => form.querySelector(sel);
                 for (const [key, value] of Object.entries(formDataStore[stepIndex])) {
@@ -1091,10 +1047,8 @@
                 }
             }
             formDataStore[stepIndex] = data;
-            console.log('Stored form data for step', stepIndex, ':', formDataStore[stepIndex]);
         }
 
-        // Previous Button Handler
         function handlePrevious() {
             if (currentStep > 0) {
                 currentStep--;
@@ -1104,7 +1058,6 @@
 
         document.getElementById('prevBtn').addEventListener('click', handlePrevious);
 
-        // Next Button with Validation and Confirmation
         function confirmNext() {
             if (modal.dataset.mode === 'create' && currentStep === 0) {
                 const errors = validateEmployeeStep();
@@ -1177,13 +1130,11 @@
                 }
                 if (result.employee_id) document.getElementById('employee_id').value = result.employee_id;
 
-                // Store form data before advancing
                 storeFormData(currentStep);
                 currentStep++;
                 if (currentStep < steps.length) {
                     showStep(currentStep);
                     if (!isEdit) {
-                        // Only clear fields for create mode if no stored data
                         if (!formDataStore[currentStep]) {
                             form.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
                                 if (['employee_id', 'step', 'csrfmiddlewaretoken'].includes(input.id)) return;
@@ -1197,7 +1148,6 @@
                     }
                 }
             } catch (e) {
-                console.error('Error saving step:', e);
                 showSnackbar('Error saving step', '#dc3545');
             }
         }
@@ -1237,9 +1187,179 @@
                     window.location.reload();
                 }
             } catch (e) {
-                console.error('Error saving final step:', e);
                 showSnackbar('Error saving final step', '#dc3545');
             }
+        }
+
+        // Inline Editing
+        const editedCells = {};
+
+        async function makeEditable(cell) {
+            if (!cell.classList.contains('editable')) return;
+            const field = cell.dataset.field;
+            const type = cell.dataset.type;
+            const employeeId = cell.parentElement.dataset.employeeId;
+            const tab = cell.closest('.tab-pane').id;
+            const endpoint = cell.dataset.endpoint;
+            const options = cell.dataset.options ? JSON.parse(cell.dataset.options) : null;
+            const depends = cell.dataset.depends;
+            const step = cell.dataset.step || 'any';
+
+            if (cell.querySelector('input, select, textarea')) return;
+
+            let input;
+            if (type === 'select') {
+                input = document.createElement('select');
+                if (options) {
+                    options.forEach(opt => {
+                        const option = document.createElement('option');
+                        option.value = opt.value;
+                        option.textContent = opt.label;
+                        input.appendChild(option);
+                    });
+                } else if (endpoint) {
+                    try {
+                        const data = await fetchJSON(endpoint);
+                        const items = asArray(data);
+                        input.innerHTML = '<option value="">Select</option>';
+                        if (field === 'department_group_id') {
+                            window.departmentGroups = items.map(dept => ({
+                                id: dept.id,
+                                name: dept.name,
+                                sections: dept.sections || []
+                            }));
+                            items.forEach(dept => {
+                                const opt = document.createElement('option');
+                                opt.value = dept.id;
+                                opt.textContent = dept.name;
+                                input.appendChild(opt);
+                            });
+                        } else if (field === 'section_id' && depends) {
+                            const groupId = cell.parentElement.querySelector(`[data-field="${depends}"] select`)?.value;
+                            if (groupId && window.departmentGroups) {
+                                const group = window.departmentGroups.find(g => g.id === parseInt(groupId));
+                                if (group && group.sections) {
+                                    group.sections.forEach(section => {
+                                        const opt = document.createElement('option');
+                                        opt.value = section.id;
+                                        opt.textContent = section.name;
+                                        input.appendChild(opt);
+                                    });
+                                }
+                            }
+                        } else {
+                            items.forEach(item => {
+                                const opt = document.createElement('option');
+                                opt.value = item.id;
+                                opt.textContent = field === 'vehicle_id' || field === 'vehicle_proposed_id'
+                                    ? `${item.brand_name} ${item.model_name} ${item.year} (${item.condition}) - Number Plate (${item.registration_number || 'Not Assigned'})`
+                                    : (item.title || item.location || item.status || item.name);
+                                input.appendChild(opt);
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error loading dropdown:', e);
+                        return;
+                    }
+                }
+            } else if (type === 'textarea') {
+                input = document.createElement('textarea');
+            } else {
+                input = document.createElement('input');
+                input.type = type;
+                if (type === 'number') input.step = step;
+            }
+
+            input.value = cell.textContent !== '-' ? cell.textContent : '';
+            cell.textContent = '';
+            cell.appendChild(input);
+            input.focus();
+
+            input.addEventListener('blur', () => {
+                const value = input.value.trim();
+                cell.textContent = value || '-';
+                cell.classList.toggle('edited', value !== (cell.dataset.original || '-'));
+                if (!editedCells[employeeId]) editedCells[employeeId] = {};
+                if (!editedCells[employeeId][tab]) editedCells[employeeId][tab] = {};
+                if (value) {
+                    editedCells[employeeId][tab][field] = value;
+                } else {
+                    delete editedCells[employeeId][tab][field];
+                    if (Object.keys(editedCells[employeeId][tab]).length === 0) {
+                        delete editedCells[employeeId][tab];
+                    }
+                    if (Object.keys(editedCells[employeeId]).length === 0) {
+                        delete editedCells[employeeId];
+                    }
+                }
+            });
+
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') input.blur();
+            });
+        }
+
+        document.querySelectorAll('.editable').forEach(cell => {
+            cell.dataset.original = cell.textContent;
+            cell.addEventListener('click', () => makeEditable(cell));
+        });
+
+        async function saveDraft() {
+            if (Object.keys(editedCells).length === 0) {
+                showSnackbar('No changes to save', '#dc3545');
+                return;
+            }
+            try {
+                const res = await fetch(`/payroll/save-draft/{{ department_id }}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(editedCells),
+                });
+                if (!res.ok) throw new Error('Failed to save draft');
+                const result = await res.json();
+                if (result.error) {
+                    showSnackbar(result.error, '#dc3545');
+                } else {
+                    showSnackbar('Draft saved successfully', '#28a745');
+                    window.location.reload();
+                }
+            } catch (e) {
+                showSnackbar('Error saving draft', '#dc3545');
+            }
+        }
+
+        async function saveFinal() {
+            if (Object.keys(editedCells).length === 0) {
+                showSnackbar('No changes to save', '#dc3545');
+                return;
+            }
+            showConfirmPopup('Are you sure you want to save changes to the original tables?', async () => {
+                try {
+                    const res = await fetch(`/payroll/save-final/{{ department_id }}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(editedCells),
+                    });
+                    if (!res.ok) throw new Error('Failed to save changes');
+                    const result = await res.json();
+                    if (result.error) {
+                        showSnackbar(result.error, '#dc3545');
+                    } else {
+                        showSnackbar('Changes saved successfully', '#28a745');
+                        window.location.reload();
+                    }
+                } catch (e) {
+                    showSnackbar('Error saving changes', '#dc3545');
+                }
+            });
         }
 
         function bindRowActions() {
@@ -1247,13 +1367,11 @@
                 btn.addEventListener('click', async function (e) {
                     e.preventDefault();
                     const employeeId = this.dataset.employeeId;
-                    console.log('Edit button clicked for employee ID:', employeeId);
                     if (!employeeId) {
                         showSnackbar('Invalid employee ID', '#dc3545');
                         return;
                     }
                     if (!window.departmentGroups || !window.employeeStatusChoices) {
-                        console.log('Fetching dropdown data before editing');
                         await fetchDropdownData();
                     }
                     const data = await fetchEmployeeData(employeeId);
@@ -1270,7 +1388,6 @@
             document.querySelectorAll('.delete-employee-btn').forEach(btn => {
                 btn.addEventListener('click', function () {
                     const employeeId = this.dataset.employeeId;
-                    console.log('Delete button clicked for employee ID:', employeeId);
                     if (!employeeId) {
                         showSnackbar('Invalid employee ID', '#dc3545');
                         return;
@@ -1294,7 +1411,6 @@
                                 window.location.reload();
                             }
                         } catch (e) {
-                            console.error('Error deleting employee:', e);
                             showSnackbar('Error deleting employee', '#dc3545');
                         }
                     });
@@ -1302,13 +1418,62 @@
             });
         }
 
-        // Initialize on DOM Ready
+        function showSnackbar(message, bgColor) {
+            const snackbar = document.createElement('div');
+            snackbar.textContent = message;
+            snackbar.style.position = 'fixed';
+            snackbar.style.bottom = '20px';
+            snackbar.style.left = '50%';
+            snackbar.style.transform = 'translateX(-50%)';
+            snackbar.style.backgroundColor = bgColor;
+            snackbar.style.color = '#fff';
+            snackbar.style.padding = '12px 24px';
+            snackbar.style.borderRadius = '6px';
+            snackbar.style.zIndex = '1000';
+            document.body.appendChild(snackbar);
+            setTimeout(() => snackbar.remove(), 3000);
+        }
+
+        function showConfirmPopup(message, callback) {
+            const popup = document.createElement('div');
+            popup.className = 'confirm-popup';
+            popup.innerHTML = `
+                <p>${message}</p>
+                <div class="button-group">
+                    <button class="form-btn btn-submit" onclick="this.closest('.confirm-popup').remove(); (${callback.toString()})();">Confirm</button>
+                    <button class="form-btn btn-back" onclick="this.closest('.confirm-popup').remove();">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(popup);
+            popup.style.position = 'fixed';
+            popup.style.top = '50%';
+            popup.style.left = '50%';
+            popup.style.transform = 'translate(-50%, -50%)';
+            popup.style.background = '#fff';
+            popup.style.borderRadius = '8px';
+            popup.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.3)';
+            popup.style.padding = '16px';
+            popup.style.textAlign = 'center';
+            popup.style.zIndex = '1000';
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM loaded, initializing...');
-            fetchDropdownData();
             bindRowActions();
-            updateResignationFieldVisibility();
-            updateDesignationFieldVisibility();
+            document.getElementById('saveDraftBtn').addEventListener('click', saveDraft);
+            document.getElementById('saveBtn').addEventListener('click', saveFinal);
+            document.querySelectorAll('.tab-pane').forEach(tab => {
+                const tabId = tab.id;
+                tab.querySelectorAll('tr[data-employee-id]').forEach(row => {
+                    const employeeId = row.dataset.employeeId;
+                    const draftData = row.classList.contains('draft-row') ? window.draftData?.[employeeId]?.[tabId] : null;
+                    if (draftData) {
+                        Object.keys(draftData).forEach(field => {
+                            const cell = row.querySelector(`[data-field="${field}"]`);
+                            if (cell) cell.classList.add('edited');
+                        });
+                    }
+                });
+            });
         });
     </script>
 {% else %}
