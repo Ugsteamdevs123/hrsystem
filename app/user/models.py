@@ -352,7 +352,137 @@ class FinancialImpactPerMonth(models.Model):
         super().save(*args, **kwargs)
         
     
+from django.db import models
+from decimal import Decimal
+from django.core.exceptions import ValidationError
+from auditlog.models import AuditlogHistoryField
 
+class EmployeeDraft(models.Model):
+    emp_id = models.AutoField(primary_key=True)
+    employee = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='drafts')
+    fullname = models.CharField(max_length=255, blank=True, null=True)
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True)
+    department_team = models.ForeignKey('DepartmentTeams', on_delete=models.CASCADE, null=True)
+    department_group = models.ForeignKey('DepartmentGroups', on_delete=models.CASCADE, null=True)
+    section = models.ForeignKey('Section', on_delete=models.CASCADE, null=True)
+    designation = models.ForeignKey('Designation', on_delete=models.CASCADE, null=True)
+    location = models.ForeignKey('Location', on_delete=models.CASCADE, null=True)
+    date_of_joining = models.DateField(blank=True, null=True)
+    resign = models.BooleanField(default=False, null=True)
+    date_of_resignation = models.DateField(blank=True, null=True)
+    remarks = models.TextField(blank=True, null=True)
+    image = models.FileField(upload_to='employee_draft_images/', blank=True, null=True)
+    is_deleted = models.BooleanField(default=False)
+    
+    # Track which fields were edited
+    edited_fields = models.JSONField(default=dict, blank=True)  # e.g., {"fullname": true, "resign": true}
+    
+    history = AuditlogHistoryField()
+
+    def __str__(self):
+        return f"Draft for {self.employee.fullname}"
+
+    def save(self, *args, **kwargs):
+        # Ensure at least one field is edited
+        if not self.edited_fields and not self.pk:
+            raise ValidationError("At least one field must be edited to create a draft.")
+        super().save(*args, **kwargs)
+
+class CurrentPackageDetailsDraft(models.Model):
+    employee_draft = models.ForeignKey(EmployeeDraft, on_delete=models.CASCADE, related_name='current_package_drafts')
+    gross_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vehicle = models.ForeignKey('VehicleModel', on_delete=models.SET_NULL, null=True, blank=True)
+    fuel_limit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)
+    
+    # Track which fields were edited
+    edited_fields = models.JSONField(default=dict, blank=True)
+    
+    history = AuditlogHistoryField()
+
+    def __str__(self):
+        return f"Current Package Draft for {self.employee_draft.employee.fullname}"
+
+    def save(self, *args, **kwargs):
+        for field in self._meta.get_fields():
+            if isinstance(field, models.DecimalField):
+                val = getattr(self, field.name)
+                if val == '' or val is None:
+                    setattr(self, field.name, Decimal("0"))
+                else:
+                    try:
+                        setattr(self, field.name, Decimal(val))
+                    except (InvalidOperation, TypeError, ValueError):
+                        setattr(self, field.name, Decimal("0"))
+        super().save(*args, **kwargs)
+
+class ProposedPackageDetailsDraft(models.Model):
+    employee_draft = models.ForeignKey(EmployeeDraft, on_delete=models.CASCADE, related_name='proposed_package_drafts')
+    increment_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    increased_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    revised_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    revised_fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vehicle = models.ForeignKey('VehicleModel', on_delete=models.SET_NULL, null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)
+    
+    # Track which fields were edited
+    edited_fields = models.JSONField(default=dict, blank=True)
+    
+    history = AuditlogHistoryField()
+
+    def __str__(self):
+        return f"Proposed Package Draft for {self.employee_draft.employee.fullname}"
+
+    def save(self, *args, **kwargs):
+        for field in self._meta.get_fields():
+            if isinstance(field, models.DecimalField):
+                val = getattr(self, field.name)
+                if val == '' or val is None:
+                    setattr(self, field.name, Decimal("0"))
+                else:
+                    try:
+                        setattr(self, field.name, Decimal(val))
+                    except (InvalidOperation, TypeError, ValueError):
+                        setattr(self, field.name, Decimal("0"))
+        super().save(*args, **kwargs)
+
+class FinancialImpactPerMonthDraft(models.Model):
+    employee_draft = models.ForeignKey(EmployeeDraft, on_delete=models.CASCADE, related_name='financial_impact_drafts')
+    emp_status = models.ForeignKey('EmployeeStatus', on_delete=models.CASCADE, null=True, blank=True)
+    serving_years = models.IntegerField(null=True, blank=True)
+    salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    gratuity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    bonus = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    leave_encashment = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    fuel = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)
+    
+    # Track which fields were edited
+    edited_fields = models.JSONField(default=dict, blank=True)
+    
+    history = AuditlogHistoryField()
+
+    def __str__(self):
+        return f"Financial Impact Draft for {self.employee_draft.employee.fullname}"
+
+    def save(self, *args, **kwargs):
+        for field in self._meta.get_fields():
+            if isinstance(field, models.DecimalField):
+                val = getattr(self, field.name)
+                if val == '' or val is None:
+                    setattr(self, field.name, Decimal("0"))
+                else:
+                    try:
+                        setattr(self, field.name, Decimal(val))
+                    except (InvalidOperation, TypeError, ValueError):
+                        setattr(self, field.name, Decimal("0"))
+        super().save(*args, **kwargs)
+        
 
 class configurations(models.Model):
     fuel_rate = models.FloatField(null=True)

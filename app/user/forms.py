@@ -1,7 +1,24 @@
 # In app/forms.py
 from django import forms
 from django.apps import apps
-from .models import Formula, FieldFormula, FieldReference, Employee, Company, DepartmentTeams
+from django.contrib.auth.models import Group
+
+from .utils import iter_allowed_models, get_model_by_name, list_fields
+
+from .models import (
+    Company , 
+    CustomUser , 
+    Section,
+    DepartmentGroups,
+    hr_assigned_companies,
+    VehicleBrand,
+    VehicleModel,
+    Formula, 
+    FieldFormula,
+    FieldReference,
+    Employee,
+    DepartmentTeams
+)
 
 
 class FormulaForm(forms.ModelForm):
@@ -13,23 +30,21 @@ class FormulaForm(forms.ModelForm):
             'formula_expression': forms.Textarea(attrs={'rows': 4, 'id': 'formula-expression'}),
         }
 
-class FieldFormulaForm(forms.ModelForm):
-    target_field = forms.ChoiceField(choices=[])
 
+class FieldFormulaForm(forms.ModelForm):
+    target_field = forms.ChoiceField(choices=[], required=True)
+    company = forms.ModelChoiceField(
+        queryset=Company.objects.none(),  # Will be set dynamically
+        required=True,
+        empty_label="Select a company",
+        help_text="Choose the company for this formula."
+    )
     employee = forms.ModelChoiceField(
         queryset=Employee.objects.all(),
         required=False,
         empty_label="Select an employee (optional)",
         help_text="Choose an employee for a specific formula, or leave blank for department-wide."
     )
-
-    company = forms.ModelChoiceField(
-        queryset=Company.objects.all(),
-        required=True,
-        empty_label="Select a company",
-        help_text="Choose the company for this formula."
-    )
-
     department_team = forms.ModelChoiceField(
         queryset=DepartmentTeams.objects.all(),
         required=False,
@@ -43,32 +58,30 @@ class FieldFormulaForm(forms.ModelForm):
         widgets = {
             'target_model': forms.Select(
                 choices=[
-                    ('', 'None'),
+                    ('', 'Select a model'),
                     ('ProposedPackageDetails', 'Proposed Package Details'),
                     ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
                     ('IncrementDetailsSummary', 'Increment Details Summary'),
                 ],
-                attrs={'required': 'true'}  # HTML required attribute for UI
+                attrs={'required': 'true'}
             ),
-            'target_field': forms.Select(
-                attrs={'required': 'true'}  # HTML required attribute
-            ),
-            'formula': forms.Select(
-                attrs={'required': 'true'}  # HTML required attribute
-            ),
+            'target_field': forms.Select(attrs={'required': 'true'}),
+            'formula': forms.Select(attrs={'required': 'true'}),
+            'description': forms.Textarea(attrs={'rows': 3}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, user=None, *args, **kwargs):  # Add user parameter
         super().__init__(*args, **kwargs)
-				 
-        model_name = None
-        if 'target_model' in self.data:
-            model_name = self.data.get('target_model')
-        elif self.instance.pk:
-            model_name = self.instance.target_model
+        self.user = user
 
+        # Filter companies by hr_assigned_companies
+        if self.user:
+            assigned_companies = hr_assigned_companies.objects.filter(hr=self.user).values('company')
+            self.fields['company'].queryset = Company.objects.filter(id__in=assigned_companies)
+
+        # Filter target_field based on target_model
+        model_name = self.data.get('target_model') if 'target_model' in self.data else (self.instance.target_model if self.instance.pk else None)
         if model_name:
-		  
             try:
                 model = apps.get_model("user", model_name)
                 fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
@@ -78,7 +91,6 @@ class FieldFormulaForm(forms.ModelForm):
 
         # Filter department_team and employee based on company
         company_id = self.data.get('company') if 'company' in self.data else (self.instance.company_id if self.instance.pk else None)
-												 
         if company_id:
             self.fields['department_team'].queryset = DepartmentTeams.objects.filter(company_id=company_id)
             self.fields['employee'].queryset = Employee.objects.filter(company_id=company_id)
@@ -103,7 +115,6 @@ class FieldFormulaForm(forms.ModelForm):
         employee = cleaned_data.get('employee')
         department_team = cleaned_data.get('department_team')
         company = cleaned_data.get('company')
-        # print("cleaned_data: ", cleaned_data)
         if not company:
             raise forms.ValidationError("A company must be selected.")
         if not employee and not department_team:
@@ -118,16 +129,9 @@ class FieldFormulaForm(forms.ModelForm):
     
     # def save(self, commit=True):
     #     print("Values before saving:", self.cleaned_data)  # Inspect values
-    #     return super().save(commit)
-            
+    #     return super().save(commit)            
 
 
-
-
-
-
-
-from .utils import iter_allowed_models, get_model_by_name, list_fields
 class FieldReferenceAdminForm(forms.ModelForm):
     # keep as ChoiceField so admin shows dropdowns
     model_name = forms.ChoiceField(choices=[], required=True)
@@ -184,20 +188,6 @@ class FieldReferenceAdminForm(forms.ModelForm):
         if commit:
             obj.save()
         return obj
-from django import forms
-from .models import (
-    Company , 
-    CustomUser , 
-    Gender,
-    Section,
-    DepartmentGroups,
-    hr_assigned_companies,
-    VehicleModel,
-)
-from django.contrib.auth.models import Group
-
-
-
 
 
 class CustomUserForm(forms.ModelForm):
@@ -274,26 +264,6 @@ class CustomUserUpdateForm(forms.ModelForm):
         return user
 
 
-
-
-    # def save(self, commit=True):
-    #     user = super().save(commit=False)
-
-    #     # only update password if provided
-    #     if self.cleaned_data.get("password"):
-    #         user.set_password(self.cleaned_data["password"])
-
-    #     if commit:
-    #         user.save()
-
-    #         # update group assignment
-    #         user.groups.clear()  # remove old groups
-    #         if self.cleaned_data.get("groups"):
-    #             user.groups.add(self.cleaned_data["groups"])
-
-    #     return user
-
-
 class CompanyForm(forms.ModelForm):
     class Meta:
         model = Company
@@ -357,10 +327,38 @@ class HrAssignedCompaniesForm(forms.ModelForm):
 
 
 class VehicleModelForm(forms.ModelForm):
+    new_brand = forms.CharField(max_length=50, required=False, label="New Brand Name")
+
     class Meta:
         model = VehicleModel
         fields = ["brand", "model_name", "vehicle_type"]
 
+    def clean(self):
+        cleaned_data = super().clean()
+        brand = cleaned_data.get("brand")
+        new_brand = cleaned_data.get("new_brand")
+        brand_option = self.data.get("brand_option")
+
+        # Debugging log
+        print(f"Cleaning form: brand_option={brand_option}, brand={brand}, new_brand={new_brand}")
+
+        if brand_option == "new":
+            if not new_brand:
+                self.add_error("new_brand", "New brand name is required when adding a new brand.")
+            else:
+                # Create or get the brand and set it in cleaned_data
+                brand, created = VehicleBrand.objects.get_or_create(name=new_brand.strip())
+                cleaned_data["brand"] = brand
+                # Clear any errors on the brand field to avoid "required" error
+                if "brand" in self.errors:
+                    del self.errors["brand"]
+        elif brand_option == "existing" and not brand:
+            self.add_error("brand", "Please select an existing brand.")
+
+        return cleaned_data
 
 
-
+class VehicleBrandForm(forms.ModelForm):
+    class Meta:
+        model = VehicleBrand
+        fields = ["name"]

@@ -4,7 +4,6 @@ from . import views
 
 # app_name = 'user'
 urlpatterns = [
-
     path('login/', views.LoginView.as_view(), name='login'),
 
     # user crud
@@ -12,7 +11,6 @@ urlpatterns = [
     path("user/<int:pk>/edit/", views.UpdateUserView.as_view(), name="update_user"),
     path("users/", views.ViewUsersView.as_view(), name="view_users"),
     path("user/<int:pk>/delete/", views.DeleteUserView.as_view(), name="delete_user"),
-
 
     # company crud
     path('company/' , views.ViewCompaniesView.as_view() , name='view_company'),
@@ -38,11 +36,7 @@ urlpatterns = [
     path('hr-assigned-companies/<int:pk>/edit/', views.UpdateHrAssignedCompanyView.as_view(), name='update_hr_assigned_company'),
     path('hr-assigned-companies/<int:pk>/delete/', views.DeleteHrAssignedCompanyView.as_view(), name='delete_hr_assigned_company'),
 
-    # vehicle crud
-    path("vehicles/", views.ViewVehicleListView.as_view(), name="view_vehicles"),
-    path("vehicles/add/", views.AddVehicleView.as_view(), name="add_vehicle"),
-    path("vehicles/update/<int:pk>/", views.UpdateVehicleView.as_view(), name="update_vehicle"),
-    path("vehicles/delete/<int:pk>/", views.DeleteVehicleView.as_view(), name="delete_vehicle"),
+
 
 
     # formula crud
@@ -55,18 +49,23 @@ urlpatterns = [
     path('field-formulas/create/', views.CreateFieldFormulaView.as_view(), name='create_field_formula'),
     path('field-formulas/edit/<int:pk>/', views.EditFieldFormulaView.as_view(), name='edit_field_formula'),
 
-
+    path('vehicles/', views.ViewVehicleListView.as_view(), name='view_vehicles'),
+    path('vehicles/add/', views.AddVehicleView.as_view(), name='add_vehicle'),
+    path('vehicles/update/<int:pk>/', views.UpdateVehicleView.as_view(), name='update_vehicle'),
+    path('vehicles/delete/<int:pk>/', views.DeleteVehicleView.as_view(), name='delete_vehicle'),
+    path('vehicles_brands/add/', views.AddVehicleBrandView.as_view(), name='add_vehicle_brand'),
+    path('vehicles_brands/edit/<int:pk>/', views.AddVehicleBrandView.as_view(), name='edit_vehicle_brand'),
+    path('vehicles_brands/delete/<int:pk>/', views.DeleteVehicleBrandView.as_view(), name='delete_vehicle_brand'),
 
     path('hr/', views.HrDashboardView.as_view(), name='hr_dashboard'),
     path('department-team/', views.DepartmentTeamView.as_view(), name='department_team'),
     path('get-companies-and-department-teams/', views.GetCompaniesAndDepartmentTeamsView.as_view(), name='get_companies_and_department_teams'),
-    
     path('company-summary/<int:company_id>/', views.CompanySummaryView.as_view(), name='company_summary'),
 
     path('department-table/<int:department_id>/', views.DepartmentTableView.as_view(), name='department_table'),
     path('get-data/employee/<int:employee_id>/', views.GetEmployeeDataView.as_view(), name='get_employee_data'),
-    
-    
+    path('save-draft/<int:department_id>/', views.SaveDraftView.as_view(), name='save_draft'),
+    path('save-final/<int:department_id>/', views.SaveFinalView.as_view(), name='save_final'),
     path('create-data/<int:department_id>/', views.CreateDataView.as_view(), name='create_data'),
     path('get-data/<str:table>/<str:id>/', views.GetDataView.as_view(), name='get_data'),
     path('update-data/<int:department_id>/', views.UpdateDataView.as_view(), name='update_data'),
@@ -88,5 +87,4 @@ urlpatterns = [
     path('vehicles-dropdown/', views.VehiclesDropdownView.as_view(), name='vehicles-dropdown'),
 
     path("logout/", views.LogoutView.as_view(), name="logout"),
-
 ]

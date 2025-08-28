@@ -101,17 +101,3 @@ class EmployeeStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployeeStatus
         fields = '__all__'
-
-
-# class VehicleInfoDropdownSerializer(serializers.ModelSerializer):
-#     brand_name = serializers.CharField(source='vehicle.brand.name', read_only=True)
-#     model_name = serializers.CharField(source='vehicle.name', read_only=True)
-#     year = serializers.IntegerField(source='vehicle.year', read_only=True)
-#     condition = serializers.CharField(source='vehicle.get_condition_display', read_only=True)
-
-#     class Meta:
-#         model = VehicleInfo
-#         fields = ['id', 'brand_name', 'model_name', 'year', 'condition', 'registration_number']
-
-
-
