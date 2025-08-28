@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Create Field Formula{% endblock %}
+
+{% block content %}
+{% if perms.user.add_fieldformula %}
+<h2>Create Field Formula</h2>
+
+<form id="createFieldFormulaForm" method="POST">
+    {% csrf_token %}
+    <div class="form-field">{{ form.company.label_tag }} {{ form.company }}</div>
+    <div class="form-field">{{ form.department_team.label_tag }} {{ form.department_team }}</div>
+    <div class="form-field">{{ form.employee.label_tag }} {{ form.employee }}</div>
+    <div class="form-field">{{ form.target_model.label_tag }} {{ form.target_model }}</div>
+    <div class="form-field">{{ form.target_field.label_tag }} {{ form.target_field }}</div>
+    <div class="form-field">{{ form.formula.label_tag }} {{ form.formula }}</div>
+    <div class="form-field">{{ form.aggregate_type.label_tag }} {{ form.aggregate_type }}</div>
+
+    <div class="button-group">
+        <button type="button" class="form-btn btn-submit"
+            onclick="showConfirmPopup('Are you sure you want to save this field formula?', function(){ 
+                document.getElementById('createFieldFormulaForm').submit(); 
+            })">
+            Save
+        </button>
+        <button type="button" class="form-btn btn-view"
+            onclick="window.location.href='{% url 'view_field_formulas' %}'">
+            Cancel
+        </button>
+    </div>
+</form>
+
+<style>
+/* Copy same styles from manage_formula.html to match design */
+.form-field { margin-bottom: 15px; text-align: left; }
+.form-field label { display: block; margin-bottom: 5px; font-size: 14px; color: #333; }
+.form-field select, .form-field input {
+    width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px;
+    font-size: 14px; box-sizing: border-box;
+}
+.form-btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; margin-right: 10px; }
+.btn-submit { background-color: #28a745; color: #fff; }
+.btn-submit:hover { background-color: #218838; }
+.btn-view { background-color: #007bff; color: #fff; }
+.btn-view:hover { background-color: #0056b3; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const companySelect = document.getElementById('id_company');
+    const departmentSelect = document.getElementById('id_department_team');
+    const employeeSelect = document.getElementById('id_employee');
+    const modelSelect = document.getElementById('id_target_model');
+    const fieldSelect = document.getElementById('id_target_field');
+
+    // Fetch fields based on model
+    modelSelect.addEventListener('change', function() {
+        const modelName = this.value;
+        fieldSelect.innerHTML = '<option value="">Select a field</option>';
+        if (modelName) {
+            fetch(`/payroll/get-model-fields/?model_name=${encodeURIComponent(modelName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    data.fields.forEach(field => {
+                        const opt = document.createElement('option');
+                        opt.value = field;
+                        opt.textContent = field;
+                        fieldSelect.appendChild(opt);
+                    });
+                });
+        }
+    });
+
+    // Fetch departments & employees based on company
+    companySelect.addEventListener('change', function() {
+        const companyId = this.value;
+        departmentSelect.innerHTML = '<option value="">Select a department team</option>';
+        employeeSelect.innerHTML = '<option value="">Select an employee (optional)</option>';
+        if (companyId) {
+            fetch(`/payroll/get-company-departments-employees/?company_id=${encodeURIComponent(companyId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    data.department_teams.forEach(dept => {
+                        const opt = document.createElement('option');
+                        opt.value = dept.id;
+                        opt.textContent = dept.name;
+                        departmentSelect.appendChild(opt);
+                    });
+                });
+        }
+    });
+
+    // Fetch employees based on department
+    departmentSelect.addEventListener('change', function() {
+        const deptId = this.value;
+        const companyId = companySelect.value;
+        employeeSelect.innerHTML = '<option value="">Select an employee (optional)</option>';
+        if (deptId && companyId) {
+            fetch(`/payroll/get-department-employees/?company_id=${encodeURIComponent(companyId)}&department_team_id=${encodeURIComponent(deptId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    data.employees.forEach(emp => {
+                        const opt = document.createElement('option');
+                        opt.value = emp.id;
+                        opt.textContent = emp.name;
+                        employeeSelect.appendChild(opt);
+                    });
+                });
+        }
+    });
+});
+</script>
+
+{% else %}
+<p>You do not have permission to create a field formula.</p>
+{% endif %}
+{% endblock %}

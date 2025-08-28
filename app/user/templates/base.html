@@ -221,7 +221,11 @@
             {% endif %}
 
             {% if perms.user.view_formula %}
-            <a href="{% url 'manage_formulas' %}">Formulas</a>
+            <a href="{% url 'view_formula' %}">Formulas</a>
+            {% endif %}
+
+            {% if perms.user.view_fieldformula %}
+            <a href="{% url 'view_field_formulas' %}">Formulas Manage</a>
             {% endif %}
 
             {# --- Dynamic Companies → Departments (RBAC on Employee) --- #}
