@@ -914,6 +914,7 @@ class CompanySummaryView(View):
 #         })
 
 
+# View for handle the department table  
 
 class DepartmentTableView(View):
     @classmethod
@@ -949,6 +950,7 @@ class DepartmentTableView(View):
         })
 
 
+# View to made the employee data json for department table
 
 class GetEmployeeDataView(View):
     @classmethod
@@ -1332,6 +1334,7 @@ class EmployeeStatusView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
     
 class VehiclesDropdownView(View):
+    
     def get(self, request):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             vehicles = VehicleInfo.objects.select_related('vehicle__brand').all()
@@ -1344,107 +1347,235 @@ class VehiclesDropdownView(View):
 
 
 
+
+
+
+
+
+
+
+
+
 # In app/views.py
 from django.shortcuts import render, redirect
 from .models import FieldFormula, FieldReference
 from .forms import FieldFormulaForm, FormulaForm
 from django.apps import apps
 from django.shortcuts import render, redirect, get_object_or_404
-
-
-def manage_formulas(request):
-    company_data = get_companies_and_department_teams(request.user)
-
-    field_formulas = FieldFormula.objects.all()
-    field_references = FieldReference.objects.all()
-    if request.method == 'POST':
-        form = FieldFormulaForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('manage_formulas')
-        else:
-            print(form.errors)
-    else:
-        form = FieldFormulaForm()
-    return render(request, 'manage_formulas.html', {
-        'form': form,
-        'field_formulas': field_formulas,
-        'field_references': field_references,
-        'company_data': company_data
-    })
-
-
-def get_model_fields(request):
-    model_name = request.GET.get("model_name")
-
-    if not model_name:
-        return JsonResponse({"fields": []})
-
-    try:
-        model = apps.get_model('user', model_name)
-    except LookupError:
-        return JsonResponse({"fields": []})
-
-    fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
-    
-    return JsonResponse({"fields": fields})
-
-
-def create_formula(request):
-    if request.method == 'POST':
-        form = FormulaForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('manage_formulas')
-    else:
-        form = FormulaForm()
-    return render(request, 'create_formula.html', {'form': form})
-
-
-def edit_formula(request, pk):
-    formula = get_object_or_404(Formula, pk=pk)
-    if request.method == 'POST':
-        form = FormulaForm(request.POST, instance=formula)
-        if form.is_valid():
-            form.save()
-            return redirect('manage_formulas')
-    else:
-        form = FormulaForm(instance=formula)
-    return render(request, 'edit_formula.html', {'form': form, 'field_references': FieldReference.objects.all()})
-
-def edit_field_formula(request, pk):
-    field_formula = get_object_or_404(FieldFormula, pk=pk)
-    if request.method == 'POST':
-        form = FieldFormulaForm(request.POST, instance=field_formula)
-        if form.is_valid():
-            form.save()
-            return redirect('manage_formulas')
-    else:
-        form = FieldFormulaForm(instance=field_formula)
-    return render(request, 'edit_field_formula.html', {'form': form})
-
 from django.db import models 
 
-def get_company_departments_employees(request):
-    company_id = request.GET.get('company_id')
-    if company_id:
-        department_teams = DepartmentTeams.objects.filter(company_id=company_id).values('id', 'name')
-        employees = Employee.objects.filter(company_id=company_id).values('emp_id', name=models.F('fullname'))
-        
-        return JsonResponse({
-            'department_teams': list(department_teams),
-            'employees': list(employees)
-        })
-    return JsonResponse({'department_teams': [], 'employees': []})
 
-def get_department_employees(request):
-    company_id = request.GET.get('company_id')
-    department_team_id = request.GET.get('department_team_id')
-    if company_id and department_team_id:
-        employees = Employee.objects.filter(
-            company_id=company_id,
-            department_team_id=department_team_id
-        ).values('emp_id', name=models.F('fullname'))
-        
-        return JsonResponse({'employees': list(employees)})
-    return JsonResponse({'employees': []})
+# For Formula CRUD view
+
+# class ViewFormulaView(PermissionRequiredMixin, View):
+#     permission_required = "user.view_formula"
+#     template_name = "view_formula.html"
+
+#     def get(self, request, pk):
+#         formula = get_object_or_404(Formula, pk=pk)
+#         return render(request, self.template_name, {
+#             'formula': formula,
+#         })
+
+class FormulaListView(PermissionRequiredMixin, View):
+    permission_required = "user.view_formula"
+    template_name = "view_formula.html"
+
+    def get(self, request):
+        formulas = Formula.objects.all().order_by('-id')  # latest first
+        return render(request, self.template_name, {
+            'formulas': formulas
+        })
+
+
+class CreateFormulaView(PermissionRequiredMixin, View):
+    permission_required = "user.add_formula"
+    template_name = "create_formula.html"
+
+    def get(self, request):
+        form = FormulaForm()
+        field_references = FieldReference.objects.all()
+        return render(request, self.template_name, {
+            'form': form,
+            'field_references': field_references
+        })
+
+    def post(self, request):
+        form = FormulaForm(request.POST)
+        field_references = FieldReference.objects.all()
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Formula created successfully!")
+            return redirect("view_formula")
+        return render(request, self.template_name, {
+            'form': form,
+            'field_references': field_references
+        })
+    
+class EditFormulaView(PermissionRequiredMixin, View):
+    permission_required = "user.change_formula"
+    template_name = "update_formula.html"
+
+    def get(self, request, pk):
+        formula = get_object_or_404(Formula, pk=pk)
+        form = FormulaForm(instance=formula)
+        field_references = FieldReference.objects.all()
+        return render(request, self.template_name, {
+            'form': form,
+            'field_references': field_references,
+            'formula': formula
+        })
+
+    def post(self, request, pk):
+        formula = get_object_or_404(Formula, pk=pk)
+        form = FormulaForm(request.POST, instance=formula)
+        field_references = FieldReference.objects.all()
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Formula updated successfully!")
+            return redirect("view_formula")
+        return render(request, self.template_name, {
+            'form': form,
+            'field_references': field_references,
+            'formula': formula
+        })
+
+
+
+# For Manage Formula CRUD
+
+class FieldFormulaListView(PermissionRequiredMixin, View):
+    permission_required = "user.view_fieldformula"
+    template_name = "view_field_formulas.html"
+
+    def get(self, request):
+        company_data = get_companies_and_department_teams(request.user)
+        field_formulas = FieldFormula.objects.all().order_by('-id')
+        field_references = FieldReference.objects.all()
+        return render(request, self.template_name, {
+            'field_formulas': field_formulas,
+            'field_references': field_references,
+            'company_data': company_data
+        })
+
+
+class CreateFieldFormulaView(PermissionRequiredMixin, View):
+    permission_required = "user.add_fieldformula"
+    template_name = "create_field_formula.html"
+
+    def get(self, request):
+        form = FieldFormulaForm()
+        field_references = FieldReference.objects.all()
+        company_data = get_companies_and_department_teams(request.user)
+        return render(request, self.template_name, {
+            'form': form,
+            'field_references': field_references,
+            'company_data': company_data
+        })
+
+    def post(self, request):
+        form = FieldFormulaForm(request.POST)
+        field_references = FieldReference.objects.all()
+        company_data = get_companies_and_department_teams(request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Field Formula created successfully!")
+            return redirect("view_field_formulas")
+        return render(request, self.template_name, {
+            'form': form,
+            'field_references': field_references,
+            'company_data': company_data
+        })
+
+
+class EditFieldFormulaView(PermissionRequiredMixin, View):
+    permission_required = "user.change_fieldformula"
+    template_name = "update_field_formula.html"
+
+    def get(self, request, pk):
+        field_formula = get_object_or_404(FieldFormula, pk=pk)
+        form = FieldFormulaForm(instance=field_formula)
+        field_references = FieldReference.objects.all()
+        company_data = get_companies_and_department_teams(request.user)
+        return render(request, self.template_name, {
+            'form': form,
+            'field_references': field_references,
+            'company_data': company_data,
+            'field_formula': field_formula
+        })
+
+    def post(self, request, pk):
+        field_formula = get_object_or_404(FieldFormula, pk=pk)
+        form = FieldFormulaForm(request.POST, instance=field_formula)
+        field_references = FieldReference.objects.all()
+        company_data = get_companies_and_department_teams(request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Field Formula updated successfully!")
+            return redirect("view_field_formulas")
+        return render(request, self.template_name, {
+            'form': form,
+            'field_references': field_references,
+            'company_data': company_data,
+            'field_formula': field_formula
+        })
+
+
+
+class GetModelFieldsView(View):
+    def get(self, request):
+        model_name = request.GET.get("model_name")
+        if not model_name:
+            return JsonResponse({"fields": []})
+        try:
+            model = apps.get_model('user', model_name)
+        except LookupError:
+            return JsonResponse({"fields": []})
+        fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
+        return JsonResponse({"fields": fields})
+
+
+
+class GetCompanyDepartmentsEmployeesView(View):
+    def get(self, request):
+        company_id = request.GET.get('company_id')
+        if company_id:
+            department_teams = DepartmentTeams.objects.filter(company_id=company_id).values('id', 'name')
+            employees = Employee.objects.filter(company_id=company_id).values('emp_id', name=models.F('fullname'))
+            return JsonResponse({
+                'department_teams': list(department_teams),
+                'employees': list(employees)
+            })
+        return JsonResponse({'department_teams': [], 'employees': []})
+
+class GetDepartmentEmployeesView(View):
+    def get(self, request):
+        company_id = request.GET.get('company_id')
+        department_team_id = request.GET.get('department_team_id')
+        if company_id and department_team_id:
+            employees = Employee.objects.filter(
+                company_id=company_id,
+                department_team_id=department_team_id
+            ).values('emp_id', name=models.F('fullname'))
+            return JsonResponse({'employees': list(employees)})
+        return JsonResponse({'employees': []})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

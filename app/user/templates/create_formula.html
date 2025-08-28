@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% block title %}Create Formula{% endblock %}
+
+{% block content %}
+{% if perms.user.add_formula %}
+<h2>Create New Formula</h2>
+
+<form id="createFormulaForm" method="POST" action="{% url 'create_formula' %}">
+    {% csrf_token %}
+
+    <!-- Formula Name -->
+    <div class="form-field">
+        {{ form.formula_name.label_tag }}
+        {{ form.formula_name }}
+    </div>
+
+    <!-- Formula Expression -->
+    <div class="form-field">
+        {{ form.formula_expression.label_tag }}
+        {{ form.formula_expression }}
+    </div>
+
+    <!-- Combine Values (Aggregate Selector) -->
+    <div class="form-field">
+        <label for="aggregate-selector">Combine Values:</label>
+        <select id="aggregate-selector" name="aggregate-selector">
+            <option value="">None</option>
+            <option value="SUM">Sum</option>
+            <option value="AVG">Average</option>
+            <option value="COUNT">Count</option>
+        </select>
+    </div>
+
+    <!-- Insert Field (Field Selector) -->
+    <div class="form-field">
+        <label for="field-selector">Insert Field:</label>
+        <select id="field-selector" name="field-selector">
+            <option selected disabled value="[Model: Field]">[Model: Field]</option>
+            {% for ref in field_references %}
+                <option value="[{{ ref.model_name }}: {{ ref.display_name }}]">{{ ref }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Buttons -->
+    <div class="button-group">
+        <button type="button" class="form-btn btn-submit"
+            onclick="showConfirmPopup('Are you sure you want to create this formula?', function(){ 
+                document.getElementById('createFormulaForm').submit(); 
+            })">
+            Create Formula
+        </button>
+        <button type="button" class="form-btn btn-back" 
+            onclick="window.location.href='{% url 'view_formula' %}'">
+            Back
+        </button>
+    </div>
+</form>
+
+<style>
+/* Form fields styling (consistent with add_user.html) */
+.form-field {
+    margin-bottom: 15px;
+    text-align: left;
+}
+.form-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #333;
+}
+.form-field input,
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+.form-field textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Buttons (consistent with add_user.html) */
+.button-group {
+    margin-top: 20px;
+}
+.form-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+}
+.btn-submit {
+    background-color: #28a745;
+    color: #fff;
+}
+.btn-submit:hover {
+    background-color: #218838;
+}
+.btn-back {
+    background-color: #6c757d;
+    color: #fff;
+}
+.btn-back:hover {
+    background-color: #5a6268;
+}
+
+/* Responsive adjustments (consistent with add_user.html) */
+@media screen and (max-width: 500px) {
+    .form-btn {
+        font-size: 12px;
+        padding: 10px;
+    }
+    .form-field input,
+    .form-field select,
+    .form-field textarea {
+        font-size: 14px;
+        padding: 10px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let lastInsertedField = null;
+    const formulaTextarea = document.querySelector('[name="formula_expression"]');
+    const fieldSelector = document.getElementById('field-selector');
+    const aggregateSelector = document.getElementById('aggregate-selector');
+
+    if (!formulaTextarea) {
+        console.error('Formula textarea not found!');
+        return;
+    }
+
+    // Handle field selection
+    fieldSelector.addEventListener('change', function(e) {
+        const insertText = e.target.value; 
+        const aggregate = aggregateSelector.value;
+        const finalText = aggregate ? `${aggregate}${insertText}` : insertText;
+        lastInsertedField = finalText;
+
+        const current = formulaTextarea.value;
+        const cursorPos = formulaTextarea.selectionStart;
+        const newText = current.substring(0, cursorPos) + finalText + current.substring(cursorPos);
+        formulaTextarea.value = newText;
+
+        const newCursorPos = cursorPos + finalText.length;
+        formulaTextarea.focus();
+        formulaTextarea.setSelectionRange(newCursorPos, newCursorPos);
+
+        fieldSelector.value = '[Model: Field]';
+    });
+
+    // Handle aggregate selection
+    aggregateSelector.addEventListener('change', function() {
+        if (!lastInsertedField) return;
+
+        const newAggregate = this.value;
+        const current = formulaTextarea.value;
+        const baseField = lastInsertedField.match(/\[.*?\]/)?.[0] || lastInsertedField;
+        const newText = newAggregate ? `${newAggregate}${baseField}` : baseField.replace(/^(SUM|AVG|COUNT)/, '');
+        formulaTextarea.value = current.replace(lastInsertedField, newText);
+        lastInsertedField = newText;
+        formulaTextarea.focus();
+    });
+});
+</script>
+{% else %}
+<p>You do not have permission to create a formula.</p>
+{% endif %}
+{% endblock %}

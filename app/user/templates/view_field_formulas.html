@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Field Formulas{% endblock %}
+
+{% block content %}
+{% if perms.user.view_fieldformula %}
+<h2>Field Formulas</h2>
+
+<!-- Add Field Formula Button -->
+{% if perms.user.add_fieldformula %}
+<button class="form-btn btn-add" onclick="window.location.href='{% url 'create_field_formula' %}'">
+    Add New Field Formula
+</button>
+{% endif %}
+
+<!-- Field Formulas Table -->
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+    <thead>
+        <tr>
+            <th>SR.No</th>
+            <th>Company</th>
+            <th>Department Team</th>
+            <th>Employee</th>
+            <th>Target Model</th>
+            <th>Target Field</th>
+            <th>Formula</th>
+            {% comment %} <th>Aggregate Type</th> {% endcomment %}
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ff in field_formulas %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ ff.company.name|default:"-" }}</td>
+            <td>{{ ff.department_team.name|default:"-" }}</td>
+            <td>{{ ff.employee|default:"-" }}</td>
+            <td>{{ ff.target_model }}</td>
+            <td>{{ ff.target_field }}</td>
+            <td>{{ ff.formula.formula_expression }}</td>
+            {% comment %} <td>{{ ff.get_aggregate_type_display|default:"None" }}</td> {% endcomment %}
+            <td>
+                {% if perms.user.change_fieldformula %}
+                <a href="{% url 'edit_field_formula' ff.id %}" class="action-btn edit-btn">Edit</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="9" style="text-align: center;">No formulas available.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+/* Table styling */
+table { border-collapse: collapse; margin-top: 15px; width: 100%; }
+th, td { text-align: left; padding: 10px; }
+th { background-color: #f2f2f2; }
+tr:nth-child(even) { background-color: #f9f9f9; }
+
+/* Buttons */
+.form-btn { padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; margin-bottom: 10px; }
+.btn-add { background-color: #28a745; color: #fff; }
+.btn-add:hover { background-color: #218838; }
+
+.action-btn { 
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-size: 14px; 
+    color: #fff; 
+    text-decoration: none; 
+    cursor: pointer; 
+    display: inline-block; 
+    margin-right: 5px;
+}
+
+/* Edit button colors */
+.edit-btn { background-color: #007bff; }
+.edit-btn:hover { background-color: #0056b3; }
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+    table, th, td { font-size: 14px; }
+    .form-btn, .action-btn { font-size: 12px; padding: 8px 12px; }
+}
+</style>
+{% else %}
+<p>You do not have permission to view field formulas.</p>
+{% endif %}
+{% endblock %}

@@ -45,6 +45,17 @@ urlpatterns = [
     path("vehicles/delete/<int:pk>/", views.DeleteVehicleView.as_view(), name="delete_vehicle"),
 
 
+    # formula crud
+    path('formula/create/', views.CreateFormulaView.as_view(), name='create_formula'),
+    path('formula/view/', views.FormulaListView.as_view(), name='view_formula'),
+    path('formula/edit/<int:pk>/', views.EditFormulaView.as_view(), name='edit_formula'),
+
+    # manage formula crud 
+    path('field-formulas/', views.FieldFormulaListView.as_view(), name='view_field_formulas'),
+    path('field-formulas/create/', views.CreateFieldFormulaView.as_view(), name='create_field_formula'),
+    path('field-formulas/edit/<int:pk>/', views.EditFieldFormulaView.as_view(), name='edit_field_formula'),
+
+
 
     path('hr/', views.HrDashboardView.as_view(), name='hr_dashboard'),
     path('department-team/', views.DepartmentTeamView.as_view(), name='department_team'),
@@ -67,31 +78,15 @@ urlpatterns = [
     path('locations/', views.LocationsView.as_view(), name='locations'),
     path('employee-status-choices/', views.EmployeeStatusView.as_view(), name='employee_status_choices'),
 
-    path('manage-formulas/', views.manage_formulas, name='manage_formulas'),
-    path("get-model-fields/", views.get_model_fields, name="get_model_fields"),
-    path('create-formula/', views.create_formula, name='create_formula'),
-    path('edit-formula/<int:pk>/', views.edit_formula, name='edit_formula'),
-    path('edit-field-formula/<int:pk>/', views.edit_field_formula, name='edit_field_formula'),
 
-    path('get-company-departments-employees/', views.get_company_departments_employees, name='get_company_departments_employees'),
-    path('get-department-employees/', views.get_department_employees, name='get_department_employees'),
+
+    path("get-model-fields/", views.GetModelFieldsView.as_view(), name="get_model_fields"),
+
+    path('get-company-departments-employees/', views.GetCompanyDepartmentsEmployeesView.as_view(), name='get_company_departments_employees'),
+    path('get-department-employees/', views.GetDepartmentEmployeesView.as_view(), name='get_department_employees'),
+
     path('vehicles-dropdown/', views.VehiclesDropdownView.as_view(), name='vehicles-dropdown'),
-
-
-    # path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
-
-    
-
-    
-
-
-
-   
-
-
 
     path("logout/", views.LogoutView.as_view(), name="logout"),
 
-
-    # path('logout/', views.UserLogoutView.as_view(), name='logout'),
 ]
