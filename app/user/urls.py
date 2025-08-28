@@ -62,14 +62,33 @@ urlpatterns = [
     path('get-companies-and-department-teams/', views.GetCompaniesAndDepartmentTeamsView.as_view(), name='get_companies_and_department_teams'),
     path('company-summary/<int:company_id>/', views.CompanySummaryView.as_view(), name='company_summary'),
 
-    path('department-table/<int:department_id>/', views.DepartmentTableView.as_view(), name='department_table'),
-    path('get-data/employee/<int:employee_id>/', views.GetEmployeeDataView.as_view(), name='get_employee_data'),
+    # For dept table crud
+
+    path('department/<int:department_id>/', views.DepartmentTableView.as_view(), name='department_table'),
+    path('department/<int:department_id>/create/', views.CreateEmployeeView.as_view(), name='create_employee'),
+    
+    path('department/<int:department_id>/update/<int:employee_id>/', views.UpdateEmployeeView.as_view(), name='update_employee'),
+    
+    
+
+    path('department/<int:department_id>/delete/<int:employee_id>/', views.DeleteEmployeeView.as_view(), name='delete_employee'),
+    path('get-data/<str:table>/<str:id>/', views.GetDataView.as_view(), name='get_data'),
     path('save-draft/<int:department_id>/', views.SaveDraftView.as_view(), name='save_draft'),
     path('save-final/<int:department_id>/', views.SaveFinalView.as_view(), name='save_final'),
-    path('create-data/<int:department_id>/', views.CreateDataView.as_view(), name='create_data'),
-    path('get-data/<str:table>/<str:id>/', views.GetDataView.as_view(), name='get_data'),
-    path('update-data/<int:department_id>/', views.UpdateDataView.as_view(), name='update_data'),
-    path('delete-data/<str:table>/<int:id>/', views.DeleteDataView.as_view(), name='delete_data'),
+
+
+
+
+    # path('department-table/<int:department_id>/', views.DepartmentTableView.as_view(), name='department_table'),
+    # path('get-data/employee/<int:employee_id>/', views.GetEmployeeDataView.as_view(), name='get_employee_data'),
+    # path('save-draft/<int:department_id>/', views.SaveDraftView.as_view(), name='save_draft'),
+
+    # path('save-final/<int:department_id>/', views.SaveFinalView.as_view(), name='save_final'),
+    # path('create-data/<int:department_id>/', views.CreateDataView.as_view(), name='create_data'),
+
+    # path('get-data/<str:table>/<str:id>/', views.GetDataView.as_view(), name='get_data'),
+    # path('update-data/<int:department_id>/', views.UpdateDataView.as_view(), name='update_data'),
+    # path('delete-data/<str:table>/<int:id>/', views.DeleteDataView.as_view(), name='delete_data'),
 
     path('department-groups-sections/', views.DepartmentGroupsSectionsView.as_view(), name='department_groups_sections'),
     path('designations/', views.DesignationsView.as_view(), name='designations'),

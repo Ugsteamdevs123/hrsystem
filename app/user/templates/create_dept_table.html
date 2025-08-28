@@ -1,0 +1,638 @@
+{% extends 'base.html' %}
+{% block title %}Create Employee - {{ department.name }}{% endblock %}
+
+{% block content %}
+{% if perms.user.add_employee %}
+    <div class="section-head">
+        <h2>Create New Employee — {{ department.name }}</h2>
+        <a href="{% url 'department_table' department_id=department_id %}" class="form-btn btn-back">Back to Department List</a>
+    </div>
+
+    <div class="form-container" data-company-id="{{ department.company.id }}">
+        <form id="createForm" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <!-- Step 1: Employee Details -->
+            <div class="step" id="step-employee">
+                <h4 class="step-title">Step 1: Employee Details</h4>
+                <div class="form-field">
+                    <label for="fullname">Full Name <span class="req">*</span></label>
+                    <input type="text" id="fullname" name="fullname" required>
+                </div>
+                <div class="form-field">
+                    <label for="department_group_id">Department Group <span class="req">*</span></label>
+                    <select id="department_group_id" name="department_group_id" required>
+                        <option value="">Select Department Group</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="section_id">Section <span class="req">*</span></label>
+                    <select id="section_id" name="section_id">
+                        <option value="">Select Section</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="designation_id">Designation <span class="req">*</span></label>
+                    <div class="inline-group">
+                        <select id="designation_id" name="designation_id">
+                            <option value="">Select Designation</option>
+                        </select>
+                        <label class="inline-check">
+                            <input type="checkbox" id="add_new_designation">
+                            <span>Add New</span>
+                        </label>
+                    </div>
+                    <div class="form-field" id="new_designation_container" style="display: none;">
+                        <label for="new_designation_title">New Designation Title</label>
+                        <input type="text" id="new_designation_title" name="new_designation_title" placeholder="Enter new designation title" disabled>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label for="location_id">Location <span class="req">*</span></label>
+                    <select id="location_id" name="location_id">
+                        <option value="">Select Location</option>
+                    </select>
+                </div>
+                <div class="form-field split">
+                    <div>
+                        <label for="date_of_joining">Date of Joining <span class="req">*</span></label>
+                        <input type="date" id="date_of_joining" name="date_of_joining">
+                    </div>
+                    <div>
+                        <label for="resign">Resign</label>
+                        <select id="resign" name="resign">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-field" id="resignation_date_container" style="display: none;">
+                    <label for="date_of_resignation">Date of Resignation</label>
+                    <input type="date" id="date_of_resignation" name="date_of_resignation" disabled>
+                </div>
+                <div class="form-field">
+                    <label for="remarks">Remarks</label>
+                    <textarea id="remarks" name="remarks"></textarea>
+                </div>
+                <div class="form-field">
+                    <label for="image">Image</label>
+                    <input type="file" id="image" name="image" accept="image/*">
+                </div>
+            </div>
+            <!-- Step 2: Current Package -->
+            <div class="step hidden" id="step-current_package">
+                <h4 class="step-title">Step 2: Current Package Details</h4>
+                <div class="form-field">
+                    <label for="gross_salary">Gross Salary</label>
+                    <input type="number" id="gross_salary" name="gross_salary" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="vehicle_id">Vehicle</label>
+                    <select id="vehicle_id" name="vehicle_id">
+                        <option value="">Select Vehicle</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="fuel_limit">Fuel Limit</label>
+                    <input type="number" id="fuel_limit" name="fuel_limit" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="mobile_allowance">Mobile Allowance</label>
+                    <input type="number" id="mobile_allowance" name="mobile_allowance" step="0.01">
+                </div>
+            </div>
+            <!-- Step 3: Proposed Package -->
+            <div class="step hidden" id="step-proposed_package">
+                <h4 class="step-title">Step 3: Proposed Package Details</h4>
+                <div class="form-field">
+                    <label for="increment_percentage">Increment Percentage</label>
+                    <input type="number" id="increment_percentage" name="increment_percentage" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="increased_fuel_amount">Increased Fuel Amount</label>
+                    <input type="number" id="increased_fuel_amount" name="increased_fuel_amount" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="mobile_allowance_proposed">Mobile Allowance</label>
+                    <input type="number" id="mobile_allowance_proposed" name="mobile_allowance_proposed" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="vehicle_proposed_id">Vehicle</label>
+                    <select id="vehicle_proposed_id" name="vehicle_proposed">
+                        <option value="">Select Vehicle</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Step 4: Financial Impact -->
+            <div class="step hidden" id="step-financial_impact">
+                <h4 class="step-title">Step 4: Financial Impact Details</h4>
+                <div class="form-field">
+                    <label for="emp_status_id">Employee Status</label>
+                    <select id="emp_status_id" name="emp_status_id">
+                        <option value="">Select Employee Status</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Hidden Fields -->
+            <input type="hidden" name="step" id="step">
+            <input type="hidden" name="employee_id" id="employee_id">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <div class="form-footer">
+                <button type="button" class="form-btn btn-back hidden" id="prevBtn">Previous</button>
+                <button type="button" class="form-btn btn-submit" id="nextBtn" onclick="confirmNext()">Next</button>
+                <button type="button" class="form-btn btn-submit hidden" id="submitBtn" onclick="handleSubmit()">Submit</button>
+                <a href="{% url 'department_table' department_id=department_id %}" class="form-btn btn-back">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <style>
+        .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .section-head h2 { margin: 0; font-size: 24px; color: #343a40; }
+        .form-container { background: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); padding: 16px; margin-top: 20px; }
+        .form-btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 5px; transition: background-color 0.2s; }
+        .btn-submit { background-color: #28a745; color: #fff; }
+        .btn-submit:hover { background-color: #218838; }
+        .btn-back { background-color: #6c757d; color: #fff; }
+        .btn-back:hover { background-color: #5a6268; }
+        .form-field { margin-bottom: 15px; text-align: left; }
+        .form-field label { font-weight: 500; margin-bottom: 6px; display: block; }
+        .form-field input, .form-field select, .form-field textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        .form-field textarea { min-height: 90px; resize: vertical; }
+        .inline-group { display: flex; align-items: center; gap: 10px; }
+        .inline-check { display: flex; align-items: center; gap: 6px; user-select: none; }
+        .req { color: #dc3545; }
+        .step-title { font-size: 18px; margin-bottom: 16px; color: #343a40; }
+        .hidden { display: none !important; }
+        .form-field.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-footer { padding: 12px 16px; border-top: 1px solid #eee; display: flex; gap: 8px; justify-content: flex-end; }
+        .confirm-popup { background: #fff; width: min(960px, 94vw); max-width: 500px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); padding: 16px; text-align: center; }
+        .confirm-popup p { margin: 0 0 20px; font-size: 16px; }
+        .confirm-popup .form-btn { min-width: 100px; }
+        @media screen and (max-width: 768px) {
+            .form-field input, .form-field select, .form-field textarea { font-size: 14px; padding: 10px; }
+            .form-btn { font-size: 12px; padding: 8px 12px; }
+        }
+        @media screen and (max-width: 500px) {
+            .form-field.split { grid-template-columns: 1fr; }
+            .form-btn { font-size: 12px; padding: 10px; }
+            .confirm-popup { width: 90vw; max-width: 400px; }
+        }
+    </style>
+
+    <script>
+        const form = document.getElementById('createForm');
+        const companyId = document.querySelector('.form-container').dataset.companyId;
+        const formDataStore = {};
+        let currentStep = 0;
+        const steps = ['employee', 'current_package', 'proposed_package', 'financial_impact'];
+
+        async function fetchJSON(url, opts = {}, timeoutMs = 5000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, signal: controller.signal, ...opts });
+                clearTimeout(timeoutId);
+                if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                clearTimeout(timeoutId);
+                console.error(`Error fetching ${url}:`, err);
+                showSnackbar(`Error: ${err.message}`, '#dc3545');
+                throw err;
+            }
+        }
+
+        function asArray(payload) {
+            if (Array.isArray(payload)) return payload;
+            if (payload && Array.isArray(payload.data)) return payload.data;
+            if (payload && Array.isArray(payload.results)) return payload.results;
+            if (payload && Array.isArray(payload.items)) return payload.items;
+            return [];
+        }
+
+        async function fetchDropdownData() {
+            if (!companyId) {
+                showSnackbar('Company ID is missing', '#dc3545');
+                return;
+            }
+            try {
+                const raw = await fetchJSON('/payroll/department-groups-sections/');
+                const list = asArray(raw);
+                if (!Array.isArray(list)) {
+                    showSnackbar('No department groups available', '#dc3545');
+                    window.departmentGroups = [];
+                    return;
+                }
+                populateDepartmentGroups(list);
+            } catch (e) {
+                showSnackbar('Error loading department groups', '#dc3545');
+                window.departmentGroups = [];
+            }
+
+            try {
+                const [designationsRaw, locationsRaw, vehiclesRaw, statusRaw] = await Promise.all([
+                    fetchJSON(`/payroll/designations/?company_id=${companyId}`),
+                    fetchJSON('/payroll/locations/'),
+                    fetchJSON('/payroll/vehicles-dropdown/'),
+                    fetchJSON('/payroll/employee-status-choices/'),
+                ]);
+                const designations = asArray(designationsRaw);
+                const locations = asArray(locationsRaw);
+                const vehicles = asArray(vehiclesRaw);
+                const statuses = asArray(statusRaw);
+
+                if (designationsRaw.error || !designations) {
+                    showSnackbar(designationsRaw.error || 'Invalid designations data', '#dc3545');
+                } else {
+                    populateDesignations(designations);
+                }
+                if (locationsRaw.error || !locations) {
+                    showSnackbar(locationsRaw.error || 'Invalid locations data', '#dc3545');
+                } else {
+                    populateLocations(locations);
+                }
+                if (vehiclesRaw.error || !vehicles) {
+                    showSnackbar('No vehicles available', '#dc3545');
+                } else {
+                    populateVehicles(vehicles);
+                }
+                if (statusRaw.error || !statuses) {
+                    showSnackbar(statusRaw.error || 'No employee status choices available', '#dc3545');
+                } else {
+                    populateEmployeeStatusDropdown(statuses);
+                }
+            } catch (e) {
+                showSnackbar('Error loading dropdown data', '#dc3545');
+            }
+        }
+
+        function populateDepartmentGroups(data) {
+            const select = document.getElementById('department_group_id');
+            select.innerHTML = '<option value="">Select Department Group</option>';
+            window.departmentGroups = [];
+            data.forEach(dept => {
+                const opt = document.createElement('option');
+                opt.value = dept.id;
+                opt.textContent = dept.name;
+                select.appendChild(opt);
+                window.departmentGroups.push({ id: dept.id, name: dept.name, sections: dept.sections || [] });
+            });
+        }
+
+        function populateDesignations(data) {
+            const select = document.getElementById('designation_id');
+            select.innerHTML = '<option value="">Select Designation</option>';
+            data.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.title;
+                select.appendChild(opt);
+            });
+        }
+
+        function populateLocations(data) {
+            const select = document.getElementById('location_id');
+            select.innerHTML = '<option value="">Select Location</option>';
+            data.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.id;
+                opt.textContent = l.location;
+                select.appendChild(opt);
+            });
+        }
+
+        function populateVehicles(data) {
+            const currentSelect = document.getElementById('vehicle_id');
+            const proposedSelect = document.getElementById('vehicle_proposed_id');
+            currentSelect.innerHTML = '<option value="">Select Vehicle</option>';
+            proposedSelect.innerHTML = '<option value="">Select Vehicle</option>';
+            data.forEach(v => {
+                const plateText = `Number Plate (${v.registration_number && v.registration_number.trim() ? v.registration_number : 'Not Assigned'})`;
+                const label = `${v.brand_name} ${v.model_name} ${v.year} (${v.condition}) - ${plateText}`;
+                const opt1 = document.createElement('option');
+                opt1.value = v.id;
+                opt1.textContent = label;
+                currentSelect.appendChild(opt1);
+                const opt2 = opt1.cloneNode(true);
+                proposedSelect.appendChild(opt2);
+            });
+        }
+
+        function populateEmployeeStatusDropdown(data) {
+            const select = document.getElementById('emp_status_id');
+            select.innerHTML = '<option value="">Select Employee Status</option>';
+            window.employeeStatusChoices = [];
+            data.forEach(choice => {
+                const opt = document.createElement('option');
+                opt.value = choice.id;
+                opt.textContent = choice.status;
+                select.appendChild(opt);
+                window.employeeStatusChoices.push({ id: choice.id, status: choice.status });
+            });
+        }
+
+        function populateSections(groupId) {
+            const select = document.getElementById('section_id');
+            select.innerHTML = '<option value="">Select Section</option>';
+            if (!window.departmentGroups) {
+                showSnackbar('Department groups not loaded', '#dc3545');
+                return;
+            }
+            if (groupId) {
+                const group = window.departmentGroups.find(g => g.id === parseInt(groupId));
+                if (group && group.sections) {
+                    group.sections.forEach(section => {
+                        const opt = document.createElement('option');
+                        opt.value = section.id;
+                        opt.textContent = section.name;
+                        select.appendChild(opt);
+                    });
+                }
+            }
+        }
+
+        const resignDropdown = document.getElementById('resign');
+        const resignationInput = document.getElementById('date_of_resignation');
+        const resignationContainer = document.getElementById('resignation_date_container');
+        const addNewDesignationCheckbox = document.getElementById('add_new_designation');
+        const newDesignationInput = document.getElementById('new_designation_title');
+        const newDesignationContainer = document.getElementById('new_designation_container');
+        const designationSelect = document.getElementById('designation_id');
+
+        function updateResignationFieldVisibility() {
+            const isResigned = resignDropdown.value === 'true';
+            resignationContainer.style.display = isResigned ? 'block' : 'none';
+            resignationInput.disabled = !isResigned;
+            if (!isResigned) resignationInput.value = '';
+        }
+
+        function updateDesignationFieldVisibility() {
+            const isAddNew = addNewDesignationCheckbox.checked;
+            newDesignationContainer.style.display = isAddNew ? 'block' : 'none';
+            newDesignationInput.disabled = !isAddNew;
+            designationSelect.disabled = isAddNew;
+            if (!isAddNew) {
+                newDesignationInput.value = '';
+                designationSelect.value = '';
+            }
+        }
+
+        resignDropdown.addEventListener('change', updateResignationFieldVisibility);
+        addNewDesignationCheckbox.addEventListener('change', updateDesignationFieldVisibility);
+        document.getElementById('department_group_id').addEventListener('change', function () {
+            populateSections(this.value);
+        });
+
+        async function createNewDesignation() {
+            const title = newDesignationInput.value.trim();
+            if (!title) {
+                showSnackbar('Please enter a designation title', '#dc3545');
+                return null;
+            }
+            try {
+                const res = await fetch('/payroll/designations/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ title, company: companyId }),
+                });
+                if (!res.ok) throw new Error('Failed to create designation');
+                const result = await res.json();
+                if (result.error) {
+                    showSnackbar(result.error, '#dc3545');
+                    return null;
+                }
+                return result;
+            } catch (e) {
+                showSnackbar('Error creating designation', '#dc3545');
+                return null;
+            }
+        }
+
+        function validateEmployeeStep() {
+            const errors = [];
+            const q = sel => form.querySelector(sel);
+            if (!q('#fullname').value.trim()) errors.push('Full Name is required');
+            if (!q('#department_group_id').value) errors.push('Department Group is required');
+            if (!q('#section_id').value) errors.push('Section is required');
+            if (!q('#location_id').value) errors.push('Location is required');
+            if (!q('#date_of_joining').value) errors.push('Date of Joining is required');
+            if (q('#resign').value === 'true' && !q('#date_of_resignation').value.trim()) errors.push('Date of Resignation is required');
+            if (addNewDesignationCheckbox.checked && !newDesignationInput.value.trim()) errors.push('New Designation Title is required');
+            if (!addNewDesignationCheckbox.checked && !designationSelect.value) errors.push('Designation is required');
+            return errors;
+        }
+
+        function showStep(stepIndex) {
+            document.querySelectorAll('.step').forEach((el, i) => {
+                el.classList.toggle('hidden', i !== stepIndex);
+            });
+            document.getElementById('step').value = steps[stepIndex];
+            document.getElementById('prevBtn').classList.toggle('hidden', stepIndex === 0);
+            document.getElementById('nextBtn').classList.toggle('hidden', stepIndex === steps.length - 1);
+            document.getElementById('submitBtn').classList.toggle('hidden', stepIndex !== steps.length - 1);
+            document.querySelector('.section-head h2').textContent = `Create New Employee — Step ${stepIndex + 1}`;
+            if (formDataStore[stepIndex]) {
+                const q = sel => form.querySelector(sel);
+                for (const [key, value] of Object.entries(formDataStore[stepIndex])) {
+                    const input = q(`#${key}`);
+                    if (input) {
+                        input.value = value || '';
+                        if (key === 'department_group_id' && value) populateSections(value);
+                        if (key === 'resign') updateResignationFieldVisibility();
+                        if (key === 'designation_id' || key === 'new_designation_title') updateDesignationFieldVisibility();
+                    }
+                }
+            }
+        }
+
+        function storeFormData(stepIndex) {
+            const formData = new FormData(form);
+            const data = {};
+            for (const [key, value] of formData.entries()) {
+                if (!['step', 'employee_id', 'csrfmiddlewaretoken'].includes(key)) {
+                    data[key] = value;
+                }
+            }
+            formDataStore[stepIndex] = data;
+        }
+
+        function confirmNext() {
+            if (currentStep === 0) {
+                const errors = validateEmployeeStep();
+                if (errors.length) {
+                    showSnackbar(`Please fix the following errors: ${errors.join(', ')}`, '#dc3545');
+                    return;
+                }
+            }
+            showConfirmPopup('Are you sure you want to proceed to the next step?', async () => {
+                await handleNext();
+            });
+        }
+
+        async function handleFormSubmission(formData, step) {
+            if (step === 'employee') {
+                const errors = validateEmployeeStep();
+                if (errors.length) {
+                    showSnackbar(`Please fix the following errors: ${errors.join(', ')}`, '#dc3545');
+                    return null;
+                }
+                if (addNewDesignationCheckbox.checked) {
+                    const created = await createNewDesignation();
+                    if (created) {
+                        formData.set('designation_id', created.id);
+                        try {
+                            const data = await fetchJSON(`/payroll/designations/?company_id=${companyId}`);
+                            populateDesignations(asArray(data));
+                            designationSelect.value = created.id;
+                        } catch (e) {
+                            console.error('Error refreshing designations:', e);
+                        }
+                    } else {
+                        return null;
+                    }
+                }
+            }
+            return formData;
+        }
+
+        async function handleNext() {
+            let formData = new FormData(form);
+            formData = await handleFormSubmission(formData, steps[currentStep]);
+            if (!formData) return;
+
+            try {
+                console.log("hello");
+                const res = await fetch(`/payroll/department/{{ department_id }}/create/`, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    body: formData
+                });
+                if (!res.ok) throw new Error('Failed to save step');
+                const result = await res.json();
+                if (result.error) {
+                    showSnackbar(result.error, '#dc3545');
+                    return;
+                }
+                if (result.employee_id) document.getElementById('employee_id').value = result.employee_id;
+
+                storeFormData(currentStep);
+                currentStep++;
+                if (currentStep < steps.length) {
+                    showStep(currentStep);
+                    form.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
+                        if (['employee_id', 'step', 'csrfmiddlewaretoken'].includes(input.id)) return;
+                        input.value = '';
+                    });
+                    addNewDesignationCheckbox.checked = false;
+                    updateDesignationFieldVisibility();
+                    resignDropdown.value = 'false';
+                    updateResignationFieldVisibility();
+                }
+            } catch (e) {
+                showSnackbar('Error saving step', '#dc3545');
+            }
+        }
+
+        async function handleSubmit() {
+            let formData = new FormData(form);
+            formData = await handleFormSubmission(formData, steps[currentStep]);
+            if (!formData) return;
+
+            try {
+                const res = await fetch(`/payroll/department/{{ department_id }}/create/`, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    body: formData
+                });
+                if (!res.ok) throw new Error('Failed to save final step');
+                const result = await res.json();
+                if (result.error) {
+                    showSnackbar(result.error, '#dc3545');
+                } else {
+                    showSpinner();
+                    showSnackbar('Employee created successfully', '#28a745');
+                    window.location.href = `payroll/department/{{ department_id }}/`;
+                }
+            } catch (e) {
+                showSnackbar('Error saving final step', '#dc3545');
+            }
+        }
+
+        function showSnackbar(message, bgColor) {
+            const snackbar = document.createElement('div');
+            snackbar.textContent = message;
+            snackbar.style.position = 'fixed';
+            snackbar.style.bottom = '20px';
+            snackbar.style.left = '50%';
+            snackbar.style.transform = 'translateX(-50%)';
+            snackbar.style.backgroundColor = bgColor;
+            snackbar.style.color = '#fff';
+            snackbar.style.padding = '12px 24px';
+            snackbar.style.borderRadius = '6px';
+            snackbar.style.zIndex = '1000';
+            document.body.appendChild(snackbar);
+            setTimeout(() => snackbar.remove(), 3000);
+        }
+
+        function showConfirmPopup(message, callback) {
+            const popup = document.createElement('div');
+            popup.className = 'confirm-popup';
+            popup.innerHTML = `
+                <p>${message}</p>
+                <div class="button-group">
+                    <button class="form-btn btn-submit" onclick="this.closest('.confirm-popup').remove(); (${callback.toString()})();">Confirm</button>
+                    <button class="form-btn btn-back" onclick="this.closest('.confirm-popup').remove();">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(popup);
+            popup.style.position = 'fixed';
+            popup.style.top = '50%';
+            popup.style.left = '50%';
+            popup.style.transform = 'translate(-50%, -50%)';
+            popup.style.background = '#fff';
+            popup.style.borderRadius = '8px';
+            popup.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.3)';
+            popup.style.padding = '16px';
+            popup.style.textAlign = 'center';
+            popup.style.zIndex = '1000';
+        }
+
+        function showSpinner() {
+            const spinner = document.createElement('div');
+            spinner.className = 'spinner';
+            spinner.style.position = 'fixed';
+            spinner.style.top = '50%';
+            spinner.style.left = '50%';
+            spinner.style.transform = 'translate(-50%, -50%)';
+            spinner.style.width = '40px';
+            spinner.style.height = '40px';
+            spinner.style.border = '4px solid #f3f3f3';
+            spinner.style.borderTop = '4px solid #3498db';
+            spinner.style.borderRadius = '50%';
+            spinner.style.animation = 'spin 1s linear infinite';
+            document.body.appendChild(spinner);
+            setTimeout(() => spinner.remove(), 1000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchDropdownData();
+            updateResignationFieldVisibility();
+            updateDesignationFieldVisibility();
+            showStep(currentStep);
+            document.getElementById('prevBtn').addEventListener('click', () => {
+                if (currentStep > 0) {
+                    currentStep--;
+                    showStep(currentStep);
+                }
+            });
+        });
+    </script>
+{% else %}
+    <p>You do not have permission to add employees.</p>
+{% endif %}
+{% endblock %}
