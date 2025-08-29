@@ -241,6 +241,7 @@ class Employee(models.Model):
     image = models.FileField(upload_to='employee_images/', blank=True, null=True)
 
     eligible_for_increment = models.BooleanField(default=False)
+    auto_mark_eligibility = models.BooleanField(default=True)
 
     is_intern = models.BooleanField(default=False)
     promoted_from_intern_date = models.DateField(blank=True, null=True)
