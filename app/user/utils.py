@@ -10,50 +10,16 @@ def update_department_team_increment_summary(sender, instance, company, departme
             current_package = CurrentPackageDetails.objects.filter(employee__company=company, employee__department_team=department_team)
             if current_package.exists():
                 print("CurrentPackageDetails")
-                gross_salary = current_package.aggregate(total_price=Sum('gross_salary'))['total_price'] or 0
-                print("gross_salary: ", gross_salary)
 
-                # IncrementDetailsSummary.objects.filter(company=company, 
-                #                                     department_team=department_team
-                #                                     ).update(current_salary=gross_salary,
-                #                                                 total_employees = employee_count
-                #                                                 )
                 IncrementDetailsSummary.objects.filter(company=company, department_team=department_team).update(total_employees = employee_count)
                 print("CurrentPackageDetails")
                 
         if sender is ProposedPackageDetails:
-            # current_package = CurrentPackageDetails.objects.get(employee=instance.employee)
-            # if current_package:
-                # print("ProposedPackageDetails...")
-                # # .update() prevents calling signal again
-                # ProposedPackageDetails.objects.filter(id=instance.id).update(
-                #     increased_amount=current_package.gross_salary * instance.increment_percentage,
-                #     revised_salary=current_package.gross_salary + (current_package.gross_salary * instance.increment_percentage),
-                #     revised_fuel_allowance=instance.increased_fuel_amount + current_package.fuel_limit
-                # )
-
             print("ProposedPackageDetails")
 
             proposed_package = ProposedPackageDetails.objects.filter(employee__company=company, employee__department_team=department_team)
             if proposed_package.exists():
-                increased_fuel_amount = proposed_package.aggregate(total_price=Sum('increased_fuel_amount'))['total_price'] or 0
 
-                print("increased_fuel_amount: ",increased_fuel_amount)
-                
-                current_package = CurrentPackageDetails.objects.filter(employee__company=company, employee__department_team=department_team)
-                if current_package.exists():
-                    fuel_limit = current_package.aggregate(total_price=Sum('fuel_limit'))['total_price'] or 0
-                else:
-                    fuel_limit = 0
-
-                print("fuel_limit: ",fuel_limit)
-
-                # IncrementDetailsSummary.objects.filter(company=company, 
-                #                                     department_team=department_team
-                #                                     ).update(total_employees = employee_count,
-                #                                                 fuel_increment_impact_hod = increased_fuel_amount,
-                #                                                 effective_fuel_percentage_hod = increased_fuel_amount/fuel_limit if fuel_limit>0 else None
-                #                                                 )
                 IncrementDetailsSummary.objects.filter(company=company, 
                                                     department_team=department_team
                                                     ).update(total_employees = employee_count,)
@@ -69,28 +35,8 @@ def update_department_team_increment_summary(sender, instance, company, departme
 
                 FinancialImpactPerMonth.objects.filter(id=instance.id).update(
                     serving_years = years
-                    # salary = proposed_package.increased_amount,
-                    # gratuity = instance.salary/12,
-                    # bonus = (instance.salary*Decimal(str(1.7)))/Decimal(str(12)),
-                    # leave_encashment = instance.salary/12,
-                    # mobile_allowance = proposed_package.mobile_allowance,
-                    # fuel = proposed_package.increased_fuel_amount * Decimal(str(configuration.fuel_rate)),
-                    # total = instance.salary + instance.gratuity + instance.bonus + instance.leave_encashment + instance.mobile_allowance + instance.fuel
                 )
-
-            financial_impact_per_month = FinancialImpactPerMonth.objects.filter(employee__company=company, employee__department_team=department_team)
-            if financial_impact_per_month.exists():
-                salary = financial_impact_per_month.aggregate(total_price=Sum('salary'))['total_price'] or 0
-
-                # Increment_details_summary = IncrementDetailsSummary.objects.filter(company=company, department_team=department_team).first()
-                # Increment_details_summary.total_employees = employee_count
-                # Increment_details_summary.effective_increment_rate_hod = salary/Decimal(str(Increment_details_summary.current_salary))
-                # Increment_details_summary.salary_increment_impact_hod = float(salary)
-                # Increment_details_summary.total_cost_on_p_and_l_per_month = float(financial_impact_per_month.aggregate(total_price=Sum('total'))['total_price'] or 0)
-                # Increment_details_summary.revised_department_salary = Increment_details_summary.salary_increment_impact_hod + Increment_details_summary.current_salary
-                # Increment_details_summary.staff_revised_cost = Increment_details_summary.total_cost_on_p_and_l_per_month + Increment_details_summary.current_salary
-                # Increment_details_summary.save()
-                pass
+           
     except Exception as e:
         print(f"Error in updating department team increment summary: {e}")
 

@@ -142,10 +142,6 @@ class Section(models.Model):
 
 
 class EmployeeStatus(models.Model):
-    # STATUS_CHOICES = (
-    #     ('PERMANENT', 'P'),
-    #     ('CONTRACT', 'C'),
-    # )
     status = models.CharField(max_length=255)
     is_deleted = models.BooleanField(default=False)
 
@@ -205,6 +201,8 @@ class VehicleBrand(models.Model):
     """Stores vehicle brand details like Toyota, Honda."""
     name = models.CharField(max_length=50, unique=True)
 
+    history = AuditlogHistoryField()  # Required to store log
+
     def __str__(self):
         return self.name
 
@@ -215,6 +213,8 @@ class VehicleModel(models.Model):
     brand = models.ForeignKey(VehicleBrand, on_delete=models.CASCADE, related_name='models')
     model_name = models.CharField(max_length=50)
     vehicle_type = models.CharField(max_length=50) #For count cc
+
+    history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
         return f"{self.brand.name} {self.model_name} ({self.vehicle_type})"
@@ -240,6 +240,11 @@ class Employee(models.Model):
     remarks = models.TextField(blank=True)
     image = models.FileField(upload_to='employee_images/', blank=True, null=True)
 
+    eligible_for_increment = models.BooleanField(default=False)
+
+    is_intern = models.BooleanField(default=False)
+    promoted_from_intern_date = models.DateField(blank=True, null=True)
+
     is_deleted = models.BooleanField(default=False)
 
     history = AuditlogHistoryField()  # Required to store log
@@ -253,7 +258,12 @@ class CurrentPackageDetails(models.Model):
     gross_salary = models.DecimalField(max_digits=10, decimal_places=2)
     vehicle = models.ForeignKey(VehicleModel, on_delete=models.SET_NULL, null=True)
     fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
-    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2)
+
+    mobile_provided = models.BooleanField(default=False)
+
+    fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total = models.IntegerField()
 
     is_deleted = models.BooleanField(default=False)
 
@@ -287,8 +297,13 @@ class ProposedPackageDetails(models.Model):
     revised_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     revised_fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
-    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle = models.ForeignKey(VehicleModel, on_delete=models.SET_NULL, null=True)
+
+    mobile_provided = models.BooleanField(default=False)
+    fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total = models.IntegerField()
+    approved = models.BooleanField(default=False)
 
     is_deleted = models.BooleanField(default=False)
 
@@ -324,8 +339,11 @@ class FinancialImpactPerMonth(models.Model):
     gratuity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     bonus = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     leave_encashment = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
-    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
+    
+    # mobile_provided = models.BooleanField(default=False)
+    
     fuel = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vehicle = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
 
     is_deleted = models.BooleanField(default=False)
@@ -528,6 +546,8 @@ class FieldFormula(models.Model):
         help_text="Required if no employee: Formula applies to this department team."
     )
 
+    history = AuditlogHistoryField()  # Required to store log
+
     class Meta:
         constraints = [
             models.CheckConstraint(
@@ -555,6 +575,8 @@ class FieldReference(models.Model):
     field_name = models.CharField(max_length=255)
     display_name = models.CharField(max_length=255)
     path = models.CharField(max_length=255)
+
+    history = AuditlogHistoryField()  # Required to store log
 
     class Meta:
         unique_together = ('model_name', 'field_name')
