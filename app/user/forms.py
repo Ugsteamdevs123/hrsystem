@@ -362,3 +362,14 @@ class VehicleBrandForm(forms.ModelForm):
     class Meta:
         model = VehicleBrand
         fields = ["name"]
+
+
+
+
+
+
+
+
+
+
+        

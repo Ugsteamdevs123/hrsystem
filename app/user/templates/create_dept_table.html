@@ -117,7 +117,7 @@
                 </div>
                 <div class="form-field">
                     <label for="vehicle_proposed_id">Vehicle</label>
-                    <select id="vehicle_proposed_id" name="vehicle_proposed">
+                    <select id="vehicle_proposed_id" name="vehicle_proposed_id">
                         <option value="">Select Vehicle</option>
                     </select>
                 </div>
@@ -130,6 +130,18 @@
                     <select id="emp_status_id" name="emp_status_id">
                         <option value="">Select Employee Status</option>
                     </select>
+                </div>
+                <div class="form-field">
+                    <label for="serving_years">Serving Years</label>
+                    <input type="number" id="serving_years" name="serving_years" step="0.1">
+                </div>
+                <div class="form-field">
+                    <label for="salary">Salary</label>
+                    <input type="number" id="salary" name="salary" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="gratuity">Gratuity</label>
+                    <input type="number" id="gratuity" name="gratuity" step="0.01">
                 </div>
             </div>
             <!-- Hidden Fields -->
@@ -427,6 +439,13 @@
             return errors;
         }
 
+        function validateFinancialImpactStep() {
+            const errors = [];
+            const q = sel => form.querySelector(sel);
+            if (!q('#emp_status_id').value) errors.push('Employee Status is required');
+            return errors;
+        }
+
         function showStep(stepIndex) {
             document.querySelectorAll('.step').forEach((el, i) => {
                 el.classList.toggle('hidden', i !== stepIndex);
@@ -461,7 +480,7 @@
             formDataStore[stepIndex] = data;
         }
 
-        function confirmNext() {
+        async function confirmNext() {
             if (currentStep === 0) {
                 const errors = validateEmployeeStep();
                 if (errors.length) {
@@ -496,6 +515,12 @@
                         return null;
                     }
                 }
+            } else if (step === 'financial_impact') {
+                const errors = validateFinancialImpactStep();
+                if (errors.length) {
+                    showSnackbar(`Please fix the following errors: ${errors.join(', ')}`, '#dc3545');
+                    return null;
+                }
             }
             return formData;
         }
@@ -506,8 +531,7 @@
             if (!formData) return;
 
             try {
-                console.log("hello");
-                const res = await fetch(`/payroll/department/{{ department_id }}/create/`, {
+                const res = await fetch("{% url 'create_employee' department_id=department_id %}", {
                     method: 'POST',
                     headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                     body: formData
@@ -544,7 +568,7 @@
             if (!formData) return;
 
             try {
-                const res = await fetch(`/payroll/department/{{ department_id }}/create/`, {
+                const res = await fetch("{% url 'create_employee' department_id=department_id %}", {
                     method: 'POST',
                     headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                     body: formData
@@ -556,7 +580,7 @@
                 } else {
                     showSpinner();
                     showSnackbar('Employee created successfully', '#28a745');
-                    window.location.href = `payroll/department/{{ department_id }}/`;
+                    window.location.href = "{% url 'department_table' department_id=department_id %}";
                 }
             } catch (e) {
                 showSnackbar('Error saving final step', '#dc3545');

@@ -19,9 +19,9 @@
                         <!-- Employee Details -->
                         <th colspan="8" class="group-header">Employee Details</th>
                         <!-- Current Package -->
-                        <th colspan="4" class="group-header">Current Package</th>
+                        <th colspan="6" class="group-header">Current Package</th>
                         <!-- Proposed Package -->
-                        <th colspan="7" class="group-header">Proposed Package</th>
+                        <th colspan="9" class="group-header">Proposed Package</th>
                         <!-- Financial Impact -->
                         <th colspan="8" class="group-header">Financial Impact</th>
                         <th rowspan="2">Actions</th>
@@ -40,14 +40,18 @@
                         <th>Gross Salary</th>
                         <th>Vehicle</th>
                         <th>Fuel Limit</th>
-                        <th>Mobile Allowance</th>
+                        <th>Fuel Litre</th>
+                        <th>Vehicle Allowance</th>
+                        <th>Mobile Provided</th>
                         <!-- Proposed Package Subheaders -->
                         <th>Increment Percentage</th>
                         <th>Increased Amount</th>
                         <th>Revised Salary</th>
                         <th>Increased Fuel Amount</th>
                         <th>Revised Fuel Allowance</th>
-                        <th>Mobile Allowance</th>
+                        <th>Fuel Litre</th>
+                        <th>Vehicle Allowance</th>
+                        <th>Mobile Provided</th>
                         <th>Vehicle</th>
                         <!-- Financial Impact Subheaders -->
                         <th>Employee Status</th>
@@ -56,8 +60,8 @@
                         <th>Gratuity</th>
                         <th>Bonus</th>
                         <th>Leave Encashment</th>
-                        <th>Mobile Allowance</th>
                         <th>Fuel</th>
+                        <th>Vehicle</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -79,7 +83,9 @@
                                 <td class="editable" data-tab="current_package" data-field="gross_salary" data-type="number" data-step="0.01">{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
                                 <td class="editable" data-tab="current_package" data-field="vehicle_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ current_package.vehicle|default:"-" }}</td>
                                 <td class="editable" data-tab="current_package" data-field="fuel_limit" data-type="number" data-step="0.01">{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="current_package" data-field="mobile_allowance" data-type="number" data-step="0.01">{{ current_package.mobile_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="current_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="current_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ current_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="current_package" data-field="mobile_provided" data-type="number" data-step="0.01">{{ current_package.mobile_provided|floatformat:2|default:"-" }}</td>
                             {% endwith %}
                             <!-- Proposed Package -->
                             {% with proposed_package=employee.proposedpackagedetails %}
@@ -88,19 +94,21 @@
                                 <td>{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
                                 <td class="editable" data-tab="proposed_package" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td>
                                 <td>{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="mobile_allowance_proposed" data-type="number" data-step="0.01">{{ proposed_package.mobile_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.fuel_litre|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ proposed_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="mobile_provided" data-type="number" data-step="0.01">{{ proposed_package.mobile_provided|floatformat:2|default:"-" }}</td>
                                 <td class="editable" data-tab="proposed_package" data-field="vehicle_proposed_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ proposed_package.vehicle|default:"-" }}</td>
                             {% endwith %}
                             <!-- Financial Impact -->
                             {% with financial_impact=employee.financialimpactpermonth %}
                                 <td class="editable" data-tab="financial_impact" data-field="emp_status_id" data-type="select" data-endpoint="/payroll/employee-status-choices/">{{ financial_impact.emp_status.status|default:"-" }}</td>
-                                <td>{{ financial_impact.serving_years|default:"-" }}</td>
-                                <td>{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
-                                <td>{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
-                                <td>{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
-                                <td>{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
-                                <td>{{ financial_impact.mobile_allowance|floatformat:2|default:"-" }}</td>
-                                <td>{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="financial_impact" data-field="serving_years" data-type="number" data-step="0.1">{{ financial_impact.serving_years|floatformat:1|default:"-" }}</td>
+                                <td class="editable" data-tab="financial_impact" data-field="salary" data-type="number" data-step="0.01">{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="financial_impact" data-field="gratuity" data-type="number" data-step="0.01">{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="financial_impact" data-field="bonus" data-type="number" data-step="0.01">{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="financial_impact" data-field="leave_encashment" data-type="number" data-step="0.01">{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="financial_impact" data-field="fuel" data-type="number" data-step="0.01">{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="financial_impact" data-field="vehicle" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ financial_impact.vehicle|default:"-" }}</td>
                             {% endwith %}
                             <!-- Actions -->
                             <td>
@@ -114,7 +122,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="29" style="text-align: center;">No employees found.</td>
+                            <td colspan="32" style="text-align: center;">No employees found.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -133,9 +141,6 @@
 
     <style>
         .container {
-            {% comment %} max-width: 1700px; {% endcomment %}
-            {% comment %} max-width: 35%; {% endcomment %}
-            {% comment %} margin: 0 auto; {% endcomment %}
             overflow: hidden !important;
             padding: 20px;
         }
@@ -174,7 +179,7 @@
             text-align: left;
             padding: 10px;
             border: 1px solid #dee2e6;
-            white-space: nowrap; /* Prevents text wrapping */
+            white-space: nowrap;
         }
         th {
             background-color: #f2f2f2;
@@ -187,7 +192,7 @@
             vertical-align: middle;
         }
         th.group-header {
-            text-align: center; /* Center group headings */
+            text-align: center;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;
@@ -208,7 +213,7 @@
             cursor: pointer;
             font-size: 14px;
             margin-right: 10px;
-            text-decoration: none; /* For <a> tags */
+            text-decoration: none;
         }
         .btn-submit {
             background-color: #28a745;
@@ -302,8 +307,8 @@
     </style>
 
     <script>
-        // Inline Editing
         const editedCells = {};
+        const draftData = {{ draft_data|safe }};
 
         async function fetchJSON(url, opts = {}, timeoutMs = 5000) {
             const controller = new AbortController();
@@ -393,7 +398,7 @@
                             items.forEach(item => {
                                 const opt = document.createElement('option');
                                 opt.value = item.id;
-                                opt.textContent = field === 'vehicle_id' || field === 'vehicle_proposed_id'
+                                opt.textContent = field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle'
                                     ? `${item.brand_name} ${item.model_name} ${item.year} (${item.condition}) - Number Plate (${item.registration_number || 'Not Assigned'})`
                                     : (item.title || item.location || item.status || item.name);
                                 input.appendChild(opt);
@@ -593,13 +598,11 @@
             document.querySelectorAll('tr[data-employee-id]').forEach(row => {
                 const employeeId = row.dataset.employeeId;
                 ['employee', 'current_package', 'proposed_package', 'financial_impact'].forEach(tab => {
-                    const draftData = row.classList.contains('draft-row') ? window.draftData?.[employeeId]?.[tab] : null;
-                    if (draftData) {
-                        Object.keys(draftData).forEach(field => {
-                            const cell = row.querySelector(`[data-tab="${tab}"][data-field="${field}"]`);
-                            if (cell) cell.classList.add('edited');
-                        });
-                    }
+                    const draftDataTab = draftData?.[employeeId]?.[tab] || {};
+                    Object.keys(draftDataTab).forEach(field => {
+                        const cell = row.querySelector(`[data-tab="${tab}"][data-field="${field}"]`);
+                        if (cell) cell.classList.add('edited');
+                    });
                 });
             });
         });
