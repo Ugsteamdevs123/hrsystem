@@ -2613,6 +2613,147 @@ import json
 from decimal import Decimal
 
 
+# class SaveDraftView(View):
+#     @classmethod
+#     def as_view(cls, **initkwargs):
+#         view = super().as_view(**initkwargs)
+#         view = login_required(view)
+#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+#         view = ensure_csrf_cookie(view)
+#         return view
+
+#     def post(self, request, department_id):
+#         try:
+#             data = json.loads(request.body)
+#             drafts_saved = False
+#             with transaction.atomic():
+#                 for employee_id, tabs in data.items():
+#                     employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
+#                     if not employee:
+#                         return JsonResponse({'error': f'Employee {employee_id} not found'}, status=404)
+
+#                     has_changes = False
+#                     employee_draft_edited = {}
+#                     current_package_edited = {}
+#                     proposed_package_edited = {}
+#                     financial_impact_edited = {}
+
+#                     for tab, fields in tabs.items():
+#                         if tab == 'employee':
+#                             for field, value in fields.items():
+#                                 if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks']:
+#                                     current_value = getattr(employee, field, None)
+#                                     if field in ['department_group_id', 'section_id', 'designation_id', 'location_id']:
+#                                         current_value = getattr(getattr(employee, field, None), 'id', None)
+#                                     elif field == 'resign':
+#                                         current_value = str(current_value).lower()
+#                                     if str(value) != str(current_value):
+#                                         has_changes = True
+#                                         employee_draft_edited[field] = True
+#                         elif tab == 'current_package':
+#                             for field, value in fields.items():
+#                                 if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance']:
+#                                     current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
+#                                     current_value = getattr(current_package, field, None) if current_package else None
+#                                     if field == 'vehicle_id':
+#                                         current_value = current_value.id if current_value else None
+#                                     if str(value) != str(current_value):
+#                                         has_changes = True
+#                                         current_package_edited[field] = True
+#                         elif tab == 'proposed_package':
+#                             for field, value in fields.items():
+#                                 if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id']:
+#                                     proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
+#                                     field_key = 'mobile_allowance' if field == 'mobile_allowance_proposed' else ('vehicle_id' if field == 'vehicle_proposed_id' else field)
+#                                     current_value = getattr(proposed_package, field_key, None) if proposed_package else None
+#                                     if field in ['vehicle_proposed_id']:
+#                                         current_value = current_value.id if current_value else None
+#                                     if str(value) != str(current_value):
+#                                         has_changes = True
+#                                         proposed_package_edited[field_key] = True
+#                         elif tab == 'financial_impact':
+#                             for field, value in fields.items():
+#                                 if field == 'emp_status_id':
+#                                     financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
+#                                     current_value = getattr(financial_impact, 'emp_status_id', None) if financial_impact else None
+#                                     if str(value) != str(current_value):
+#                                         has_changes = True
+#                                         financial_impact_edited[field] = True
+
+#                     if not has_changes:
+#                         continue
+
+#                     employee_draft = EmployeeDraft.objects.filter(employee=employee).first()
+#                     if employee_draft_edited or current_package_edited or proposed_package_edited or financial_impact_edited:
+#                         if not employee_draft:
+#                             employee_draft = EmployeeDraft(employee=employee, company=employee.company, department_team=employee.department_team)
+#                         for field, value in tabs.get('employee', {}).items():
+#                             if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks'] and employee_draft_edited.get(field):
+#                                 if field == 'department_group_id':
+#                                     employee_draft.department_group_id = int(value) if value else None
+#                                 elif field == 'section_id':
+#                                     employee_draft.section_id = int(value) if value else None
+#                                 elif field == 'designation_id':
+#                                     employee_draft.designation_id = int(value) if value else None
+#                                 elif field == 'location_id':
+#                                     employee_draft.location_id = int(value) if value else None
+#                                 elif field == 'resign':
+#                                     employee_draft.resign = value == 'true'
+#                                 elif field == 'date_of_joining' or field == 'date_of_resignation':
+#                                     employee_draft.__setattr__(field, value or None)
+#                                 elif field == 'fullname' or field == 'remarks':
+#                                     employee_draft.__setattr__(field, value or None)
+#                         employee_draft.edited_fields = employee_draft_edited
+#                         if employee_draft_edited:
+#                             employee_draft.save()
+#                             drafts_saved = True
+
+#                     if current_package_edited:
+#                         draft, created = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+#                         for field, value in tabs.get('current_package', {}).items():
+#                             if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance'] and current_package_edited.get(field):
+#                                 if field == 'vehicle_id':
+#                                     draft.vehicle_id = int(value) if value else None
+#                                 elif field in ['gross_salary', 'fuel_limit', 'mobile_allowance']:
+#                                     draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
+#                         draft.edited_fields = current_package_edited
+#                         draft.save()
+#                         drafts_saved = True
+
+#                     if proposed_package_edited:
+#                         draft, created = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+#                         for field, value in tabs.get('proposed_package', {}).items():
+#                             if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id'] and proposed_package_edited.get('vehicle_id' if field == 'vehicle_proposed_id' else field):
+#                                 if field == 'vehicle_proposed_id':
+#                                     draft.vehicle_id = int(value) if value else None
+#                                 elif field == 'mobile_allowance_proposed':
+#                                     draft.mobile_allowance = Decimal(value) if value else Decimal('0')
+#                                 elif field in ['increment_percentage', 'increased_fuel_amount']:
+#                                     draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
+#                         draft.edited_fields = proposed_package_edited
+#                         draft.save()
+#                         drafts_saved = True
+
+#                     if financial_impact_edited:
+#                         draft, created = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
+#                         for field, value in tabs.get('financial_impact', {}).items():
+#                             if field == 'emp_status_id' and financial_impact_edited.get(field):
+#                                 draft.emp_status_id = int(value) if value else None
+#                         draft.edited_fields = financial_impact_edited
+#                         draft.save()
+#                         drafts_saved = True
+
+#                 if drafts_saved:
+#                     return JsonResponse({'message': 'Draft saved'})
+#                 else:
+#                     return JsonResponse({'message': 'No changes to save'}, status=200)
+#         except Exception as e:
+#             print("error: ", e)
+#             return JsonResponse({'error': str(e)}, status=500)
+
+
+
+
 class SaveDraftView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -2630,6 +2771,7 @@ class SaveDraftView(View):
                 for employee_id, tabs in data.items():
                     employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
                     if not employee:
+                        logger.error(f"Employee {employee_id} not found for department {department_id}")
                         return JsonResponse({'error': f'Employee {employee_id} not found'}, status=404)
 
                     has_changes = False
@@ -2689,67 +2831,86 @@ class SaveDraftView(View):
                             employee_draft = EmployeeDraft(employee=employee, company=employee.company, department_team=employee.department_team)
                         for field, value in tabs.get('employee', {}).items():
                             if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks'] and employee_draft_edited.get(field):
-                                if field == 'department_group_id':
-                                    employee_draft.department_group_id = int(value) if value else None
-                                elif field == 'section_id':
-                                    employee_draft.section_id = int(value) if value else None
-                                elif field == 'designation_id':
-                                    employee_draft.designation_id = int(value) if value else None
-                                elif field == 'location_id':
-                                    employee_draft.location_id = int(value) if value else None
-                                elif field == 'resign':
-                                    employee_draft.resign = value == 'true'
-                                elif field == 'date_of_joining' or field == 'date_of_resignation':
-                                    employee_draft.__setattr__(field, value or None)
-                                elif field == 'fullname' or field == 'remarks':
-                                    employee_draft.__setattr__(field, value or None)
+                                try:
+                                    if field == 'department_group_id':
+                                        employee_draft.department_group_id = int(value) if value else None
+                                    elif field == 'section_id':
+                                        employee_draft.section_id = int(value) if value else None
+                                    elif field == 'designation_id':
+                                        employee_draft.designation_id = int(value) if value else None
+                                        if employee_draft.designation_id:
+                                            Designation.objects.get(id=employee_draft.designation_id)  # Validate designation_id
+                                    elif field == 'location_id':
+                                        employee_draft.location_id = int(value) if value else None
+                                    elif field == 'resign':
+                                        employee_draft.resign = value == 'true'
+                                    elif field == 'date_of_joining' or field == 'date_of_resignation':
+                                        employee_draft.__setattr__(field, value or None)
+                                    elif field == 'fullname' or field == 'remarks':
+                                        employee_draft.__setattr__(field, value or None)
+                                except (ValueError, Designation.DoesNotExist) as e:
+                                    logger.error(f"Invalid designation_id {value} for employee {employee_id}: {str(e)}")
+                                    return JsonResponse({'error': f'Invalid designation ID: {value}'}, status=400)
                         employee_draft.edited_fields = employee_draft_edited
                         if employee_draft_edited:
                             employee_draft.save()
                             drafts_saved = True
 
-                    if current_package_edited:
-                        draft, created = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-                        for field, value in tabs.get('current_package', {}).items():
-                            if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance'] and current_package_edited.get(field):
-                                if field == 'vehicle_id':
-                                    draft.vehicle_id = int(value) if value else None
-                                elif field in ['gross_salary', 'fuel_limit', 'mobile_allowance']:
-                                    draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
-                        draft.edited_fields = current_package_edited
-                        draft.save()
-                        drafts_saved = True
+                        if current_package_edited:
+                            draft, created = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+                            for field, value in tabs.get('current_package', {}).items():
+                                if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance'] and current_package_edited.get(field):
+                                    try:
+                                        if field == 'vehicle_id':
+                                            draft.vehicle_id = int(value) if value else None
+                                        elif field in ['gross_salary', 'fuel_limit', 'mobile_allowance']:
+                                            draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
+                                    except ValueError as e:
+                                        logger.error(f"Invalid value for {field} in current_package for employee {employee_id}: {str(e)}")
+                                        return JsonResponse({'error': f'Invalid value for {field}: {value}'}, status=400)
+                            draft.edited_fields = current_package_edited
+                            draft.save()
+                            drafts_saved = True
 
-                    if proposed_package_edited:
-                        draft, created = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-                        for field, value in tabs.get('proposed_package', {}).items():
-                            if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id'] and proposed_package_edited.get('vehicle_id' if field == 'vehicle_proposed_id' else field):
-                                if field == 'vehicle_proposed_id':
-                                    draft.vehicle_id = int(value) if value else None
-                                elif field == 'mobile_allowance_proposed':
-                                    draft.mobile_allowance = Decimal(value) if value else Decimal('0')
-                                elif field in ['increment_percentage', 'increased_fuel_amount']:
-                                    draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
-                        draft.edited_fields = proposed_package_edited
-                        draft.save()
-                        drafts_saved = True
+                        if proposed_package_edited:
+                            draft, created = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+                            for field, value in tabs.get('proposed_package', {}).items():
+                                if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id'] and proposed_package_edited.get('vehicle_id' if field == 'vehicle_proposed_id' else field):
+                                    try:
+                                        if field == 'vehicle_proposed_id':
+                                            draft.vehicle_id = int(value) if value else None
+                                        elif field == 'mobile_allowance_proposed':
+                                            draft.mobile_allowance = Decimal(value) if value else Decimal('0')
+                                        elif field in ['increment_percentage', 'increased_fuel_amount']:
+                                            draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
+                                    except ValueError as e:
+                                        logger.error(f"Invalid value for {field} in proposed_package for employee {employee_id}: {str(e)}")
+                                        return JsonResponse({'error': f'Invalid value for {field}: {value}'}, status=400)
+                            draft.edited_fields = proposed_package_edited
+                            draft.save()
+                            drafts_saved = True
 
-                    if financial_impact_edited:
-                        draft, created = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
-                        for field, value in tabs.get('financial_impact', {}).items():
-                            if field == 'emp_status_id' and financial_impact_edited.get(field):
-                                draft.emp_status_id = int(value) if value else None
-                        draft.edited_fields = financial_impact_edited
-                        draft.save()
-                        drafts_saved = True
+                        if financial_impact_edited:
+                            draft, created = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
+                            for field, value in tabs.get('financial_impact', {}).items():
+                                if field == 'emp_status_id' and financial_impact_edited.get(field):
+                                    try:
+                                        draft.emp_status_id = int(value) if value else None
+                                    except ValueError as e:
+                                        logger.error(f"Invalid emp_status_id {value} for employee {employee_id}: {str(e)}")
+                                        return JsonResponse({'error': f'Invalid emp_status_id: {value}'}, status=400)
+                            draft.edited_fields = financial_impact_edited
+                            draft.save()
+                            drafts_saved = True
 
                 if drafts_saved:
                     return JsonResponse({'message': 'Draft saved'})
                 else:
                     return JsonResponse({'message': 'No changes to save'}, status=200)
         except Exception as e:
-            print("error: ", e)
+            logger.error(f"Error in SaveDraftView for department {department_id}: {str(e)}", exc_info=True)
             return JsonResponse({'error': str(e)}, status=500)
+
 
 class SaveFinalView(View):
     @classmethod
@@ -2831,3 +2992,7 @@ class SaveFinalView(View):
                     return JsonResponse({'message': 'No changes to save'}, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
+
+
+
+
