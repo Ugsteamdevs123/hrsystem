@@ -8,35 +8,20 @@ services:
     container_name: pyroll_test_develop
     command: /start
     networks:
-      - nginx_network
+      - pyroll_network
     volumes:
       - .:/code
-      - static_volume:/code/app/static
+      - static_volume:/code/app/staticfiles
       - media_volume:/code/app/images
       - logs:/code/app/logs
     ports:
-      - "8000:8000"
+      - "8044:8044"
     env_file:
-      - .env.pyrollprod
+      - /app/.env
 
-
-
-  nginx_pyroll:
-    container_name: pyroll_nginx_develop
-    build: ./nginx
-    ports:
-      - "8011:8011"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - static_volume:/code/app/static
-      - ./app/media:/code/app/media
-      # - media_volume:/code/app/media
-    restart: "on-failure"
-    networks:
-      - nginx_network
 
 networks:
-  nginx_network:
+  pyroll_network:
     driver: bridge
 
 volumes:

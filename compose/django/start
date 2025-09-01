@@ -12,4 +12,8 @@ python manage.py collectstatic --noinput
 echo "Running makemigrations..."
 
 python manage.py migrate
-gunicorn pyroll.wsgi:application --bind 0.0.0.0:8000
+gunicorn pyroll.wsgi:application --bind 0.0.0.0:8044
+
+
+
+
