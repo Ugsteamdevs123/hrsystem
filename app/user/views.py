@@ -1754,7 +1754,7 @@ class DepartmentTableView(View):
             data = {
                 'emp_id': emp.emp_id,
                 'fullname': emp_draft.fullname if is_draft and emp_draft.edited_fields.get('fullname') else emp.fullname,
-                'company': emp.company,
+                'company': emp.company.name,
                 'department_team': emp.department_team,
                 'department_group': emp_draft.department_group if is_draft and emp_draft.edited_fields.get('department_group_id') else emp.department_group,
                 'section': emp_draft.section if is_draft and emp_draft.edited_fields.get('section_id') else emp.section,

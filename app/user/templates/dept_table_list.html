@@ -73,6 +73,71 @@
                     {% for employee in employees %}
                         <tr data-employee-id="{{ employee.emp_id }}" class="{% if employee.is_draft %}draft-row{% endif %}">
                             <td>{{ forloop.counter }}</td>
+                            <td>{{ employee.fullname|default:"-" }}</td>
+                            <!-- Employee Details -->
+                            <td>{{ employee.company.name|default:"-" }}</td>
+                            <td>{{ employee.department_group.name|default:"-" }}</td>
+                            <td>{{ employee.section.name|default:"-" }}</td>
+                            <td class="editable" data-tab="employee" data-field="designation_id" data-type="select" data-endpoint="/payroll/designations/?company_id={{ department.company.id }}">{{ employee.designation.title|default:"-" }}</td>
+                            <td>{{ employee.location.location|default:"-" }}</td>
+                            <td>{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
+                            <td>{{ employee.resign|yesno:"Yes,No,-" }}</td>
+                            <td>{{ employee.date_of_resignation|date:"Y-m-d"|default:"-" }}</td>
+                            <!-- Current Package -->
+                            {% with current_package=employee.currentpackagedetails %}
+                                <td>{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
+                                <td>{{ current_package.vehicle|default:"-" }}</td>
+                                <td>{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td>
+                                <td>{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
+                                <td>{{ current_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
+                                <td>{{ current_package.mobile_provided|floatformat:2|default:"-" }}</td>
+                            {% endwith %}
+                            <!-- Proposed Package -->
+                            {% with proposed_package=employee.proposedpackagedetails %}
+                                <td class="editable" data-tab="proposed_package" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
+                                <td>{{ proposed_package.increased_amount|floatformat:2|default:"-" }}</td>
+                                <td>{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td>
+                                <td>{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.fuel_litre|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ proposed_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="mobile_provided" data-type="number" data-step="0.01">{{ proposed_package.mobile_provided|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="vehicle_proposed_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ proposed_package.vehicle|default:"-" }}</td>
+                            {% endwith %}
+                            <!-- Financial Impact -->
+                            {% with financial_impact=employee.financialimpactpermonth %}
+                                <td class="editable" data-tab="financial_impact" data-field="emp_status_id" data-type="select" data-endpoint="/payroll/employee-status-choices/">{{ financial_impact.emp_status.status|default:"-" }}</td>
+                                <td>{{ financial_impact.serving_years|floatformat:1|default:"-" }}</td>
+                                <td>{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
+                                <td>{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
+                                <td>{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
+                                <td>{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
+                                <td>{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
+                                <td>{{ financial_impact.vehicle|default:"-" }}</td>
+                            {% endwith %}
+                            <!-- Actions -->
+                            <td>
+                                {% if perms.user.change_employee %}
+                                    <a href="{% url 'update_employee' department_id=department_id employee_id=employee.emp_id %}" class="action-btn edit-btn">Edit</a>
+                                {% endif %}
+                                {% if perms.user.delete_employee %}
+                                    <button class="action-btn delete-btn delete-employee-btn" data-employee-id="{{ employee.emp_id }}">Delete</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="32" style="text-align: center;">No employees found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+
+
+                {% comment %} <tbody>
+                    {% for employee in employees %}
+                        <tr data-employee-id="{{ employee.emp_id }}" class="{% if employee.is_draft %}draft-row{% endif %}">
+                            <td>{{ forloop.counter }}</td>
                             <td class="editable" data-tab="employee" data-field="fullname" data-type="text">{{ employee.fullname|default:"-" }}</td>
                             <!-- Employee Details -->
                             <td>{{ employee.company.company_name|default:"-" }}</td>
@@ -130,7 +195,7 @@
                             <td colspan="32" style="text-align: center;">No employees found.</td>
                         </tr>
                     {% endfor %}
-                </tbody>
+                </tbody> {% endcomment %}
             </table>
         </div>
 
