@@ -22,13 +22,13 @@
                         <th rowspan="2">SR.No</th>
                         <th rowspan="2">Full Name</th>
                         <!-- Employee Details -->
-                        <th colspan="8" class="group-header">Employee Details</th>
+                        <th colspan="9" class="group-header">Employee Details</th>
                         <!-- Current Package -->
-                        <th colspan="6" class="group-header">Current Package</th>
+                        <th colspan="5" class="group-header">Current Package</th>
                         <!-- Proposed Package -->
-                        <th colspan="9" class="group-header">Proposed Package</th>
+                        <th colspan="7" class="group-header">Proposed Package</th>
                         <!-- Financial Impact -->
-                        <th colspan="8" class="group-header">Financial Impact</th>
+                        <th colspan="4" class="group-header">Financial Impact</th>
                         <th rowspan="2">Actions</th>
                     </tr>
                     <tr>
@@ -41,32 +41,26 @@
                         <th>Date of Joining</th>
                         <th>Resign</th>
                         <th>Date of Resignation</th>
+                        <th>Eligible for Increment</th>
                         <!-- Current Package Subheaders -->
                         <th>Gross Salary</th>
                         <th>Vehicle</th>
                         <th>Fuel Limit</th>
                         <th>Fuel Litre</th>
-                        <th>Vehicle Allowance</th>
                         <th>Mobile Provided</th>
                         <!-- Proposed Package Subheaders -->
                         <th>Increment Percentage</th>
-                        <th>Increased Amount</th>
-                        <th>Revised Salary</th>
                         <th>Increased Fuel Amount</th>
-                        <th>Revised Fuel Allowance</th>
+                        <th>Revised Salary</th>
                         <th>Fuel Litre</th>
                         <th>Vehicle Allowance</th>
                         <th>Mobile Provided</th>
-                        <th>Vehicle</th>
+                        <th>Approved</th>
                         <!-- Financial Impact Subheaders -->
                         <th>Employee Status</th>
                         <th>Serving Years</th>
                         <th>Salary</th>
                         <th>Gratuity</th>
-                        <th>Bonus</th>
-                        <th>Leave Encashment</th>
-                        <th>Fuel</th>
-                        <th>Vehicle</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,7 +69,7 @@
                             <td>{{ forloop.counter }}</td>
                             <td>{{ employee.fullname|default:"-" }}</td>
                             <!-- Employee Details -->
-                            <td>{{ employee.company.name|default:"-" }}</td>
+                            <td>{{ employee.company|default:"-" }}</td>
                             <td>{{ employee.department_group.name|default:"-" }}</td>
                             <td>{{ employee.section.name|default:"-" }}</td>
                             <td class="editable" data-tab="employee" data-field="designation_id" data-type="select" data-endpoint="/payroll/designations/?company_id={{ department.company.id }}">{{ employee.designation.title|default:"-" }}</td>
@@ -83,26 +77,24 @@
                             <td>{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
                             <td>{{ employee.resign|yesno:"Yes,No,-" }}</td>
                             <td>{{ employee.date_of_resignation|date:"Y-m-d"|default:"-" }}</td>
+                            <td>{{ employee.eligible_for_increment|yesno:"Yes,No,-" }}</td>
                             <!-- Current Package -->
                             {% with current_package=employee.currentpackagedetails %}
                                 <td>{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
                                 <td>{{ current_package.vehicle|default:"-" }}</td>
                                 <td>{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td>
                                 <td>{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
-                                <td>{{ current_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
-                                <td>{{ current_package.mobile_provided|floatformat:2|default:"-" }}</td>
+                                <td>{{ current_package.mobile_provided|yesno:"Yes,No,-" }}</td>
                             {% endwith %}
                             <!-- Proposed Package -->
                             {% with proposed_package=employee.proposedpackagedetails %}
                                 <td class="editable" data-tab="proposed_package" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
-                                <td>{{ proposed_package.increased_amount|floatformat:2|default:"-" }}</td>
-                                <td>{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
                                 <td class="editable" data-tab="proposed_package" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td>
-                                <td>{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
+                                <td>{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
                                 <td class="editable" data-tab="proposed_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.fuel_litre|floatformat:2|default:"-" }}</td>
                                 <td class="editable" data-tab="proposed_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ proposed_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="mobile_provided" data-type="number" data-step="0.01">{{ proposed_package.mobile_provided|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="vehicle_proposed_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ proposed_package.vehicle|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="mobile_provided" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.mobile_provided|yesno:"Yes,No,-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="approved" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.approved|yesno:"Yes,No,-" }}</td>
                             {% endwith %}
                             <!-- Financial Impact -->
                             {% with financial_impact=employee.financialimpactpermonth %}
@@ -110,10 +102,6 @@
                                 <td>{{ financial_impact.serving_years|floatformat:1|default:"-" }}</td>
                                 <td>{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
                                 <td>{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
-                                <td>{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
-                                <td>{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
-                                <td>{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
-                                <td>{{ financial_impact.vehicle|default:"-" }}</td>
                             {% endwith %}
                             <!-- Actions -->
                             <td>
@@ -127,75 +115,10 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="32" style="text-align: center;">No employees found.</td>
+                            <td colspan="27" style="text-align: center;">No employees found.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
-
-
-
-                {% comment %} <tbody>
-                    {% for employee in employees %}
-                        <tr data-employee-id="{{ employee.emp_id }}" class="{% if employee.is_draft %}draft-row{% endif %}">
-                            <td>{{ forloop.counter }}</td>
-                            <td class="editable" data-tab="employee" data-field="fullname" data-type="text">{{ employee.fullname|default:"-" }}</td>
-                            <!-- Employee Details -->
-                            <td>{{ employee.company.company_name|default:"-" }}</td>
-                            <td class="editable" data-tab="employee" data-field="department_group_id" data-type="select" data-endpoint="/payroll/department-groups-sections/">{{ employee.department_group.name|default:"-" }}</td>
-                            <td class="editable" data-tab="employee" data-field="section_id" data-type="select" data-depends="department_group_id">{{ employee.section.name|default:"-" }}</td>
-                            <td class="editable" data-tab="employee" data-field="designation_id" data-type="select" data-endpoint="/payroll/designations/?company_id={{ department.company.id }}">{{ employee.designation.title|default:"-" }}</td>
-                            <td class="editable" data-tab="employee" data-field="location_id" data-type="select" data-endpoint="/payroll/locations/">{{ employee.location.location|default:"-" }}</td>
-                            <td class="editable" data-tab="employee" data-field="date_of_joining" data-type="date">{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
-                            <td class="editable" data-tab="employee" data-field="resign" data-type="select" data-options='[{"value": "false", "label": "No"}, {"value": "true", "label": "Yes"}]'>{{ employee.resign|yesno:"Yes,No,-" }}</td>
-                            <td class="editable" data-tab="employee" data-field="date_of_resignation" data-type="date">{{ employee.date_of_resignation|date:"Y-m-d"|default:"-" }}</td>
-                            <!-- Current Package -->
-                            {% with current_package=employee.currentpackagedetails %}
-                                <td class="editable" data-tab="current_package" data-field="gross_salary" data-type="number" data-step="0.01">{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="current_package" data-field="vehicle_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ current_package.vehicle|default:"-" }}</td>
-                                <td class="editable" data-tab="current_package" data-field="fuel_limit" data-type="number" data-step="0.01">{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="current_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="current_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ current_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="current_package" data-field="mobile_provided" data-type="number" data-step="0.01">{{ current_package.mobile_provided|floatformat:2|default:"-" }}</td>
-                            {% endwith %}
-                            <!-- Proposed Package -->
-                            {% with proposed_package=employee.proposedpackagedetails %}
-                                <td class="editable" data-tab="proposed_package" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
-                                <td>{{ proposed_package.increased_amount|floatformat:2|default:"-" }}</td>
-                                <td>{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td>
-                                <td>{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.fuel_litre|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ proposed_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="mobile_provided" data-type="number" data-step="0.01">{{ proposed_package.mobile_provided|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="vehicle_proposed_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ proposed_package.vehicle|default:"-" }}</td>
-                            {% endwith %}
-                            <!-- Financial Impact -->
-                            {% with financial_impact=employee.financialimpactpermonth %}
-                                <td class="editable" data-tab="financial_impact" data-field="emp_status_id" data-type="select" data-endpoint="/payroll/employee-status-choices/">{{ financial_impact.emp_status.status|default:"-" }}</td>
-                                <td class="editable" data-tab="financial_impact" data-field="serving_years" data-type="number" data-step="0.1">{{ financial_impact.serving_years|floatformat:1|default:"-" }}</td>
-                                <td class="editable" data-tab="financial_impact" data-field="salary" data-type="number" data-step="0.01">{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="financial_impact" data-field="gratuity" data-type="number" data-step="0.01">{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="financial_impact" data-field="bonus" data-type="number" data-step="0.01">{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="financial_impact" data-field="leave_encashment" data-type="number" data-step="0.01">{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="financial_impact" data-field="fuel" data-type="number" data-step="0.01">{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="financial_impact" data-field="vehicle" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ financial_impact.vehicle|default:"-" }}</td>
-                            {% endwith %}
-                            <!-- Actions -->
-                            <td>
-                                {% if perms.user.change_employee %}
-                                    <a href="{% url 'update_employee' department_id=department_id employee_id=employee.emp_id %}" class="action-btn edit-btn">Edit</a>
-                                {% endif %}
-                                {% if perms.user.delete_employee %}
-                                    <button class="action-btn delete-btn delete-employee-btn" data-employee-id="{{ employee.emp_id }}">Delete</button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="32" style="text-align: center;">No employees found.</td>
-                        </tr>
-                    {% endfor %}
-                </tbody> {% endcomment %}
             </table>
         </div>
 
@@ -275,6 +198,9 @@
         }
         .editable.edited {
             background-color: #fff3cd;
+        }
+        .edited-row {
+            background-color: #fff3cd !important;
         }
         .form-btn {
             padding: 12px 20px;
@@ -377,6 +303,498 @@
     </style>
 
     <script>
+    const editedCells = {};
+    const draftData = {{ draft_data|safe }};
+
+    async function fetchJSON(url, opts = {}, timeoutMs = 5000) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const res = await fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                signal: controller.signal,
+                ...opts
+            });
+            clearTimeout(timeoutId);
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(`HTTP error! Status: ${res.status}, Response: ${errorText}`);
+            }
+            return await res.json();
+        } catch (err) {
+            clearTimeout(timeoutId);
+            console.error(`Error fetching ${url}:`, err);
+            showSnackbar(`Error: ${err.message}`, '#dc3545');
+            throw err;
+        }
+    }
+
+    function asArray(payload) {
+        if (Array.isArray(payload)) return payload;
+        if (payload && Array.isArray(payload.data)) return payload.data;
+        if (payload && Array.isArray(payload.results)) return payload.results;
+        if (payload && Array.isArray(payload.items)) return payload.items;
+        return [];
+    }
+
+    async function makeEditable(cell) {
+        if (!cell.classList.contains('editable')) return;
+        const field = cell.dataset.field;
+        const type = cell.dataset.type;
+        const employeeId = cell.parentElement.dataset.employeeId;
+        const tab = cell.dataset.tab;
+        const endpoint = cell.dataset.endpoint;
+        const options = cell.dataset.options ? JSON.parse(cell.dataset.options) : null;
+        const depends = cell.dataset.depends;
+        const step = cell.dataset.step || 'any';
+
+        if (cell.querySelector('input, select, textarea')) return;
+
+        let input;
+        if (type === 'select') {
+            input = document.createElement('select');
+            if (options) {
+                options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt.value;
+                    option.textContent = opt.label;
+                    input.appendChild(option);
+                });
+            } else if (endpoint) {
+                try {
+                    const data = await fetchJSON(endpoint);
+                    const items = asArray(data);
+                    input.innerHTML = '<option value="">Select</option>';
+                    if (field === 'department_group_id') {
+                        window.departmentGroups = items.map(dept => ({
+                            id: dept.id,
+                            name: dept.name,
+                            sections: dept.sections || []
+                        }));
+                        items.forEach(dept => {
+                            const opt = document.createElement('option');
+                            opt.value = dept.id;
+                            opt.textContent = dept.name;
+                            input.appendChild(opt);
+                        });
+                    } else if (field === 'section_id' && depends) {
+                        const groupId = cell.parentElement.querySelector(`[data-tab="employee"][data-field="${depends}"] select`)?.value;
+                        if (groupId && window.departmentGroups) {
+                            const group = window.departmentGroups.find(g => g.id === parseInt(groupId));
+                            if (group && group.sections) {
+                                group.sections.forEach(section => {
+                                    const opt = document.createElement('option');
+                                    opt.value = section.id;
+                                    opt.textContent = section.name;
+                                    input.appendChild(opt);
+                                });
+                            }
+                        }
+                    } else {
+                        items.forEach(item => {
+                            const opt = document.createElement('option');
+                            opt.value = item.id;
+                            opt.textContent = field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle'
+                                ? `${item.brand_name} ${item.model_name} - (${item.vehicle_type})`
+                                : (item.title || item.location || item.status || item.name);
+                            input.appendChild(opt);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error loading dropdown:', e);
+                    showSnackbar('Failed to load dropdown options', '#dc3545');
+                    return;
+                }
+            }
+            input.value = cell.dataset.originalId || cell.dataset.original || '';
+        } else if (type === 'textarea') {
+            input = document.createElement('textarea');
+            input.value = cell.textContent !== '-' ? cell.textContent : '';
+        } else {
+            input = document.createElement('input');
+            input.type = type;
+            if (type === 'number') input.step = step;
+            input.value = cell.textContent !== '-' ? cell.textContent : '';
+        }
+
+        cell.textContent = '';
+        cell.appendChild(input);
+        input.focus();
+
+        input.addEventListener('blur', () => {
+            let displayText = input.value.trim() || '-';
+            const value = input.value.trim();
+            
+            if (type === 'select' && input.selectedIndex >= 0) {
+                displayText = input.options[input.selectedIndex].text || '-';
+            }
+            
+            cell.textContent = displayText;
+            const originalValue = type === 'select' ? (cell.dataset.originalId || cell.dataset.original || '-') : (cell.dataset.original || '-');
+            const isChanged = value !== originalValue;
+            cell.classList.toggle('edited', isChanged);
+            if (!isChanged && cell.dataset.hasDraft === 'true') {
+                cell.classList.add('edited');
+            }
+            
+            if (!editedCells[employeeId]) editedCells[employeeId] = {};
+            if (!editedCells[employeeId][tab]) editedCells[employeeId][tab] = {};
+            
+            if (value && value !== '-') {
+                editedCells[employeeId][tab][field] = value;
+            } else {
+                if (cell.dataset.hasDraft !== 'true') {
+                    delete editedCells[employeeId][tab][field];
+                    if (Object.keys(editedCells[employeeId][tab]).length === 0) {
+                        delete editedCells[employeeId][tab];
+                    }
+                    if (Object.keys(editedCells[employeeId]).length === 0) {
+                        delete editedCells[employeeId];
+                    }
+                }
+            }
+            // Update row highlighting
+            const row = cell.parentElement;
+            const hasEdits = Object.keys(editedCells[employeeId] || {}).some(tab => Object.keys(editedCells[employeeId][tab]).length > 0);
+            row.classList.toggle('edited-row', hasEdits);
+            console.log('Updated editedCells:', JSON.stringify(editedCells));
+        });
+
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') input.blur();
+        });
+    }
+
+    async function saveDraft() {
+        console.log('editedCells before saveDraft:', JSON.stringify(editedCells));
+        if (Object.keys(editedCells).length === 0) {
+            showSnackbar('No changes to save', '#dc3545');
+            return;
+        }
+        // Convert ID fields to integers
+        Object.keys(editedCells).forEach(empId => {
+            if (editedCells[empId].employee && editedCells[empId].employee.designation_id) {
+                editedCells[empId].employee.designation_id = parseInt(editedCells[empId].employee.designation_id, 10);
+            }
+            if (editedCells[empId].employee && editedCells[empId].employee.department_group_id) {
+                editedCells[empId].employee.department_group_id = parseInt(editedCells[empId].employee.department_group_id, 10);
+            }
+            if (editedCells[empId].employee && editedCells[empId].employee.section_id) {
+                editedCells[empId].employee.section_id = parseInt(editedCells[empId].employee.section_id, 10);
+            }
+            if (editedCells[empId].employee && editedCells[empId].employee.location_id) {
+                editedCells[empId].employee.location_id = parseInt(editedCells[empId].employee.location_id, 10);
+            }
+            if (editedCells[empId].current_package && editedCells[empId].current_package.vehicle_id) {
+                editedCells[empId].current_package.vehicle_id = parseInt(editedCells[empId].current_package.vehicle_id, 10);
+            }
+            if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_id) {
+                editedCells[empId].proposed_package.vehicle_id = parseInt(editedCells[empId].proposed_package.vehicle_id, 10);
+            }
+            if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
+                editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
+            }
+        });
+        try {
+            const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (!csrfInput || !csrfInput.value) {
+                showSnackbar('CSRF token missing or invalid', '#dc3545');
+                console.error('CSRF token not found or empty');
+                throw new Error('CSRF token missing or invalid');
+            }
+            console.log('CSRF token:', csrfInput.value);
+            console.log('Saving draft with payload:', JSON.stringify(editedCells));
+            const res = await fetch(`/payroll/save-draft/{{ department_id }}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfInput.value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(editedCells),
+            });
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(`Failed to save draft: ${res.status}, Response: ${errorText}`);
+            }
+            const result = await res.json();
+            if (result.error) {
+                showSnackbar(result.error, '#dc3545');
+            } else {
+                showSpinner();
+                showSnackbar('Draft saved successfully', '#28a745');
+                // Update original values to reflect saved draft
+                Object.keys(editedCells).forEach(empId => {
+                    Object.keys(editedCells[empId]).forEach(tab => {
+                        Object.keys(editedCells[empId][tab]).forEach(field => {
+                            const cell = document.querySelector(`tr[data-employee-id="${empId}"] [data-tab="${tab}"][data-field="${field}"]`);
+                            if (cell) {
+                                if (cell.dataset.type === 'select') {
+                                    cell.dataset.originalId = editedCells[empId][tab][field];
+                                } else {
+                                    cell.dataset.original = editedCells[empId][tab][field];
+                                }
+                                cell.classList.remove('edited');
+                            }
+                        });
+                    });
+                });
+                // Clear row highlighting
+                document.querySelectorAll('tr.edited-row').forEach(row => row.classList.remove('edited-row'));
+                console.log('editedCells after draft save:', JSON.stringify(editedCells));
+            }
+        } catch (e) {
+            showSnackbar(`Error saving draft: ${e.message}`, '#dc3545');
+            console.error('Save draft error:', e);
+        }
+    }
+
+    async function saveFinal() {
+        console.log('editedCells before saveFinal:', JSON.stringify(editedCells));
+        if (Object.keys(editedCells).length === 0) {
+            showSnackbar('No changes to save', '#dc3545');
+            return;
+        }
+        // Convert ID fields to integers
+        Object.keys(editedCells).forEach(empId => {
+            if (editedCells[empId].employee && editedCells[empId].employee.designation_id) {
+                editedCells[empId].employee.designation_id = parseInt(editedCells[empId].employee.designation_id, 10);
+            }
+            if (editedCells[empId].employee && editedCells[empId].employee.department_group_id) {
+                editedCells[empId].employee.department_group_id = parseInt(editedCells[empId].employee.department_group_id, 10);
+            }
+            if (editedCells[empId].employee && editedCells[empId].employee.section_id) {
+                editedCells[empId].employee.section_id = parseInt(editedCells[empId].employee.section_id, 10);
+            }
+            if (editedCells[empId].employee && editedCells[empId].employee.location_id) {
+                editedCells[empId].employee.location_id = parseInt(editedCells[empId].employee.location_id, 10);
+            }
+            if (editedCells[empId].current_package && editedCells[empId].current_package.vehicle_id) {
+                editedCells[empId].current_package.vehicle_id = parseInt(editedCells[empId].current_package.vehicle_id, 10);
+            }
+            if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_id) {
+                editedCells[empId].proposed_package.vehicle_id = parseInt(editedCells[empId].proposed_package.vehicle_id, 10);
+            }
+            if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
+                editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
+            }
+        });
+        showConfirmPopup('Are you sure you want to save changes to the original tables?', async () => {
+            try {
+                const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                if (!csrfInput || !csrfInput.value) {
+                    showSnackbar('CSRF token missing or invalid', '#dc3545');
+                    console.error('CSRF token not found or empty');
+                    throw new Error('CSRF token missing or invalid');
+                }
+                console.log('CSRF token:', csrfInput.value);
+                console.log('Saving final with payload:', JSON.stringify(editedCells));
+                const res = await fetch(`/payroll/save-final/{{ department_id }}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfInput.value,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(editedCells),
+                });
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(`Failed to save changes: ${res.status}, Response: ${errorText}`);
+                }
+                const result = await res.json();
+                if (result.error) {
+                    showSnackbar(result.error, '#dc3545');
+                } else {
+                    showSpinner();
+                    showSnackbar('Changes saved successfully', '#28a745');
+                    // Update original values to reflect saved changes
+                    Object.keys(editedCells).forEach(empId => {
+                        Object.keys(editedCells[empId]).forEach(tab => {
+                            Object.keys(editedCells[empId][tab]).forEach(field => {
+                                const cell = document.querySelector(`tr[data-employee-id="${empId}"] [data-tab="${tab}"][data-field="${field}"]`);
+                                if (cell) {
+                                    if (cell.dataset.type === 'select') {
+                                        cell.dataset.originalId = editedCells[empId][tab][field];
+                                    } else {
+                                        cell.dataset.original = editedCells[empId][tab][field];
+                                    }
+                                    cell.classList.remove('edited');
+                                }
+                            });
+                        });
+                    });
+                    // Clear editedCells and row highlighting after saving
+                    document.querySelectorAll('tr.edited-row').forEach(row => row.classList.remove('edited-row'));
+                    Object.keys(editedCells).forEach(empId => delete editedCells[empId]);
+                    console.log('Cleared editedCells after final save:', JSON.stringify(editedCells));
+                    window.location.reload();
+                }
+            } catch (e) {
+                showSnackbar(`Error saving changes: ${e.message}`, '#dc3545');
+                console.error('Save final error:', e);
+            }
+        });
+    }
+
+    function bindRowActions() {
+        document.querySelectorAll('.delete-employee-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const employeeId = this.dataset.employeeId;
+                if (!employeeId) {
+                    showSnackbar('Invalid employee ID', '#dc3545');
+                    return;
+                }
+                showConfirmPopup('Are you sure you want to delete this employee?', async () => {
+                    try {
+                        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                        if (!csrfInput || !csrfInput.value) {
+                            showSnackbar('CSRF token missing or invalid', '#dc3545');
+                            console.error('CSRF token not found or empty');
+                            throw new Error('CSRF token missing or invalid');
+                        }
+                        console.log('CSRF token:', csrfInput.value);
+                        const res = await fetch(`/payroll/department/{{ department_id }}/delete/${employeeId}/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrfInput.value,
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                            },
+                        });
+                        if (!res.ok) {
+                            const errorText = await res.text();
+                            throw new Error(`Failed to delete employee: ${res.status}, Response: ${errorText}`);
+                        }
+                        const out = await res.json();
+                        if (out.error) {
+                            showSnackbar(out.error, '#dc3545');
+                        } else {
+                            showSpinner();
+                            showSnackbar('Deleted successfully', '#28a745');
+                            window.location.reload();
+                        }
+                    } catch (e) {
+                        showSnackbar(`Error deleting employee: ${e.message}`, '#dc3545');
+                        console.error('Delete employee error:', e);
+                    }
+                });
+            });
+        });
+    }
+
+    function showSnackbar(message, bgColor) {
+        const snackbar = document.createElement('div');
+        snackbar.textContent = message;
+        snackbar.style.position = 'fixed';
+        snackbar.style.bottom = '20px';
+        snackbar.style.left = '50%';
+        snackbar.style.transform = 'translateX(-50%)';
+        snackbar.style.backgroundColor = bgColor;
+        snackbar.style.color = '#fff';
+        snackbar.style.padding = '12px 24px';
+        snackbar.style.borderRadius = '6px';
+        snackbar.style.zIndex = '1000';
+        document.body.appendChild(snackbar);
+        setTimeout(() => snackbar.remove(), 3000);
+    }
+
+    function showConfirmPopup(message, callback) {
+        const popup = document.createElement('div');
+        popup.className = 'confirm-popup';
+        popup.innerHTML = `
+            <p>${message}</p>
+            <div class="button-group">
+                <button class="form-btn btn-submit" onclick="this.closest('.confirm-popup').remove(); (${callback.toString()})();">Confirm</button>
+                <button class="form-btn btn-back" onclick="this.closest('.confirm-popup').remove();">Cancel</button>
+            </div>
+        `;
+        document.body.appendChild(popup);
+    }
+
+    function showSpinner() {
+        const spinner = document.createElement('div');
+        spinner.className = 'spinner';
+        spinner.style.position = 'fixed';
+        spinner.style.top = '50%';
+        spinner.style.left = '50%';
+        spinner.style.transform = 'translate(-50%, -50%)';
+        spinner.style.width = '40px';
+        spinner.style.height = '40px';
+        spinner.style.border = '4px solid #f3f3f3';
+        spinner.style.borderTop = '4px solid #3498db';
+        spinner.style.borderRadius = '50%';
+        spinner.style.animation = 'spin 1s linear infinite';
+        document.body.appendChild(spinner);
+        setTimeout(() => spinner.remove(), 1000);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Log CSRF token on page load for debugging
+        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfInput) {
+            console.log('CSRF token on load:', csrfInput.value);
+        } else {
+            console.error('CSRF token input not found on page load');
+        }
+
+        bindRowActions();
+        document.getElementById('saveDraftBtn').addEventListener('click', saveDraft);
+        document.getElementById('saveBtn').addEventListener('click', saveFinal);
+        document.querySelectorAll('.editable').forEach(cell => {
+            cell.dataset.original = cell.textContent;
+
+            if (cell.dataset.type === 'select') {
+                const employeeId = cell.parentElement.dataset.employeeId;
+                const tab = cell.dataset.tab;
+                const field = cell.dataset.field;
+                const draftValue = draftData[employeeId]?.[tab]?.[field];
+                cell.dataset.originalId = draftValue || (field === 'designation_id' ? '{{ employee.designation.id|default:"" }}' : '');
+
+                if (draftValue) {
+                    // Fetch display text for draft values
+                    fetchJSON(cell.dataset.endpoint).then(data => {
+                        const items = asArray(data);
+                        const item = items.find(i => i.id == draftValue);
+                        if (item) {
+                            if (field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle') {
+                                cell.textContent = `${item.brand_name} ${item.model_name} (${item.vehicle_type})cc`;
+                            } else {
+                                // fallback for other select fields
+                                cell.textContent = item.title || item.location || item.status || item.name;
+                            }
+                        }
+                    });
+                }
+            }
+
+            cell.addEventListener('click', () => makeEditable(cell));
+        });
+        document.querySelectorAll('tr[data-employee-id]').forEach(row => {
+            const employeeId = row.dataset.employeeId;
+            ['employee', 'current_package', 'proposed_package', 'financial_impact'].forEach(tab => {
+                const draftDataTab = draftData?.[employeeId]?.[tab] || {};
+                Object.keys(draftDataTab).forEach(field => {
+                    const cell = row.querySelector(`[data-tab="${tab}"][data-field="${field}"]`);
+                    if (cell) {
+                        cell.classList.add('edited');
+                        cell.dataset.hasDraft = 'true';
+                        row.classList.add('edited-row');
+                    }
+                });
+            });
+        });
+        // Initialize editedCells with draftData
+        Object.keys(draftData).forEach(empId => {
+            editedCells[empId] = JSON.parse(JSON.stringify(draftData[empId]));
+        });
+    });
+</script>
+
+    {% comment %} <script>
         const editedCells = {};
         const draftData = {{ draft_data|safe }};
 
@@ -472,7 +890,7 @@
                                 const opt = document.createElement('option');
                                 opt.value = item.id;
                                 opt.textContent = field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle'
-                                    ? `${item.brand_name} ${item.model_name} ${item.year} (${item.condition}) - Number Plate (${item.registration_number || 'Not Assigned'})`
+                                    ? `${item.brand_name} ${item.model_name} - (${item.vehicle_type})`
                                     : (item.title || item.location || item.status || item.name);
                                 input.appendChild(opt);
                             });
@@ -524,6 +942,10 @@
                         delete editedCells[employeeId];
                     }
                 }
+                // Update row highlighting
+                const row = cell.parentElement;
+                const hasEdits = Object.keys(editedCells[employeeId] || {}).some(tab => Object.keys(editedCells[employeeId][tab]).length > 0);
+                row.classList.toggle('edited-row', hasEdits);
                 console.log('Updated editedCells:', JSON.stringify(editedCells));
             });
 
@@ -555,11 +977,8 @@
                 if (editedCells[empId].current_package && editedCells[empId].current_package.vehicle_id) {
                     editedCells[empId].current_package.vehicle_id = parseInt(editedCells[empId].current_package.vehicle_id, 10);
                 }
-                if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_proposed_id) {
-                    editedCells[empId].proposed_package.vehicle_proposed_id = parseInt(editedCells[empId].proposed_package.vehicle_proposed_id, 10);
-                }
-                if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.vehicle) {
-                    editedCells[empId].financial_impact.vehicle = parseInt(editedCells[empId].financial_impact.vehicle, 10);
+                if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_id) {
+                    editedCells[empId].proposed_package.vehicle_id = parseInt(editedCells[empId].proposed_package.vehicle_id, 10);
                 }
                 if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
                     editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
@@ -609,7 +1028,8 @@
                             });
                         });
                     });
-                    // Do not clear editedCells to allow saving to final tables
+                    // Clear row highlighting
+                    document.querySelectorAll('tr.edited-row').forEach(row => row.classList.remove('edited-row'));
                     console.log('editedCells after draft save:', JSON.stringify(editedCells));
                 }
             } catch (e) {
@@ -641,11 +1061,8 @@
                 if (editedCells[empId].current_package && editedCells[empId].current_package.vehicle_id) {
                     editedCells[empId].current_package.vehicle_id = parseInt(editedCells[empId].current_package.vehicle_id, 10);
                 }
-                if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_proposed_id) {
-                    editedCells[empId].proposed_package.vehicle_proposed_id = parseInt(editedCells[empId].proposed_package.vehicle_proposed_id, 10);
-                }
-                if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.vehicle) {
-                    editedCells[empId].financial_impact.vehicle = parseInt(editedCells[empId].financial_impact.vehicle, 10);
+                if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_id) {
+                    editedCells[empId].proposed_package.vehicle_id = parseInt(editedCells[empId].proposed_package.vehicle_id, 10);
                 }
                 if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
                     editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
@@ -696,7 +1113,8 @@
                                 });
                             });
                         });
-                        // Clear editedCells after saving
+                        // Clear editedCells and row highlighting after saving
+                        document.querySelectorAll('tr.edited-row').forEach(row => row.classList.remove('edited-row'));
                         Object.keys(editedCells).forEach(empId => delete editedCells[empId]);
                         console.log('Cleared editedCells after final save:', JSON.stringify(editedCells));
                         window.location.reload();
@@ -814,25 +1232,31 @@
             document.getElementById('saveBtn').addEventListener('click', saveFinal);
             document.querySelectorAll('.editable').forEach(cell => {
                 cell.dataset.original = cell.textContent;
+
                 if (cell.dataset.type === 'select') {
                     const employeeId = cell.parentElement.dataset.employeeId;
                     const tab = cell.dataset.tab;
                     const field = cell.dataset.field;
                     const draftValue = draftData[employeeId]?.[tab]?.[field];
                     cell.dataset.originalId = draftValue || (field === 'designation_id' ? '{{ employee.designation.id|default:"" }}' : '');
-                    if (draftValue && cell.dataset.type === 'select') {
+
+                    if (draftValue) {
                         // Fetch display text for draft values
                         fetchJSON(cell.dataset.endpoint).then(data => {
                             const items = asArray(data);
                             const item = items.find(i => i.id == draftValue);
                             if (item) {
-                                cell.textContent = field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle'
-                                    ? `${item.brand_name} ${item.model_name} ${item.year} (${item.condition}) - Number Plate (${item.registration_number || 'Not Assigned'})`
-                                    : (item.title || item.location || item.status || item.name);
+                                if (field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle') {
+                                    cell.textContent = `${item.brand_name} ${item.model_name} (${item.vehicle_type})cc`;
+                                } else {
+                                    // fallback for other select fields
+                                    cell.textContent = item.title || item.location || item.status || item.name;
+                                }
                             }
                         });
                     }
                 }
+
                 cell.addEventListener('click', () => makeEditable(cell));
             });
             document.querySelectorAll('tr[data-employee-id]').forEach(row => {
@@ -843,12 +1267,17 @@
                         const cell = row.querySelector(`[data-tab="${tab}"][data-field="${field}"]`);
                         if (cell) {
                             cell.classList.add('edited');
+                            row.classList.add('edited-row');
                         }
                     });
                 });
             });
         });
-    </script>
+    </script> {% endcomment %}
+
+
+
+
 {% else %}
     <p>You do not have permission to view this page.</p>
 {% endif %}

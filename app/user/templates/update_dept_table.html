@@ -70,6 +70,17 @@
                     <input type="date" id="date_of_resignation" name="date_of_resignation" disabled>
                 </div>
                 <div class="form-field">
+                    <label for="eligible_for_increment">Eligible for Increment <span class="req">*</span></label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" name="eligible_for_increment" value="true" id="eligible_for_increment_true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" name="eligible_for_increment" value="false" id="eligible_for_increment_false"> No
+                        </label>
+                    </div>
+                </div>
+                <div class="form-field">
                     <label for="remarks">Remarks</label>
                     <textarea id="remarks" name="remarks"></textarea>
                 </div>
@@ -96,8 +107,19 @@
                     <input type="number" id="fuel_limit" name="fuel_limit" step="0.01">
                 </div>
                 <div class="form-field">
-                    <label for="mobile_allowance">Mobile Allowance</label>
-                    <input type="number" id="mobile_allowance" name="mobile_allowance" step="0.01">
+                    <label for="mobile_provided">Mobile Provided</label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" name="mobile_provided" value="true" id="mobile_provided_true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" name="mobile_provided" value="false" id="mobile_provided_false"> No
+                        </label>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label for="fuel_litre">Fuel Litre</label>
+                    <input type="number" id="fuel_litre" name="fuel_litre" step="0.01">
                 </div>
             </div>
             <!-- Step 3: Proposed Package -->
@@ -112,14 +134,40 @@
                     <input type="number" id="increased_fuel_amount" name="increased_fuel_amount" step="0.01">
                 </div>
                 <div class="form-field">
-                    <label for="mobile_allowance_proposed">Mobile Allowance</label>
-                    <input type="number" id="mobile_allowance_proposed" name="mobile_allowance_proposed" step="0.01">
+                    <label for="mobile_provided_proposed">Mobile Provided Proposed</label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" name="mobile_provided_proposed" value="true" id="mobile_provided_proposed_true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" name="mobile_provided_proposed" value="false" id="mobile_provided_proposed_false"> No
+                        </label>
+                    </div>
                 </div>
                 <div class="form-field">
                     <label for="vehicle_proposed_id">Vehicle</label>
                     <select id="vehicle_proposed_id" name="vehicle_proposed_id">
                         <option value="">Select Vehicle</option>
                     </select>
+                </div>
+                <div class="form-field">
+                    <label for="fuel_litre">Fuel Litre</label>
+                    <input type="number" id="fuel_litre" name="fuel_litre" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="vehicle_allowance">Vehicle Allowance</label>
+                    <input type="number" id="vehicle_allowance" name="vehicle_allowance" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="approved">Approved</label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" name="approved" value="true" id="approved_true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" name="approved" value="false" id="approved_false"> No
+                        </label>
+                    </div>
                 </div>
             </div>
             <!-- Step 4: Financial Impact -->
@@ -241,19 +289,28 @@
             q('#resign').value = data.employee.resign ? 'true' : 'false';
             updateResignationFieldVisibility();
             q('#date_of_resignation').value = data.employee.date_of_resignation || '';
+            const eligibleValue = data.employee.eligible_for_increment ? 'true' : 'false';
+            q(`input[name="eligible_for_increment"][value="${eligibleValue}"]`).checked = true;
             q('#remarks').value = data.employee.remarks || '';
             q('#gross_salary').value = data.current_package?.gross_salary || '';
             q('#vehicle_id').value = data.current_package?.vehicle_id || '';
             q('#fuel_limit').value = data.current_package?.fuel_limit || '';
-            q('#mobile_allowance').value = data.current_package?.mobile_allowance || '';
+            const mobileProvidedValue = data.current_package?.mobile_provided ? 'true' : 'false';
+            q(`input[name="mobile_provided"][value="${mobileProvidedValue}"]`).checked = true;
+            q('#fuel_litre').value = data.current_package?.fuel_litre || '';
             q('#increment_percentage').value = data.proposed_package?.increment_percentage || '';
             q('#increased_fuel_amount').value = data.proposed_package?.increased_fuel_amount || '';
-            q('#mobile_allowance_proposed').value = data.proposed_package?.mobile_allowance || '';
+            const mobileProvidedProposedValue = data.proposed_package?.mobile_provided ? 'true' : 'false';
+            q(`input[name="mobile_provided_proposed"][value="${mobileProvidedProposedValue}"]`).checked = true;
             q('#vehicle_proposed_id').value = data.proposed_package?.vehicle_id || '';
+            q('#fuel_litre').value = data.proposed_package?.fuel_litre || '';
+            q('#vehicle_allowance').value = data.proposed_package?.vehicle_allowance || '';
+            const approvedValue = data.proposed_package?.approved ? 'true' : 'false';
+            q(`input[name="approved"][value="${approvedValue}"]`).checked = true;
             q('#emp_status_id').value = data.financial_impact?.emp_status_id || '';
-            formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, resign: q('#resign').value, date_of_resignation: q('#date_of_resignation').value, remarks: q('#remarks').value };
-            formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, vehicle_id: q('#vehicle_id').value, fuel_limit: q('#fuel_limit').value, mobile_allowance: q('#mobile_allowance').value };
-            formDataStore[2] = { ...formDataStore[2], increment_percentage: q('#increment_percentage').value, increased_fuel_amount: q('#increased_fuel_amount').value, mobile_allowance_proposed: q('#mobile_allowance_proposed').value, vehicle_proposed_id: q('#vehicle_proposed_id').value };
+            formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, resign: q('#resign').value, date_of_resignation: q('#date_of_resignation').value, eligible_for_increment: eligibleValue, remarks: q('#remarks').value };
+            formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, vehicle_id: q('#vehicle_id').value, fuel_limit: q('#fuel_limit').value, mobile_provided: mobileProvidedValue, fuel_litre: q('#fuel_litre').value };
+            formDataStore[2] = { ...formDataStore[2], increment_percentage: q('#increment_percentage').value, increased_fuel_amount: q('#increased_fuel_amount').value, mobile_provided_proposed: mobileProvidedProposedValue, vehicle_proposed_id: q('#vehicle_proposed_id').value, fuel_litre: q('#fuel_litre').value, vehicle_allowance: q('#vehicle_allowance').value, approved: approvedValue };
             formDataStore[3] = { ...formDataStore[3], emp_status_id: q('#emp_status_id').value };
         }
 
@@ -354,8 +411,7 @@
             currentSelect.innerHTML = '<option value="">Select Vehicle</option>';
             proposedSelect.innerHTML = '<option value="">Select Vehicle</option>';
             data.forEach(v => {
-                const plateText = `Number Plate (${v.registration_number && v.registration_number.trim() ? v.registration_number : 'Not Assigned'})`;
-                const label = `${v.brand_name} ${v.model_name} ${v.year} (${v.condition}) - ${plateText}`;
+                const label = `${v.brand_name} ${v.model_name} - ${v.vehicle_type}`;
                 const opt1 = document.createElement('option');
                 opt1.value = v.id;
                 opt1.textContent = label;
@@ -471,6 +527,7 @@
             if (q('#resign').value === 'true' && !q('#date_of_resignation').value.trim()) errors.push('Date of Resignation is required');
             if (addNewDesignationCheckbox.checked && !newDesignationInput.value.trim()) errors.push('New Designation Title is required');
             if (!addNewDesignationCheckbox.checked && !designationSelect.value) errors.push('Designation is required');
+            if (!q('input[name="eligible_for_increment"]:checked')) errors.push('Eligible for Increment is required');
             return errors;
         }
 
@@ -488,7 +545,12 @@
                 for (const [key, value] of Object.entries(formDataStore[stepIndex])) {
                     const input = q(`#${key}`);
                     if (input) {
-                        input.value = value || '';
+                        if (input.type === 'radio') {
+                            const radio = q(`input[name="${key}"][value="${value}"]`);
+                            if (radio) radio.checked = true;
+                        } else {
+                            input.value = value || '';
+                        }
                         if (key === 'department_group_id' && value) populateSections(value);
                         if (key === 'resign') updateResignationFieldVisibility();
                         if (key === 'designation_id' || key === 'new_designation_title') updateDesignationFieldVisibility();
@@ -564,7 +626,14 @@
                     // Only clear non-persisted fields if moving forward
                     form.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
                         if (['employee_id', 'step', 'csrfmiddlewaretoken'].includes(input.id)) return;
-                        if (!formDataStore[currentStep]?.[input.id]) input.value = '';
+                        if (!formDataStore[currentStep]?.[input.id]) {
+                            if (input.type === 'radio') {
+                                const radioGroup = form.querySelectorAll(`input[name="${input.name}"]`);
+                                radioGroup.forEach(radio => radio.checked = radio.value === 'false');
+                            } else {
+                                input.value = '';
+                            }
+                        }
                     });
                     addNewDesignationCheckbox.checked = false;
                     updateDesignationFieldVisibility();

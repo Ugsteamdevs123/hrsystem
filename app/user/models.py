@@ -230,24 +230,18 @@ class Employee(models.Model):
     department_group = models.ForeignKey(DepartmentGroups, on_delete=models.CASCADE)
     section = models.ForeignKey(Section, on_delete=models.CASCADE)
     designation = models.ForeignKey(Designation, on_delete=models.CASCADE)
-    
     location = models.ForeignKey(Location , on_delete=models.CASCADE)
     date_of_joining = models.DateField()  # Date of Joining
-
     resign = models.BooleanField(default=False)
     date_of_resignation = models.DateField(blank=True, null=True)
-
     remarks = models.TextField(blank=True)
     image = models.FileField(upload_to='employee_images/', blank=True, null=True)
-
     eligible_for_increment = models.BooleanField(default=False)
     auto_mark_eligibility = models.BooleanField(default=True)
-
     is_intern = models.BooleanField(default=False)
     promoted_from_intern_date = models.DateField(blank=True, null=True)
 
     is_deleted = models.BooleanField(default=False)
-
     history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
@@ -265,6 +259,8 @@ class CurrentPackageDetails(models.Model):
     fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.IntegerField()
+
+    company_pickup = models.BooleanField(default=False)
 
     is_deleted = models.BooleanField(default=False)
 
@@ -305,6 +301,8 @@ class ProposedPackageDetails(models.Model):
     vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.IntegerField()
     approved = models.BooleanField(default=False)
+
+    company_pickup = models.BooleanField(default=False)
 
     is_deleted = models.BooleanField(default=False)
 
@@ -379,23 +377,27 @@ from auditlog.models import AuditlogHistoryField
 class EmployeeDraft(models.Model):
     emp_id = models.AutoField(primary_key=True)
     employee = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='drafts')
+
     fullname = models.CharField(max_length=255, blank=True, null=True)
-    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True)
-    department_team = models.ForeignKey('DepartmentTeams', on_delete=models.CASCADE, null=True)
-    department_group = models.ForeignKey('DepartmentGroups', on_delete=models.CASCADE, null=True)
-    section = models.ForeignKey('Section', on_delete=models.CASCADE, null=True)
-    designation = models.ForeignKey('Designation', on_delete=models.CASCADE, null=True)
-    location = models.ForeignKey('Location', on_delete=models.CASCADE, null=True)
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)
+    department_team = models.ForeignKey('DepartmentTeams', on_delete=models.CASCADE, null=True, blank=True)
+    department_group = models.ForeignKey('DepartmentGroups', on_delete=models.CASCADE, null=True, blank=True)
+    section = models.ForeignKey('Section', on_delete=models.CASCADE, null=True, blank=True)
+    designation = models.ForeignKey('Designation', on_delete=models.CASCADE, null=True, blank=True)
+    location = models.ForeignKey('Location', on_delete=models.CASCADE, null=True, blank=True)
     date_of_joining = models.DateField(blank=True, null=True)
     resign = models.BooleanField(default=False, null=True)
     date_of_resignation = models.DateField(blank=True, null=True)
     remarks = models.TextField(blank=True, null=True)
     image = models.FileField(upload_to='employee_draft_images/', blank=True, null=True)
+    eligible_for_increment = models.BooleanField(default=False, null=True)
+    auto_mark_eligibility = models.BooleanField(default=True, null=True)
+    is_intern = models.BooleanField(default=False, null=True)
+    promoted_from_intern_date = models.DateField(blank=True, null=True)
+
     is_deleted = models.BooleanField(default=False)
-    
-    # Track which fields were edited
-    edited_fields = models.JSONField(default=dict, blank=True)  # e.g., {"fullname": true, "resign": true}
-    
+    edited_fields = models.JSONField(default=dict, blank=True)
+
     history = AuditlogHistoryField()
 
     def __str__(self):
@@ -412,12 +414,15 @@ class CurrentPackageDetailsDraft(models.Model):
     gross_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle = models.ForeignKey('VehicleModel', on_delete=models.SET_NULL, null=True, blank=True)
     fuel_limit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mobile_provided = models.BooleanField(default=False, null=True)
+    fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total = models.IntegerField(null=True, blank=True)
+    company_pickup = models.BooleanField(default=False, null=True)
+
     is_deleted = models.BooleanField(default=False)
-    
-    # Track which fields were edited
     edited_fields = models.JSONField(default=dict, blank=True)
-    
+
     history = AuditlogHistoryField()
 
     def __str__(self):
@@ -443,13 +448,17 @@ class ProposedPackageDetailsDraft(models.Model):
     revised_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     revised_fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle = models.ForeignKey('VehicleModel', on_delete=models.SET_NULL, null=True, blank=True)
+    mobile_provided = models.BooleanField(default=False, null=True)
+    fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total = models.IntegerField(null=True, blank=True)
+    approved = models.BooleanField(default=False, null=True)
+    company_pickup = models.BooleanField(default=False, null=True)
+
     is_deleted = models.BooleanField(default=False)
-    
-    # Track which fields were edited
     edited_fields = models.JSONField(default=dict, blank=True)
-    
+
     history = AuditlogHistoryField()
 
     def __str__(self):
@@ -468,6 +477,8 @@ class ProposedPackageDetailsDraft(models.Model):
                         setattr(self, field.name, Decimal("0"))
         super().save(*args, **kwargs)
 
+
+
 class FinancialImpactPerMonthDraft(models.Model):
     employee_draft = models.ForeignKey(EmployeeDraft, on_delete=models.CASCADE, related_name='financial_impact_drafts')
     emp_status = models.ForeignKey('EmployeeStatus', on_delete=models.CASCADE, null=True, blank=True)
@@ -476,14 +487,13 @@ class FinancialImpactPerMonthDraft(models.Model):
     gratuity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     bonus = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     leave_encashment = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    mobile_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     fuel = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vehicle = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
     is_deleted = models.BooleanField(default=False)
-    
-    # Track which fields were edited
     edited_fields = models.JSONField(default=dict, blank=True)
-    
+
     history = AuditlogHistoryField()
 
     def __str__(self):

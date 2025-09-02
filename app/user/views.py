@@ -15,7 +15,11 @@ from .models import (
     Designation,
     Location,
     EmployeeStatus,
-    Formula
+    Formula,
+    EmployeeDraft,
+    CurrentPackageDetailsDraft,
+    ProposedPackageDetailsDraft,
+    FinancialImpactPerMonthDraft,
 )
 
 from django.contrib.auth.mixins import PermissionRequiredMixin
@@ -1718,6 +1722,132 @@ Refracted code as per new model
 '''
 
 # ✅ DepartmentTableView - updated to reflect model changes
+# class DepartmentTableView(View):
+#     template_name = 'dept_table_list.html'
+
+#     @classmethod
+#     def as_view(cls, **initkwargs):
+#         view = super().as_view(**initkwargs)
+#         view = login_required(view)
+#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+#         view = ensure_csrf_cookie(view)
+#         return view
+
+#     def get(self, request, department_id):
+#         department = DepartmentTeams.objects.filter(
+#             id=department_id,
+#             company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+#         ).first()
+#         if not department:
+#             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
+
+#         company_data = get_companies_and_department_teams(request.user)
+#         employees = Employee.objects.filter(department_team=department).select_related(
+#             'company', 'department_team', 'department_group', 'section', 'designation', 'location'
+#         ).prefetch_related(
+#             'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts'
+#         )
+
+#         employee_data = []
+#         draft_data = {}
+
+#         for emp in employees:
+#             emp_draft = emp.drafts.first()
+#             is_draft = bool(emp_draft)
+
+#             data = {
+#                 'emp_id': emp.emp_id,
+#                 'fullname': emp_draft.fullname if is_draft and emp_draft.edited_fields.get('fullname') else emp.fullname,
+#                 'company': emp.company.name,
+#                 'department_team': emp.department_team,
+#                 'department_group': emp_draft.department_group if is_draft and emp_draft.edited_fields.get('department_group_id') else emp.department_group,
+#                 'section': emp_draft.section if is_draft and emp_draft.edited_fields.get('section_id') else emp.section,
+#                 'designation': emp_draft.designation if is_draft and emp_draft.edited_fields.get('designation_id') else emp.designation,
+#                 'location': emp_draft.location if is_draft and emp_draft.edited_fields.get('location_id') else emp.location,
+#                 'date_of_joining': emp_draft.date_of_joining if is_draft and emp_draft.edited_fields.get('date_of_joining') else emp.date_of_joining,
+#                 'resign': emp_draft.resign if is_draft and emp_draft.edited_fields.get('resign') else emp.resign,
+#                 'date_of_resignation': emp_draft.date_of_resignation if is_draft and emp_draft.edited_fields.get('date_of_resignation') else emp.date_of_resignation,
+#                 'remarks': emp_draft.remarks if is_draft and emp_draft.edited_fields.get('remarks') else emp.remarks,
+#                 'is_draft': is_draft,
+#                 'currentpackagedetails': None,
+#                 'proposedpackagedetails': None,
+#                 'financialimpactpermonth': None,
+#             }
+
+#             draft_data[emp.emp_id] = {'employee': {}, 'current_package': {}, 'proposed_package': {}, 'financial_impact': {}}
+
+#             # ✅ Handle current package
+#             current_draft = emp_draft.current_package_drafts.first() if is_draft else None
+#             # current_package = emp.currentpackagedetails or current_draft
+
+#             # Handle current package
+#             current_package = getattr(emp, 'currentpackagedetails', None) or current_draft
+#             if current_package:
+#                 data['currentpackagedetails'] = {
+#                     'gross_salary': current_package.gross_salary,
+#                     'vehicle': current_package.vehicle,
+#                     'fuel_limit': current_package.fuel_limit,
+#                     'fuel_litre': current_package.fuel_litre,
+#                     'vehicle_allowance': current_package.vehicle_allowance,
+#                     'mobile_provided': current_package.mobile_provided,
+#                     'total': current_package.total,
+#                 }
+
+#             # ✅ Handle proposed package
+#             proposed_draft = emp_draft.proposed_package_drafts.first() if is_draft else None
+#             # proposed_package = emp.proposedpackagedetails or proposed_draft
+
+#             # Handle proposed package   
+#             proposed_package = getattr(emp, 'proposedpackagedetails', None) or proposed_draft
+#             if proposed_package:
+#                 data['proposedpackagedetails'] = {
+#                     'increment_percentage': proposed_package.increment_percentage,
+#                     'increased_amount': proposed_package.increased_amount,
+#                     'revised_salary': proposed_package.revised_salary,
+#                     'increased_fuel_amount': proposed_package.increased_fuel_amount,
+#                     'revised_fuel_allowance': proposed_package.revised_fuel_allowance,
+#                     'fuel_litre': proposed_package.fuel_litre,
+#                     'vehicle_allowance': proposed_package.vehicle_allowance,
+#                     'mobile_provided': proposed_package.mobile_provided,
+#                     'total': proposed_package.total,
+#                     'approved': proposed_package.approved,
+#                     'vehicle': proposed_package.vehicle,
+#                 }
+
+#             # ✅ Handle financial impact
+#             financial_draft = emp_draft.financial_impact_drafts.first() if is_draft else None
+#             financial_package, _ = FinancialImpactPerMonth.objects.get_or_create(employee=emp)
+#             # financial_package = financial_draft or financial_package
+
+#             financial_package = getattr(emp, 'financialimpactpermonth', None) or financial_draft
+#             if financial_package:
+#                 data['financialimpactpermonth'] = {
+#                     'emp_status': financial_package.emp_status,
+#                     'serving_years': financial_package.serving_years,
+#                     'salary': financial_package.salary,
+#                     'gratuity': financial_package.gratuity,
+#                     'bonus': financial_package.bonus,
+#                     'leave_encashment': financial_package.leave_encashment,
+#                     'fuel': financial_package.fuel,
+#                     'vehicle': financial_package.vehicle,
+#                     'total': financial_package.total,
+#                 }
+
+#             employee_data.append(data)
+
+#         return render(request, self.template_name, {
+#             'department': department,
+#             'employees': employee_data,
+#             'department_id': department_id,
+#             'company_data': company_data,
+#             'draft_data': draft_data
+#         })
+
+
+'''
+update code
+'''
+
 class DepartmentTableView(View):
     template_name = 'dept_table_list.html'
 
@@ -1774,7 +1904,7 @@ class DepartmentTableView(View):
 
             # ✅ Handle current package
             current_draft = emp_draft.current_package_drafts.first() if is_draft else None
-            current_package = emp.currentpackagedetails or current_draft
+            current_package = current_draft or getattr(emp, 'currentpackagedetails', None)
             if current_package:
                 data['currentpackagedetails'] = {
                     'gross_salary': current_package.gross_salary,
@@ -1788,7 +1918,7 @@ class DepartmentTableView(View):
 
             # ✅ Handle proposed package
             proposed_draft = emp_draft.proposed_package_drafts.first() if is_draft else None
-            proposed_package = emp.proposedpackagedetails or proposed_draft
+            proposed_package = proposed_draft or getattr(emp, 'proposedpackagedetails', None)
             if proposed_package:
                 data['proposedpackagedetails'] = {
                     'increment_percentage': proposed_package.increment_percentage,
@@ -1804,10 +1934,9 @@ class DepartmentTableView(View):
                     'vehicle': proposed_package.vehicle,
                 }
 
-            # ✅ Handle financial impact
+            # ✅ Handle financial impact (Prioritize draft)
             financial_draft = emp_draft.financial_impact_drafts.first() if is_draft else None
-            financial_package, _ = FinancialImpactPerMonth.objects.get_or_create(employee=emp)
-            financial_package = financial_draft or financial_package
+            financial_package = financial_draft or getattr(emp, 'financialimpactpermonth', None)
             if financial_package:
                 data['financialimpactpermonth'] = {
                     'emp_status': financial_package.emp_status,
@@ -1839,66 +1968,227 @@ from django.views.decorators.cache import cache_control
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 
+# @method_decorator(login_required, name='dispatch')
+# @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True), name='dispatch')
+# @method_decorator(ensure_csrf_cookie, name='dispatch')
+# class GetEmployeeDataView(View):
+#     def get(self, request, employee_id):
+#         try:
+#             # Optimize queries using select_related
+#             employee = Employee.objects.select_related(
+#                 'department_group', 'section', 'designation', 'location'
+#             ).get(emp_id=employee_id)
+
+#             current_package = CurrentPackageDetails.objects.select_related('vehicle').filter(employee=employee).first()
+#             proposed_package = ProposedPackageDetails.objects.select_related('vehicle').filter(employee=employee).first()
+#             financial_impact = FinancialImpactPerMonth.objects.select_related('emp_status').filter(employee=employee).first()
+
+#             # Helper to format date
+#             def fmt_date(date):
+#                 return date.strftime('%Y-%m-%d') if date else ''
+
+#             # Helper to safely convert decimal/float fields
+#             def fmt_float(value):
+#                 return float(value) if value is not None else ''
+
+#             data = {
+#                 'employee': {
+#                     'fullname': employee.fullname,
+#                     'department_group_id': getattr(employee.department_group, 'id', None),
+#                     'section_id': getattr(employee.section, 'id', None),
+#                     'designation_id': getattr(employee.designation, 'id', None),
+#                     'location_id': getattr(employee.location, 'id', None),
+#                     'date_of_joining': fmt_date(employee.date_of_joining),
+#                     'resign': employee.resign,
+#                     'date_of_resignation': fmt_date(employee.date_of_resignation),
+#                     'remarks': employee.remarks or ''
+#                 },
+#                 'current_package': {
+#                     'gross_salary': fmt_float(getattr(current_package, 'gross_salary', None)),
+#                     'vehicle_id': getattr(getattr(current_package, 'vehicle', None), 'id', ''),
+#                     'fuel_limit': fmt_float(getattr(current_package, 'fuel_limit', None)),
+#                     'mobile_allowance': fmt_float(getattr(current_package, 'mobile_allowance', None))
+#                 },
+#                 'proposed_package': {
+#                     'increment_percentage': fmt_float(getattr(proposed_package, 'increment_percentage', None)),
+#                     'increased_amount': fmt_float(getattr(proposed_package, 'increased_amount', None)),
+#                     'revised_salary': fmt_float(getattr(proposed_package, 'revised_salary', None)),
+#                     'increased_fuel_amount': fmt_float(getattr(proposed_package, 'increased_fuel_amount', None)),
+#                     'revised_fuel_allowance': fmt_float(getattr(proposed_package, 'revised_fuel_allowance', None)),
+#                     'mobile_allowance': fmt_float(getattr(proposed_package, 'mobile_allowance', None)),
+#                     'vehicle_id': getattr(getattr(proposed_package, 'vehicle', None), 'id', '')
+#                 },
+#                 'financial_impact': {
+#                     'emp_status_id': getattr(getattr(financial_impact, 'emp_status', None), 'id', ''),
+#                     'serving_years': getattr(financial_impact, 'serving_years', ''),
+#                     'salary': fmt_float(getattr(financial_impact, 'salary', None)),
+#                     'gratuity': fmt_float(getattr(financial_impact, 'gratuity', None)),
+#                     'bonus': fmt_float(getattr(financial_impact, 'bonus', None)),
+#                     'leave_encashment': fmt_float(getattr(financial_impact, 'leave_encashment', None)),
+#                     'mobile_allowance': fmt_float(getattr(financial_impact, 'mobile_allowance', None)),
+#                     'fuel': fmt_float(getattr(financial_impact, 'fuel', None)),
+#                     'total': fmt_float(getattr(financial_impact, 'total', None)),
+#                 }
+#             }
+
+#             return JsonResponse({'data': data})
+
+#         except Employee.DoesNotExist:
+#             return JsonResponse({'error': 'Employee not found'}, status=404)
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)}, status=500)
+
+
+'''
+Updated code as per change in model
+'''
+# @method_decorator(login_required, name='dispatch')
+# @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True), name='dispatch')
+# @method_decorator(ensure_csrf_cookie, name='dispatch')
+# class GetEmployeeDataView(View):
+#     def get(self, request, employee_id):
+#         try:
+#             # Optimize queries using select_related and check authorization
+#             employee = Employee.objects.select_related(
+#                 'department_group', 'section', 'designation', 'location', 'department_team__company'
+#             ).filter(
+#                 emp_id=employee_id,
+#                 department_team__company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+#             ).first()
+
+#             if not employee:
+#                 return JsonResponse({'error': 'Employee not found or not authorized'}, status=404)
+
+#             current_package = CurrentPackageDetails.objects.select_related('vehicle').filter(employee=employee).first()
+#             proposed_package = ProposedPackageDetails.objects.select_related('vehicle').filter(employee=employee).first()
+#             financial_impact = FinancialImpactPerMonth.objects.select_related('emp_status').filter(employee=employee).first()
+
+#             # Helper to format date
+#             def fmt_date(date):
+#                 return date.strftime('%Y-%m-%d') if date else ''
+
+#             # Helper to safely convert decimal/float fields to strings
+#             def fmt_float(value):
+#                 return str(value) if value is not None else ''
+
+#             data = {
+#                 'employee': {
+#                     'fullname': employee.fullname,
+#                     'department_group_id': getattr(employee.department_group, 'id', None),
+#                     'section_id': getattr(employee.section, 'id', None),
+#                     'designation_id': getattr(employee.designation, 'id', None),
+#                     'location_id': getattr(employee.location, 'id', None),
+#                     'date_of_joining': fmt_date(employee.date_of_joining),
+#                     'resign': employee.resign,
+#                     'date_of_resignation': fmt_date(employee.date_of_resignation),
+#                     'eligible_for_increment': employee.eligible_for_increment,
+#                     'remarks': employee.remarks or '',
+#                     'image': employee.image.url if employee.image else ''
+#                 },
+#                 'current_package': {
+#                     'gross_salary': fmt_float(getattr(current_package, 'gross_salary', None)),
+#                     'vehicle_id': getattr(getattr(current_package, 'vehicle', None), 'id', ''),
+#                     'fuel_limit': fmt_float(getattr(current_package, 'fuel_limit', None)),
+#                     'mobile_provided': getattr(current_package, 'mobile_provided', False),
+#                     'fuel_litre': fmt_float(getattr(current_package, 'fuel_litre', None)),
+#                     'total': fmt_float(getattr(current_package, 'total', None))
+#                 },
+#                 'proposed_package': {
+#                     'increment_percentage': fmt_float(getattr(proposed_package, 'increment_percentage', None)),
+#                     'increased_fuel_amount': fmt_float(getattr(proposed_package, 'increased_fuel_amount', None)),
+#                     'revised_salary': fmt_float(getattr(proposed_package, 'revised_salary', None)),
+#                     'mobile_provided': getattr(proposed_package, 'mobile_provided', False),
+#                     'vehicle_id': getattr(getattr(proposed_package, 'vehicle', None), 'id', ''),
+#                     'fuel_litre': fmt_float(getattr(proposed_package, 'fuel_litre', None)),
+#                     'vehicle_allowance': fmt_float(getattr(proposed_package, 'vehicle_allowance', None)),
+#                     'approved': getattr(proposed_package, 'approved', False),
+#                     'total': fmt_float(getattr(proposed_package, 'total', None))
+#                 },
+#                 'financial_impact': {
+#                     'emp_status_id': getattr(getattr(financial_impact, 'emp_status', None), 'id', ''),
+#                     'serving_years': fmt_float(getattr(financial_impact, 'serving_years', None)),
+#                     'salary': fmt_float(getattr(financial_impact, 'salary', None)),
+#                     'gratuity': fmt_float(getattr(financial_impact, 'gratuity', None))
+#                 }
+#             }
+
+#             return JsonResponse({'data': data})
+
+#         except Employee.DoesNotExist:
+#             return JsonResponse({'error': 'Employee not found'}, status=404)
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)}, status=500)
+
+
+
 @method_decorator(login_required, name='dispatch')
 @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True), name='dispatch')
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class GetEmployeeDataView(View):
     def get(self, request, employee_id):
         try:
-            # Optimize queries using select_related
+            # Optimize queries and ensure HR authorization
             employee = Employee.objects.select_related(
-                'department_group', 'section', 'designation', 'location'
-            ).get(emp_id=employee_id)
+                'department_group', 'section', 'designation', 'location', 'department_team__company'
+            ).filter(
+                emp_id=employee_id,
+                department_team__company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+            ).first()
 
-            current_package = CurrentPackageDetails.objects.select_related('vehicle').filter(employee=employee).first()
-            proposed_package = ProposedPackageDetails.objects.select_related('vehicle').filter(employee=employee).first()
-            financial_impact = FinancialImpactPerMonth.objects.select_related('emp_status').filter(employee=employee).first()
+            if not employee:
+                return JsonResponse({'error': 'Employee not found or not authorized'}, status=404)
+
+            # Fetch drafts
+            emp_draft = EmployeeDraft.objects.filter(employee=employee).first()
+            current_draft = CurrentPackageDetailsDraft.objects.filter(employee=employee).first()
+            proposed_draft = ProposedPackageDetailsDraft.objects.filter(employee=employee).first()
+            financial_draft = FinancialImpactPerMonthDraft.objects.filter(employee=employee).first()
+
+            # Decide source (draft vs live)
+            use_emp = emp_draft if emp_draft else employee
+            use_current = current_draft if current_draft else CurrentPackageDetails.objects.filter(employee=employee).first()
+            use_proposed = proposed_draft if proposed_draft else ProposedPackageDetails.objects.filter(employee=employee).first()
+            use_financial = financial_draft if financial_draft else FinancialImpactPerMonth.objects.filter(employee=employee).first()
 
             # Helper to format date
             def fmt_date(date):
                 return date.strftime('%Y-%m-%d') if date else ''
 
-            # Helper to safely convert decimal/float fields
+            # Helper to safely convert decimal/float fields to strings
             def fmt_float(value):
-                return float(value) if value is not None else ''
+                return str(value) if value is not None else ''
 
             data = {
                 'employee': {
-                    'fullname': employee.fullname,
-                    'department_group_id': getattr(employee.department_group, 'id', None),
-                    'section_id': getattr(employee.section, 'id', None),
-                    'designation_id': getattr(employee.designation, 'id', None),
-                    'location_id': getattr(employee.location, 'id', None),
-                    'date_of_joining': fmt_date(employee.date_of_joining),
-                    'resign': employee.resign,
-                    'date_of_resignation': fmt_date(employee.date_of_resignation),
-                    'remarks': employee.remarks or ''
+                    'fullname': getattr(use_emp, 'fullname', ''),
+                    'department_group_id': getattr(getattr(use_emp, 'department_group', None), 'id', None),
+                    'section_id': getattr(getattr(use_emp, 'section', None), 'id', None),
+                    'designation_id': getattr(getattr(use_emp, 'designation', None), 'id', None),
+                    'location_id': getattr(getattr(use_emp, 'location', None), 'id', None),
+                    'date_of_joining': fmt_date(getattr(use_emp, 'date_of_joining', None)),
+                    'resign': getattr(use_emp, 'resign', False),
+                    'date_of_resignation': fmt_date(getattr(use_emp, 'date_of_resignation', None)),
+                    'eligible_for_increment': getattr(use_emp, 'eligible_for_increment', False),
+                    'remarks': getattr(use_emp, 'remarks', '') or '',
+                    'image': employee.image.url if getattr(employee, 'image', None) else ''
                 },
                 'current_package': {
-                    'gross_salary': fmt_float(getattr(current_package, 'gross_salary', None)),
-                    'vehicle_id': getattr(getattr(current_package, 'vehicle', None), 'id', ''),
-                    'fuel_limit': fmt_float(getattr(current_package, 'fuel_limit', None)),
-                    'mobile_allowance': fmt_float(getattr(current_package, 'mobile_allowance', None))
+                    'gross_salary': fmt_float(getattr(use_current, 'gross_salary', None)),
+                    'vehicle_id': getattr(getattr(use_current, 'vehicle', None), 'id', ''),
+                    'fuel_limit': fmt_float(getattr(use_current, 'fuel_limit', None)),
+                    'mobile_allowance': fmt_float(getattr(use_current, 'mobile_allowance', None)),
                 },
                 'proposed_package': {
-                    'increment_percentage': fmt_float(getattr(proposed_package, 'increment_percentage', None)),
-                    'increased_amount': fmt_float(getattr(proposed_package, 'increased_amount', None)),
-                    'revised_salary': fmt_float(getattr(proposed_package, 'revised_salary', None)),
-                    'increased_fuel_amount': fmt_float(getattr(proposed_package, 'increased_fuel_amount', None)),
-                    'revised_fuel_allowance': fmt_float(getattr(proposed_package, 'revised_fuel_allowance', None)),
-                    'mobile_allowance': fmt_float(getattr(proposed_package, 'mobile_allowance', None)),
-                    'vehicle_id': getattr(getattr(proposed_package, 'vehicle', None), 'id', '')
+                    'increment_percentage': fmt_float(getattr(use_proposed, 'increment_percentage', None)),
+                    'increased_fuel_amount': fmt_float(getattr(use_proposed, 'increased_fuel_amount', None)),
+                    'mobile_allowance': fmt_float(getattr(use_proposed, 'mobile_allowance', None)),
+                    'vehicle_id': getattr(getattr(use_proposed, 'vehicle', None), 'id', ''),
                 },
                 'financial_impact': {
-                    'emp_status_id': getattr(getattr(financial_impact, 'emp_status', None), 'id', ''),
-                    'serving_years': getattr(financial_impact, 'serving_years', ''),
-                    'salary': fmt_float(getattr(financial_impact, 'salary', None)),
-                    'gratuity': fmt_float(getattr(financial_impact, 'gratuity', None)),
-                    'bonus': fmt_float(getattr(financial_impact, 'bonus', None)),
-                    'leave_encashment': fmt_float(getattr(financial_impact, 'leave_encashment', None)),
-                    'mobile_allowance': fmt_float(getattr(financial_impact, 'mobile_allowance', None)),
-                    'fuel': fmt_float(getattr(financial_impact, 'fuel', None)),
-                    'total': fmt_float(getattr(financial_impact, 'total', None)),
+                    'emp_status_id': getattr(getattr(use_financial, 'emp_status', None), 'id', ''),
+                    'serving_years': fmt_float(getattr(use_financial, 'serving_years', None)),
+                    'salary': fmt_float(getattr(use_financial, 'salary', None)),
+                    'gratuity': fmt_float(getattr(use_financial, 'gratuity', None)),
                 }
             }
 
@@ -1911,6 +2201,119 @@ class GetEmployeeDataView(View):
 
 
 
+
+# class CreateEmployeeView(View):
+#     template_name = 'create_dept_table.html'
+
+#     @classmethod
+#     def as_view(cls, **initkwargs):
+#         view = super().as_view(**initkwargs)
+#         view = login_required(view)
+#         view = permission_required('user.add_employee', raise_exception=True)(view)
+#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+#         view = ensure_csrf_cookie(view)
+#         return view
+
+#     def get(self, request, department_id):
+#         department = get_object_or_404(
+#             DepartmentTeams,
+#             id=department_id,
+#             company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+#         )
+#         return render(request, self.template_name, {
+#             'department': department,
+#             'department_id': department_id
+#         })
+
+#     def post(self, request, department_id):
+#         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#             try:
+#                 with transaction.atomic():
+#                     step = request.POST.get('step')
+
+#                     # Validate department
+#                     department = get_object_or_404(
+#                         DepartmentTeams,
+#                         id=department_id,
+#                         company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+#                     )
+
+#                     # STEP 1: Create Employee
+#                     if step == 'employee':
+#                         employee = Employee.objects.create(
+#                             fullname=request.POST.get('fullname'),
+#                             company=department.company,
+#                             department_team=department,
+#                             department_group_id=request.POST.get('department_group_id') or None,
+#                             section_id=request.POST.get('section_id') or None,
+#                             designation_id=request.POST.get('designation_id') or None,
+#                             location_id=request.POST.get('location_id') or None,
+#                             date_of_joining=request.POST.get('date_of_joining') or None,
+#                             resign=request.POST.get('resign') == 'true',
+#                             date_of_resignation=request.POST.get('date_of_resignation') or None,
+#                             remarks=request.POST.get('remarks') or '',
+#                             image=request.FILES.get('image') if 'image' in request.FILES else None
+#                         )
+#                         logger.debug(f"Employee created: {employee.emp_id}")
+#                         return JsonResponse({'message': 'Employee created', 'employee_id': employee.emp_id})
+
+#                     # STEP 2: Create Current Package
+#                     elif step == 'current_package':
+#                         employee_id = request.POST.get('employee_id')
+#                         employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
+#                         CurrentPackageDetails.objects.create(
+#                             employee=employee,
+#                             gross_salary=request.POST.get('gross_salary') or None,
+#                             vehicle_id=request.POST.get('vehicle_id') or None,
+#                             fuel_limit=request.POST.get('fuel_limit') or None,
+#                             mobile_allowance=request.POST.get('mobile_allowance') or None
+#                         )
+#                         logger.debug(f"CurrentPackageDetails created for employee: {employee_id}")
+#                         return JsonResponse({'message': 'Current Package created'})
+
+#                     # STEP 3: Create Proposed Package
+#                     elif step == 'proposed_package':
+#                         employee_id = request.POST.get('employee_id')
+#                         employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
+#                         ProposedPackageDetails.objects.create(
+#                             employee=employee,
+#                             increment_percentage=request.POST.get('increment_percentage') or None,
+#                             increased_fuel_amount=request.POST.get('increased_fuel_amount') or None,
+#                             mobile_allowance=request.POST.get('mobile_allowance_proposed') or None,
+#                             vehicle_id=request.POST.get('vehicle_proposed_id') or None
+#                         )
+#                         logger.debug(f"ProposedPackageDetails created for employee: {employee_id}")
+#                         return JsonResponse({'message': 'Proposed Package created'})
+
+#                     # STEP 4: Create Financial Impact
+#                     elif step == 'financial_impact':
+#                         employee_id = request.POST.get('employee_id')
+#                         employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
+#                         FinancialImpactPerMonth.objects.create(
+#                             employee=employee,
+#                             emp_status_id=request.POST.get('emp_status_id') or None,
+#                             serving_years=request.POST.get('serving_years') or None,
+#                             salary=request.POST.get('salary') or None,
+#                             gratuity=request.POST.get('gratuity') or None
+#                         )
+#                         logger.debug(f"FinancialImpactPerMonth created for employee: {employee_id}")
+#                         return JsonResponse({'message': 'Financial Impact created'})
+
+#                     return JsonResponse({'error': 'Invalid step'}, status=400)
+
+#             except Exception as e:
+#                 logger.error(f"Error in CreateEmployeeView: {str(e)}")
+#                 return JsonResponse({'error': 'Invalid data'}, status=400)
+
+#         return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+'''
+Updated Code as per change in model
+'''
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CreateEmployeeView(View):
     template_name = 'create_dept_table.html'
@@ -1962,7 +2365,8 @@ class CreateEmployeeView(View):
                             resign=request.POST.get('resign') == 'true',
                             date_of_resignation=request.POST.get('date_of_resignation') or None,
                             remarks=request.POST.get('remarks') or '',
-                            image=request.FILES.get('image') if 'image' in request.FILES else None
+                            image=request.FILES.get('image') if 'image' in request.FILES else None,
+                            eligible_for_increment=request.POST.get('eligible_for_increment') == 'true'
                         )
                         logger.debug(f"Employee created: {employee.emp_id}")
                         return JsonResponse({'message': 'Employee created', 'employee_id': employee.emp_id})
@@ -1976,7 +2380,8 @@ class CreateEmployeeView(View):
                             gross_salary=request.POST.get('gross_salary') or None,
                             vehicle_id=request.POST.get('vehicle_id') or None,
                             fuel_limit=request.POST.get('fuel_limit') or None,
-                            mobile_allowance=request.POST.get('mobile_allowance') or None
+                            mobile_provided=request.POST.get('mobile_provided') == 'true',
+                            fuel_litre=request.POST.get('fuel_litre') or None
                         )
                         logger.debug(f"CurrentPackageDetails created for employee: {employee_id}")
                         return JsonResponse({'message': 'Current Package created'})
@@ -1989,8 +2394,11 @@ class CreateEmployeeView(View):
                             employee=employee,
                             increment_percentage=request.POST.get('increment_percentage') or None,
                             increased_fuel_amount=request.POST.get('increased_fuel_amount') or None,
-                            mobile_allowance=request.POST.get('mobile_allowance_proposed') or None,
-                            vehicle_id=request.POST.get('vehicle_proposed_id') or None
+                            mobile_provided=request.POST.get('mobile_provided_proposed') == 'true',
+                            vehicle_id=request.POST.get('vehicle_proposed_id') or None,
+                            fuel_litre=request.POST.get('fuel_litre') or None,
+                            vehicle_allowance=request.POST.get('vehicle_allowance') or None,
+                            approved=request.POST.get('approved') == 'true'
                         )
                         logger.debug(f"ProposedPackageDetails created for employee: {employee_id}")
                         return JsonResponse({'message': 'Proposed Package created'})
@@ -2017,6 +2425,121 @@ class CreateEmployeeView(View):
 
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
+
+
+
+
+
+
+
+# class UpdateEmployeeView(View):
+#     template_name = 'update_dept_table.html'
+
+#     @classmethod
+#     def as_view(cls, **initkwargs):
+#         view = super().as_view(**initkwargs)
+#         view = login_required(view)
+#         view = permission_required('user.change_employee', raise_exception=True)(view)
+#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+#         view = ensure_csrf_cookie(view)
+#         return view
+
+#     def get(self, request, department_id, employee_id):
+#         department = get_object_or_404(
+#             DepartmentTeams,
+#             id=department_id,
+#             company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+#         )
+#         employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
+
+#         # Get related records if exist
+#         current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
+#         proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
+#         financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
+
+#         return render(request, self.template_name, {
+#             'department': department,
+#             'department_id': department_id,
+#             'employee_id': employee_id,
+#             'employee': employee,
+#             'current_package': current_package,
+#             'proposed_package': proposed_package,
+#             'financial_impact': financial_impact,
+#         })
+
+#     def post(self, request, department_id, employee_id):
+#         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#             try:
+#                 department = get_object_or_404(
+#                     DepartmentTeams,
+#                     id=department_id,
+#                     company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+#                 )
+#                 employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
+#                 step = request.POST.get('step')
+
+#                 # --- Update Employee Info ---
+#                 if step == 'employee':
+#                     employee.fullname = request.POST.get('fullname') or employee.fullname
+#                     employee.department_group_id = request.POST.get('department_group_id') or None
+#                     employee.section_id = request.POST.get('section_id') or None
+#                     employee.designation_id = request.POST.get('designation_id') or None
+#                     employee.location_id = request.POST.get('location_id') or None
+#                     employee.date_of_joining = request.POST.get('date_of_joining') or None
+#                     employee.resign = request.POST.get('resign') == 'true'
+#                     employee.date_of_resignation = request.POST.get('date_of_resignation') or None
+#                     employee.remarks = request.POST.get('remarks') or ''
+#                     if 'image' in request.FILES:
+#                         employee.image = request.FILES['image']
+#                     employee.save()
+#                     logger.debug(f"Employee updated: {employee_id}")
+#                     return JsonResponse({'message': 'Employee updated', 'employee_id': employee_id})
+
+#                 # --- Update Current Package ---
+#                 elif step == 'current_package':
+#                     current_package, _ = CurrentPackageDetails.objects.get_or_create(employee=employee)
+#                     current_package.gross_salary = request.POST.get('gross_salary') or None
+#                     current_package.vehicle_id = request.POST.get('vehicle_id') or None
+#                     current_package.fuel_limit = request.POST.get('fuel_limit') or None
+#                     current_package.mobile_allowance = request.POST.get('mobile_allowance') or None
+#                     current_package.save()
+#                     logger.debug(f"CurrentPackageDetails updated for employee: {employee_id}")
+#                     return JsonResponse({'message': 'Current Package updated'})
+
+#                 # --- Update Proposed Package ---
+#                 elif step == 'proposed_package':
+#                     proposed_package, _ = ProposedPackageDetails.objects.get_or_create(employee=employee)
+#                     proposed_package.increment_percentage = request.POST.get('increment_percentage') or None
+#                     proposed_package.increased_fuel_amount = request.POST.get('increased_fuel_amount') or None
+#                     proposed_package.mobile_allowance = request.POST.get('mobile_allowance_proposed') or None
+#                     proposed_package.vehicle_id = request.POST.get('vehicle_proposed_id') or None
+#                     proposed_package.save()
+#                     logger.debug(f"ProposedPackageDetails updated for employee: {employee_id}")
+#                     return JsonResponse({'message': 'Proposed Package updated'})
+
+#                 # --- Update Financial Impact ---
+#                 elif step == 'financial_impact':
+#                     financial_impact, _ = FinancialImpactPerMonth.objects.get_or_create(employee=employee)
+#                     financial_impact.emp_status_id = request.POST.get('emp_status_id') or None
+#                     financial_impact.serving_years = request.POST.get('serving_years') or None
+#                     financial_impact.salary = request.POST.get('salary') or None
+#                     financial_impact.gratuity = request.POST.get('gratuity') or None
+#                     financial_impact.save()
+#                     logger.debug(f"FinancialImpactPerMonth updated for employee: {employee_id}")
+#                     return JsonResponse({'message': 'Financial Impact updated'})
+
+#                 return JsonResponse({'error': 'Invalid step'}, status=400)
+
+#             except (DepartmentTeams.DoesNotExist, Employee.DoesNotExist, ValueError) as e:
+#                 logger.error(f"Error in UpdateEmployeeView: {str(e)}")
+#                 return JsonResponse({'error': 'Invalid data'}, status=400)
+
+#         return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+'''
+Updated code as per change in model
+'''
 
 
 class UpdateEmployeeView(View):
@@ -2076,6 +2599,7 @@ class UpdateEmployeeView(View):
                     employee.resign = request.POST.get('resign') == 'true'
                     employee.date_of_resignation = request.POST.get('date_of_resignation') or None
                     employee.remarks = request.POST.get('remarks') or ''
+                    employee.eligible_for_increment = request.POST.get('eligible_for_increment') == 'true'
                     if 'image' in request.FILES:
                         employee.image = request.FILES['image']
                     employee.save()
@@ -2088,7 +2612,8 @@ class UpdateEmployeeView(View):
                     current_package.gross_salary = request.POST.get('gross_salary') or None
                     current_package.vehicle_id = request.POST.get('vehicle_id') or None
                     current_package.fuel_limit = request.POST.get('fuel_limit') or None
-                    current_package.mobile_allowance = request.POST.get('mobile_allowance') or None
+                    current_package.mobile_provided = request.POST.get('mobile_provided') == 'true'
+                    current_package.fuel_litre = request.POST.get('fuel_litre') or None
                     current_package.save()
                     logger.debug(f"CurrentPackageDetails updated for employee: {employee_id}")
                     return JsonResponse({'message': 'Current Package updated'})
@@ -2098,8 +2623,11 @@ class UpdateEmployeeView(View):
                     proposed_package, _ = ProposedPackageDetails.objects.get_or_create(employee=employee)
                     proposed_package.increment_percentage = request.POST.get('increment_percentage') or None
                     proposed_package.increased_fuel_amount = request.POST.get('increased_fuel_amount') or None
-                    proposed_package.mobile_allowance = request.POST.get('mobile_allowance_proposed') or None
+                    proposed_package.mobile_provided = request.POST.get('mobile_provided_proposed') == 'true'
                     proposed_package.vehicle_id = request.POST.get('vehicle_proposed_id') or None
+                    proposed_package.fuel_litre = request.POST.get('fuel_litre') or None
+                    proposed_package.vehicle_allowance = request.POST.get('vehicle_allowance') or None
+                    proposed_package.approved = request.POST.get('approved') == 'true'
                     proposed_package.save()
                     logger.debug(f"ProposedPackageDetails updated for employee: {employee_id}")
                     return JsonResponse({'message': 'Proposed Package updated'})
@@ -2122,6 +2650,8 @@ class UpdateEmployeeView(View):
                 return JsonResponse({'error': 'Invalid data'}, status=400)
 
         return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
 
 
 
@@ -2176,6 +2706,91 @@ class DeleteEmployeeView(View):
             return JsonResponse({'error': 'Invalid data'}, status=400)
 
 
+# class GetDataView(View):
+#     @classmethod
+#     def as_view(cls, **initkwargs):
+#         view = super().as_view(**initkwargs)
+#         view = login_required(view)
+#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+#         view = ensure_csrf_cookie(view)
+#         return view
+
+#     def get(self, request, table, id):
+#         if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+#             return JsonResponse({'error': 'Invalid request'}, status=400)
+
+#         try:
+#             if table == 'employee':
+#                 logger.debug(f"Fetching employee with emp_id: {id}")
+
+#                 employee = Employee.objects.filter(
+#                     emp_id=id,
+#                     department_team__company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+#                 ).first()
+
+#                 if not employee:
+#                     logger.error(f"Employee with emp_id {id} not found or not authorized")
+#                     return JsonResponse({'error': f'Employee with ID {id} not found'}, status=404)
+
+#                 current_package = CurrentPackageDetails.objects.filter(employee=employee).first() or {}
+#                 proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first() or {}
+#                 financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first() or {}
+
+#                 data = {
+#                     'employee': {
+#                         'fullname': employee.fullname,
+#                         'department_group_id': employee.department_group_id,
+#                         'section_id': employee.section_id,
+#                         'designation_id': employee.designation_id,
+#                         'location_id': employee.location_id,
+#                         'date_of_joining': employee.date_of_joining.isoformat() if employee.date_of_joining else '',
+#                         'resign': employee.resign,
+#                         'date_of_resignation': employee.date_of_resignation.isoformat() if employee.date_of_resignation else '',
+#                         'remarks': employee.remarks or '',
+#                         'image': employee.image.url if employee.image else ''
+#                     },
+#                     'current_package': {
+#                         'gross_salary': str(current_package.gross_salary) if current_package and current_package.gross_salary else '',
+#                         'vehicle_id': current_package.vehicle_id if current_package else '',
+#                         'fuel_limit': str(current_package.fuel_limit) if current_package and current_package.fuel_limit else '',
+#                         'mobile_allowance': str(current_package.mobile_allowance) if current_package and current_package.mobile_allowance else ''
+#                     },
+#                     'proposed_package': {
+#                         'increment_percentage': str(proposed_package.increment_percentage) if proposed_package and proposed_package.increment_percentage else '',
+#                         'increased_amount': str(proposed_package.increased_amount) if proposed_package and proposed_package.increased_amount else '',
+#                         'revised_salary': str(proposed_package.revised_salary) if proposed_package and proposed_package.revised_salary else '',
+#                         'increased_fuel_amount': str(proposed_package.increased_fuel_amount) if proposed_package and proposed_package.increased_fuel_amount else '',
+#                         'revised_fuel_allowance': str(proposed_package.revised_fuel_allowance) if proposed_package and proposed_package.revised_fuel_allowance else '',
+#                         'mobile_allowance': str(proposed_package.mobile_allowance) if proposed_package and proposed_package.mobile_allowance else '',
+#                         'vehicle_id': proposed_package.vehicle_id if proposed_package else ''
+#                     },
+#                     'financial_impact': {
+#                         'emp_status_id': str(financial_impact.emp_status_id) if financial_impact and financial_impact.emp_status_id else '',
+#                         'serving_years': str(financial_impact.serving_years) if financial_impact and financial_impact.serving_years else '',
+#                         'salary': str(financial_impact.salary) if financial_impact and financial_impact.salary else '',
+#                         'gratuity': str(financial_impact.gratuity) if financial_impact and financial_impact.gratuity else '',
+#                         'bonus': str(financial_impact.bonus) if financial_impact and financial_impact.bonus else '',
+#                         'leave_encashment': str(financial_impact.leave_encashment) if financial_impact and financial_impact.leave_encashment else '',
+#                         'mobile_allowance': str(financial_impact.mobile_allowance) if financial_impact and financial_impact.mobile_allowance else '',
+#                         'fuel': str(financial_impact.fuel) if financial_impact and financial_impact.fuel else '',
+#                         'total': str(financial_impact.total) if financial_impact and financial_impact.total else ''
+#                     }
+#                 }
+
+#                 return JsonResponse({'data': data})
+
+#             return JsonResponse({'error': 'Invalid table'}, status=400)
+
+#         except Exception as e:
+#             logger.error(f"Error in GetDataView: {str(e)}")
+#             return JsonResponse({'error': f'Invalid data: {str(e)}'}, status=400)
+
+
+'''
+Updated code as per chnage in model
+'''
+
+
 class GetDataView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -2216,6 +2831,7 @@ class GetDataView(View):
                         'date_of_joining': employee.date_of_joining.isoformat() if employee.date_of_joining else '',
                         'resign': employee.resign,
                         'date_of_resignation': employee.date_of_resignation.isoformat() if employee.date_of_resignation else '',
+                        'eligible_for_increment': employee.eligible_for_increment,
                         'remarks': employee.remarks or '',
                         'image': employee.image.url if employee.image else ''
                     },
@@ -2223,27 +2839,24 @@ class GetDataView(View):
                         'gross_salary': str(current_package.gross_salary) if current_package and current_package.gross_salary else '',
                         'vehicle_id': current_package.vehicle_id if current_package else '',
                         'fuel_limit': str(current_package.fuel_limit) if current_package and current_package.fuel_limit else '',
-                        'mobile_allowance': str(current_package.mobile_allowance) if current_package and current_package.mobile_allowance else ''
+                        'mobile_provided': current_package.mobile_provided if current_package else False,
+                        'fuel_litre': str(current_package.fuel_litre) if current_package and current_package.fuel_litre else ''
                     },
                     'proposed_package': {
                         'increment_percentage': str(proposed_package.increment_percentage) if proposed_package and proposed_package.increment_percentage else '',
-                        'increased_amount': str(proposed_package.increased_amount) if proposed_package and proposed_package.increased_amount else '',
-                        'revised_salary': str(proposed_package.revised_salary) if proposed_package and proposed_package.revised_salary else '',
                         'increased_fuel_amount': str(proposed_package.increased_fuel_amount) if proposed_package and proposed_package.increased_fuel_amount else '',
-                        'revised_fuel_allowance': str(proposed_package.revised_fuel_allowance) if proposed_package and proposed_package.revised_fuel_allowance else '',
-                        'mobile_allowance': str(proposed_package.mobile_allowance) if proposed_package and proposed_package.mobile_allowance else '',
-                        'vehicle_id': proposed_package.vehicle_id if proposed_package else ''
+                        'revised_salary': str(proposed_package.revised_salary) if proposed_package and proposed_package.revised_salary else '',
+                        'mobile_provided': proposed_package.mobile_provided if proposed_package else False,
+                        'vehicle_id': proposed_package.vehicle_id if proposed_package else '',
+                        'fuel_litre': str(proposed_package.fuel_litre) if proposed_package and proposed_package.fuel_litre else '',
+                        'vehicle_allowance': str(proposed_package.vehicle_allowance) if proposed_package and proposed_package.vehicle_allowance else '',
+                        'approved': proposed_package.approved if proposed_package else False
                     },
                     'financial_impact': {
                         'emp_status_id': str(financial_impact.emp_status_id) if financial_impact and financial_impact.emp_status_id else '',
                         'serving_years': str(financial_impact.serving_years) if financial_impact and financial_impact.serving_years else '',
                         'salary': str(financial_impact.salary) if financial_impact and financial_impact.salary else '',
-                        'gratuity': str(financial_impact.gratuity) if financial_impact and financial_impact.gratuity else '',
-                        'bonus': str(financial_impact.bonus) if financial_impact and financial_impact.bonus else '',
-                        'leave_encashment': str(financial_impact.leave_encashment) if financial_impact and financial_impact.leave_encashment else '',
-                        'mobile_allowance': str(financial_impact.mobile_allowance) if financial_impact and financial_impact.mobile_allowance else '',
-                        'fuel': str(financial_impact.fuel) if financial_impact and financial_impact.fuel else '',
-                        'total': str(financial_impact.total) if financial_impact and financial_impact.total else ''
+                        'gratuity': str(financial_impact.gratuity) if financial_impact and financial_impact.gratuity else ''
                     }
                 }
 
@@ -2254,9 +2867,6 @@ class GetDataView(View):
         except Exception as e:
             logger.error(f"Error in GetDataView: {str(e)}")
             return JsonResponse({'error': f'Invalid data: {str(e)}'}, status=400)
-
-
-
 
 
 
@@ -2564,41 +3174,6 @@ class GetDepartmentEmployeesView(View):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from django.views import View
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -2630,6 +3205,7 @@ from decimal import Decimal
 #                 for employee_id, tabs in data.items():
 #                     employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
 #                     if not employee:
+#                         logger.error(f"Employee {employee_id} not found for department {department_id}")
 #                         return JsonResponse({'error': f'Employee {employee_id} not found'}, status=404)
 
 #                     has_changes = False
@@ -2689,70 +3265,89 @@ from decimal import Decimal
 #                             employee_draft = EmployeeDraft(employee=employee, company=employee.company, department_team=employee.department_team)
 #                         for field, value in tabs.get('employee', {}).items():
 #                             if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks'] and employee_draft_edited.get(field):
-#                                 if field == 'department_group_id':
-#                                     employee_draft.department_group_id = int(value) if value else None
-#                                 elif field == 'section_id':
-#                                     employee_draft.section_id = int(value) if value else None
-#                                 elif field == 'designation_id':
-#                                     employee_draft.designation_id = int(value) if value else None
-#                                 elif field == 'location_id':
-#                                     employee_draft.location_id = int(value) if value else None
-#                                 elif field == 'resign':
-#                                     employee_draft.resign = value == 'true'
-#                                 elif field == 'date_of_joining' or field == 'date_of_resignation':
-#                                     employee_draft.__setattr__(field, value or None)
-#                                 elif field == 'fullname' or field == 'remarks':
-#                                     employee_draft.__setattr__(field, value or None)
+#                                 try:
+#                                     if field == 'department_group_id':
+#                                         employee_draft.department_group_id = int(value) if value else None
+#                                     elif field == 'section_id':
+#                                         employee_draft.section_id = int(value) if value else None
+#                                     elif field == 'designation_id':
+#                                         employee_draft.designation_id = int(value) if value else None
+#                                         if employee_draft.designation_id:
+#                                             Designation.objects.get(id=employee_draft.designation_id)  # Validate designation_id
+#                                     elif field == 'location_id':
+#                                         employee_draft.location_id = int(value) if value else None
+#                                     elif field == 'resign':
+#                                         employee_draft.resign = value == 'true'
+#                                     elif field == 'date_of_joining' or field == 'date_of_resignation':
+#                                         employee_draft.__setattr__(field, value or None)
+#                                     elif field == 'fullname' or field == 'remarks':
+#                                         employee_draft.__setattr__(field, value or None)
+#                                 except (ValueError, Designation.DoesNotExist) as e:
+#                                     logger.error(f"Invalid designation_id {value} for employee {employee_id}: {str(e)}")
+#                                     return JsonResponse({'error': f'Invalid designation ID: {value}'}, status=400)
 #                         employee_draft.edited_fields = employee_draft_edited
 #                         if employee_draft_edited:
 #                             employee_draft.save()
 #                             drafts_saved = True
 
-#                     if current_package_edited:
-#                         draft, created = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-#                         for field, value in tabs.get('current_package', {}).items():
-#                             if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance'] and current_package_edited.get(field):
-#                                 if field == 'vehicle_id':
-#                                     draft.vehicle_id = int(value) if value else None
-#                                 elif field in ['gross_salary', 'fuel_limit', 'mobile_allowance']:
-#                                     draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
-#                         draft.edited_fields = current_package_edited
-#                         draft.save()
-#                         drafts_saved = True
+#                         if current_package_edited:
+#                             draft, created = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+#                             for field, value in tabs.get('current_package', {}).items():
+#                                 if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance'] and current_package_edited.get(field):
+#                                     try:
+#                                         if field == 'vehicle_id':
+#                                             draft.vehicle_id = int(value) if value else None
+#                                         elif field in ['gross_salary', 'fuel_limit', 'mobile_allowance']:
+#                                             draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
+#                                     except ValueError as e:
+#                                         logger.error(f"Invalid value for {field} in current_package for employee {employee_id}: {str(e)}")
+#                                         return JsonResponse({'error': f'Invalid value for {field}: {value}'}, status=400)
+#                             draft.edited_fields = current_package_edited
+#                             draft.save()
+#                             drafts_saved = True
 
-#                     if proposed_package_edited:
-#                         draft, created = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-#                         for field, value in tabs.get('proposed_package', {}).items():
-#                             if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id'] and proposed_package_edited.get('vehicle_id' if field == 'vehicle_proposed_id' else field):
-#                                 if field == 'vehicle_proposed_id':
-#                                     draft.vehicle_id = int(value) if value else None
-#                                 elif field == 'mobile_allowance_proposed':
-#                                     draft.mobile_allowance = Decimal(value) if value else Decimal('0')
-#                                 elif field in ['increment_percentage', 'increased_fuel_amount']:
-#                                     draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
-#                         draft.edited_fields = proposed_package_edited
-#                         draft.save()
-#                         drafts_saved = True
+#                         if proposed_package_edited:
+#                             draft, created = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+#                             for field, value in tabs.get('proposed_package', {}).items():
+#                                 if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id'] and proposed_package_edited.get('vehicle_id' if field == 'vehicle_proposed_id' else field):
+#                                     try:
+#                                         if field == 'vehicle_proposed_id':
+#                                             draft.vehicle_id = int(value) if value else None
+#                                         elif field == 'mobile_allowance_proposed':
+#                                             draft.mobile_allowance = Decimal(value) if value else Decimal('0')
+#                                         elif field in ['increment_percentage', 'increased_fuel_amount']:
+#                                             draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
+#                                     except ValueError as e:
+#                                         logger.error(f"Invalid value for {field} in proposed_package for employee {employee_id}: {str(e)}")
+#                                         return JsonResponse({'error': f'Invalid value for {field}: {value}'}, status=400)
+#                             draft.edited_fields = proposed_package_edited
+#                             draft.save()
+#                             drafts_saved = True
 
-#                     if financial_impact_edited:
-#                         draft, created = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
-#                         for field, value in tabs.get('financial_impact', {}).items():
-#                             if field == 'emp_status_id' and financial_impact_edited.get(field):
-#                                 draft.emp_status_id = int(value) if value else None
-#                         draft.edited_fields = financial_impact_edited
-#                         draft.save()
-#                         drafts_saved = True
+#                         if financial_impact_edited:
+#                             draft, created = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
+#                             for field, value in tabs.get('financial_impact', {}).items():
+#                                 if field == 'emp_status_id' and financial_impact_edited.get(field):
+#                                     try:
+#                                         draft.emp_status_id = int(value) if value else None
+#                                     except ValueError as e:
+#                                         logger.error(f"Invalid emp_status_id {value} for employee {employee_id}: {str(e)}")
+#                                         return JsonResponse({'error': f'Invalid emp_status_id: {value}'}, status=400)
+#                             draft.edited_fields = financial_impact_edited
+#                             draft.save()
+#                             drafts_saved = True
 
 #                 if drafts_saved:
 #                     return JsonResponse({'message': 'Draft saved'})
 #                 else:
 #                     return JsonResponse({'message': 'No changes to save'}, status=200)
 #         except Exception as e:
-#             print("error: ", e)
+#             logger.error(f"Error in SaveDraftView for department {department_id}: {str(e)}", exc_info=True)
 #             return JsonResponse({'error': str(e)}, status=500)
 
-
-
+'''
+Updated save draft view
+'''
 
 class SaveDraftView(View):
     @classmethod
@@ -2780,137 +3375,209 @@ class SaveDraftView(View):
                     proposed_package_edited = {}
                     financial_impact_edited = {}
 
+                    # Detect changes
                     for tab, fields in tabs.items():
                         if tab == 'employee':
                             for field, value in fields.items():
-                                if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks']:
-                                    current_value = getattr(employee, field, None)
-                                    if field in ['department_group_id', 'section_id', 'designation_id', 'location_id']:
-                                        current_value = getattr(getattr(employee, field, None), 'id', None)
-                                    elif field == 'resign':
-                                        current_value = str(current_value).lower()
-                                    if str(value) != str(current_value):
-                                        has_changes = True
-                                        employee_draft_edited[field] = True
+                                current_value = getattr(employee, field, None)
+                                if field.endswith('_id'):
+                                    current_value = getattr(getattr(employee, field.replace('_id', ''), None), 'id', None)
+                                elif isinstance(current_value, bool):
+                                    current_value = str(current_value).lower()
+                                if str(value) != str(current_value):
+                                    has_changes = True
+                                    employee_draft_edited[field] = True
+
                         elif tab == 'current_package':
+                            current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
                             for field, value in fields.items():
-                                if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance']:
-                                    current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
-                                    current_value = getattr(current_package, field, None) if current_package else None
-                                    if field == 'vehicle_id':
-                                        current_value = current_value.id if current_value else None
-                                    if str(value) != str(current_value):
-                                        has_changes = True
-                                        current_package_edited[field] = True
+                                current_value = getattr(current_package, field, None) if current_package else None
+                                if field.endswith('_id'):
+                                    current_value = current_value.id if current_value else None
+                                if str(value) != str(current_value):
+                                    has_changes = True
+                                    current_package_edited[field] = True
+
                         elif tab == 'proposed_package':
+                            proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
                             for field, value in fields.items():
-                                if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id']:
-                                    proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
-                                    field_key = 'mobile_allowance' if field == 'mobile_allowance_proposed' else ('vehicle_id' if field == 'vehicle_proposed_id' else field)
-                                    current_value = getattr(proposed_package, field_key, None) if proposed_package else None
-                                    if field in ['vehicle_proposed_id']:
-                                        current_value = current_value.id if current_value else None
-                                    if str(value) != str(current_value):
-                                        has_changes = True
-                                        proposed_package_edited[field_key] = True
+                                current_value = getattr(proposed_package, field, None) if proposed_package else None
+                                if field.endswith('_id'):
+                                    current_value = current_value.id if current_value else None
+                                if str(value) != str(current_value):
+                                    has_changes = True
+                                    proposed_package_edited[field] = True
+
                         elif tab == 'financial_impact':
+                            financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
                             for field, value in fields.items():
-                                if field == 'emp_status_id':
-                                    financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
-                                    current_value = getattr(financial_impact, 'emp_status_id', None) if financial_impact else None
-                                    if str(value) != str(current_value):
-                                        has_changes = True
-                                        financial_impact_edited[field] = True
+                                current_value = getattr(financial_impact, field, None) if financial_impact else None
+                                if field.endswith('_id'):
+                                    current_value = current_value.id if current_value else None
+                                if str(value) != str(current_value):
+                                    has_changes = True
+                                    financial_impact_edited[field] = True
 
                     if not has_changes:
                         continue
 
+                    # Create or update EmployeeDraft
                     employee_draft = EmployeeDraft.objects.filter(employee=employee).first()
-                    if employee_draft_edited or current_package_edited or proposed_package_edited or financial_impact_edited:
-                        if not employee_draft:
-                            employee_draft = EmployeeDraft(employee=employee, company=employee.company, department_team=employee.department_team)
-                        for field, value in tabs.get('employee', {}).items():
-                            if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks'] and employee_draft_edited.get(field):
-                                try:
-                                    if field == 'department_group_id':
-                                        employee_draft.department_group_id = int(value) if value else None
-                                    elif field == 'section_id':
-                                        employee_draft.section_id = int(value) if value else None
-                                    elif field == 'designation_id':
-                                        employee_draft.designation_id = int(value) if value else None
-                                        if employee_draft.designation_id:
-                                            Designation.objects.get(id=employee_draft.designation_id)  # Validate designation_id
-                                    elif field == 'location_id':
-                                        employee_draft.location_id = int(value) if value else None
-                                    elif field == 'resign':
-                                        employee_draft.resign = value == 'true'
-                                    elif field == 'date_of_joining' or field == 'date_of_resignation':
-                                        employee_draft.__setattr__(field, value or None)
-                                    elif field == 'fullname' or field == 'remarks':
-                                        employee_draft.__setattr__(field, value or None)
-                                except (ValueError, Designation.DoesNotExist) as e:
-                                    logger.error(f"Invalid designation_id {value} for employee {employee_id}: {str(e)}")
-                                    return JsonResponse({'error': f'Invalid designation ID: {value}'}, status=400)
-                        employee_draft.edited_fields = employee_draft_edited
-                        if employee_draft_edited:
-                            employee_draft.save()
-                            drafts_saved = True
+                    if not employee_draft:
+                        employee_draft = EmployeeDraft(employee=employee, company=employee.company, department_team=employee.department_team)
 
-                        if current_package_edited:
-                            draft, created = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-                            for field, value in tabs.get('current_package', {}).items():
-                                if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance'] and current_package_edited.get(field):
-                                    try:
-                                        if field == 'vehicle_id':
-                                            draft.vehicle_id = int(value) if value else None
-                                        elif field in ['gross_salary', 'fuel_limit', 'mobile_allowance']:
-                                            draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
-                                    except ValueError as e:
-                                        logger.error(f"Invalid value for {field} in current_package for employee {employee_id}: {str(e)}")
-                                        return JsonResponse({'error': f'Invalid value for {field}: {value}'}, status=400)
-                            draft.edited_fields = current_package_edited
-                            draft.save()
-                            drafts_saved = True
+                    # Save employee fields
+                    for field, value in tabs.get('employee', {}).items():
+                        if employee_draft_edited.get(field):
+                            if field.endswith('_id'):
+                                setattr(employee_draft, field, int(value) if value else None)
+                            elif isinstance(getattr(EmployeeDraft, field).field, models.BooleanField):
+                                setattr(employee_draft, field, value == 'true')
+                            else:
+                                setattr(employee_draft, field, value or None)
 
-                        if proposed_package_edited:
-                            draft, created = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-                            for field, value in tabs.get('proposed_package', {}).items():
-                                if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id'] and proposed_package_edited.get('vehicle_id' if field == 'vehicle_proposed_id' else field):
-                                    try:
-                                        if field == 'vehicle_proposed_id':
-                                            draft.vehicle_id = int(value) if value else None
-                                        elif field == 'mobile_allowance_proposed':
-                                            draft.mobile_allowance = Decimal(value) if value else Decimal('0')
-                                        elif field in ['increment_percentage', 'increased_fuel_amount']:
-                                            draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
-                                    except ValueError as e:
-                                        logger.error(f"Invalid value for {field} in proposed_package for employee {employee_id}: {str(e)}")
-                                        return JsonResponse({'error': f'Invalid value for {field}: {value}'}, status=400)
-                            draft.edited_fields = proposed_package_edited
-                            draft.save()
-                            drafts_saved = True
+                    employee_draft.edited_fields = employee_draft_edited
+                    if employee_draft_edited:
+                        employee_draft.save()
+                        drafts_saved = True
 
-                        if financial_impact_edited:
-                            draft, created = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
-                            for field, value in tabs.get('financial_impact', {}).items():
-                                if field == 'emp_status_id' and financial_impact_edited.get(field):
-                                    try:
-                                        draft.emp_status_id = int(value) if value else None
-                                    except ValueError as e:
-                                        logger.error(f"Invalid emp_status_id {value} for employee {employee_id}: {str(e)}")
-                                        return JsonResponse({'error': f'Invalid emp_status_id: {value}'}, status=400)
-                            draft.edited_fields = financial_impact_edited
-                            draft.save()
-                            drafts_saved = True
+                    # Save current package fields
+                    if current_package_edited:
+                        draft, _ = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+                        for field, value in tabs.get('current_package', {}).items():
+                            if current_package_edited.get(field):
+                                if field.endswith('_id'):
+                                    setattr(draft, field, int(value) if value else None)
+                                elif isinstance(getattr(CurrentPackageDetailsDraft, field).field, models.BooleanField):
+                                    setattr(draft, field, value == 'true')
+                                else:
+                                    setattr(draft, field, Decimal(value) if value else Decimal('0'))
+                        draft.edited_fields = current_package_edited
+                        draft.save()
+                        drafts_saved = True
 
-                if drafts_saved:
-                    return JsonResponse({'message': 'Draft saved'})
-                else:
-                    return JsonResponse({'message': 'No changes to save'}, status=200)
+                    # Save proposed package fields
+                    if proposed_package_edited:
+                        draft, _ = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+                        for field, value in tabs.get('proposed_package', {}).items():
+                            if proposed_package_edited.get(field):
+                                if field.endswith('_id'):
+                                    setattr(draft, field, int(value) if value else None)
+                                elif isinstance(getattr(ProposedPackageDetailsDraft, field).field, models.BooleanField):
+                                    setattr(draft, field, value == 'true')
+                                else:
+                                    setattr(draft, field, Decimal(value) if value else Decimal('0'))
+                        draft.edited_fields = proposed_package_edited
+                        draft.save()
+                        drafts_saved = True
+
+                    # Save financial impact fields
+                    if financial_impact_edited:
+                        draft, _ = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
+                        for field, value in tabs.get('financial_impact', {}).items():
+                            if financial_impact_edited.get(field):
+                                if field.endswith('_id'):
+                                    setattr(draft, field, int(value) if value else None)
+                                else:
+                                    setattr(draft, field, Decimal(value) if value else Decimal('0'))
+                        draft.edited_fields = financial_impact_edited
+                        draft.save()
+                        drafts_saved = True
+
+                return JsonResponse({'message': 'Draft saved' if drafts_saved else 'No changes to save'}, status=200)
+
         except Exception as e:
             logger.error(f"Error in SaveDraftView for department {department_id}: {str(e)}", exc_info=True)
             return JsonResponse({'error': str(e)}, status=500)
 
+
+
+
+# class SaveFinalView(View):
+#     @classmethod
+#     def as_view(cls, **initkwargs):
+#         view = super().as_view(**initkwargs)
+#         view = login_required(view)
+#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+#         view = ensure_csrf_cookie(view)
+#         return view
+
+#     def post(self, request, department_id):
+#         try:
+#             data = json.loads(request.body)
+#             updated_employees = []
+#             with transaction.atomic():
+#                 for employee_id, tabs in data.items():
+#                     employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
+#                     if not employee:
+#                         return JsonResponse({'error': f'Employee {employee_id} not found'}, status=404)
+
+#                     employee_draft = EmployeeDraft.objects.filter(employee=employee).first()
+#                     if employee_draft and employee_draft.edited_fields:  # Only process if draft has edited fields
+#                         for tab, fields in tabs.items():
+#                             if tab == 'employee':
+#                                 for field, value in fields.items():
+#                                     if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks']:
+#                                         if field == 'department_group_id':
+#                                             employee.department_group_id = int(value) if value else None
+#                                         elif field == 'section_id':
+#                                             employee.section_id = int(value) if value else None
+#                                         elif field == 'designation_id':
+#                                             employee.designation_id = int(value) if value else None
+#                                         elif field == 'location_id':
+#                                             employee.location_id = int(value) if value else None
+#                                         elif field == 'resign':
+#                                             employee.resign = value == 'true'
+#                                         elif field == 'date_of_joining' or field == 'date_of_resignation':
+#                                             employee.__setattr__(field, value or None)
+#                                         elif field == 'fullname' or field == 'remarks':
+#                                             employee.__setattr__(field, value or None)
+#                                 employee.save()
+
+#                             elif tab == 'current_package':
+#                                 current_package, created = CurrentPackageDetails.objects.get_or_create(employee=employee)
+#                                 for field, value in fields.items():
+#                                     if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance']:
+#                                         if field == 'vehicle_id':
+#                                             current_package.vehicle_id = int(value) if value else None
+#                                         elif field in ['gross_salary', 'fuel_limit', 'mobile_allowance']:
+#                                             current_package.__setattr__(field, Decimal(value) if value else Decimal('0'))
+#                                 current_package.save()
+
+#                             elif tab == 'proposed_package':
+#                                 proposed_package, created = ProposedPackageDetails.objects.get_or_create(employee=employee)
+#                                 for field, value in fields.items():
+#                                     if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id']:
+#                                         if field == 'vehicle_proposed_id':
+#                                             proposed_package.vehicle_id = int(value) if value else None
+#                                         elif field == 'mobile_allowance_proposed':
+#                                             proposed_package.mobile_allowance = Decimal(value) if value else Decimal('0')
+#                                         elif field in ['increment_percentage', 'increased_fuel_amount']:
+#                                             proposed_package.__setattr__(field, Decimal(value) if value else Decimal('0'))
+#                                 proposed_package.save()
+
+#                             elif tab == 'financial_impact':
+#                                 financial_impact, created = FinancialImpactPerMonth.objects.get_or_create(employee=employee)
+#                                 for field, value in fields.items():
+#                                     if field == 'emp_status_id':
+#                                         financial_impact.emp_status_id = int(value) if value else None
+#                                 financial_impact.save()
+
+#                         updated_employees.append(employee_id)
+#                         employee_draft.delete()
+
+#                 if updated_employees:
+#                     EmployeeDraft.objects.filter(employee__department_team_id=department_id).delete()
+#                     return JsonResponse({'message': 'Changes saved'})
+#                 else:
+#                     return JsonResponse({'message': 'No changes to save'}, status=200)
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)}, status=500)
+
+
+'''
+updated code for save final
+'''
 
 class SaveFinalView(View):
     @classmethod
@@ -2927,16 +3594,24 @@ class SaveFinalView(View):
             updated_employees = []
             with transaction.atomic():
                 for employee_id, tabs in data.items():
-                    employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
+                    employee = Employee.objects.filter(
+                        emp_id=employee_id, department_team_id=department_id
+                    ).first()
                     if not employee:
                         return JsonResponse({'error': f'Employee {employee_id} not found'}, status=404)
 
                     employee_draft = EmployeeDraft.objects.filter(employee=employee).first()
-                    if employee_draft and employee_draft.edited_fields:  # Only process if draft has edited fields
+                    if employee_draft and employee_draft.edited_fields:  # Only process if draft has edits
                         for tab, fields in tabs.items():
+
+                            # Employee Tab
                             if tab == 'employee':
                                 for field, value in fields.items():
-                                    if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks']:
+                                    if field in [
+                                        'fullname', 'department_group_id', 'section_id',
+                                        'designation_id', 'location_id', 'date_of_joining',
+                                        'resign', 'date_of_resignation', 'remarks'
+                                    ]:
                                         if field == 'department_group_id':
                                             employee.department_group_id = int(value) if value else None
                                         elif field == 'section_id':
@@ -2947,39 +3622,47 @@ class SaveFinalView(View):
                                             employee.location_id = int(value) if value else None
                                         elif field == 'resign':
                                             employee.resign = value == 'true'
-                                        elif field == 'date_of_joining' or field == 'date_of_resignation':
-                                            employee.__setattr__(field, value or None)
-                                        elif field == 'fullname' or field == 'remarks':
-                                            employee.__setattr__(field, value or None)
+                                        elif field in ['date_of_joining', 'date_of_resignation']:
+                                            setattr(employee, field, value or None)
+                                        elif field in ['fullname', 'remarks']:
+                                            setattr(employee, field, value or None)
                                 employee.save()
 
+                            # Current Package Tab
                             elif tab == 'current_package':
                                 current_package, created = CurrentPackageDetails.objects.get_or_create(employee=employee)
                                 for field, value in fields.items():
                                     if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance']:
                                         if field == 'vehicle_id':
                                             current_package.vehicle_id = int(value) if value else None
-                                        elif field in ['gross_salary', 'fuel_limit', 'mobile_allowance']:
-                                            current_package.__setattr__(field, Decimal(value) if value else Decimal('0'))
+                                        else:
+                                            setattr(current_package, field, Decimal(value) if value else Decimal('0'))
                                 current_package.save()
 
+                            # Proposed Package Tab
                             elif tab == 'proposed_package':
                                 proposed_package, created = ProposedPackageDetails.objects.get_or_create(employee=employee)
                                 for field, value in fields.items():
-                                    if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id']:
+                                    if field in ['increment_percentage', 'increased_fuel_amount',
+                                                 'mobile_allowance_proposed', 'vehicle_proposed_id']:
                                         if field == 'vehicle_proposed_id':
                                             proposed_package.vehicle_id = int(value) if value else None
                                         elif field == 'mobile_allowance_proposed':
                                             proposed_package.mobile_allowance = Decimal(value) if value else Decimal('0')
-                                        elif field in ['increment_percentage', 'increased_fuel_amount']:
-                                            proposed_package.__setattr__(field, Decimal(value) if value else Decimal('0'))
+                                        else:
+                                            setattr(proposed_package, field, Decimal(value) if value else Decimal('0'))
                                 proposed_package.save()
 
+                            # Financial Impact Tab
                             elif tab == 'financial_impact':
                                 financial_impact, created = FinancialImpactPerMonth.objects.get_or_create(employee=employee)
                                 for field, value in fields.items():
                                     if field == 'emp_status_id':
                                         financial_impact.emp_status_id = int(value) if value else None
+                                    elif field in ['serving_years']:
+                                        financial_impact.serving_years = int(value) if value else None
+                                    elif field in ['salary', 'gratuity']:
+                                        setattr(financial_impact, field, Decimal(value) if value else Decimal('0'))
                                 financial_impact.save()
 
                         updated_employees.append(employee_id)
@@ -2992,7 +3675,5 @@ class SaveFinalView(View):
                     return JsonResponse({'message': 'No changes to save'}, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
-
-
 
 

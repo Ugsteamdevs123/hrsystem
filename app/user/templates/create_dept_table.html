@@ -70,6 +70,17 @@
                     <input type="date" id="date_of_resignation" name="date_of_resignation" disabled>
                 </div>
                 <div class="form-field">
+                    <label for="eligible_for_increment">Eligible for Increment <span class="req">*</span></label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" name="eligible_for_increment" value="true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" name="eligible_for_increment" value="false" checked> No
+                        </label>
+                    </div>
+                </div>
+                <div class="form-field">
                     <label for="remarks">Remarks</label>
                     <textarea id="remarks" name="remarks"></textarea>
                 </div>
@@ -96,8 +107,19 @@
                     <input type="number" id="fuel_limit" name="fuel_limit" step="0.01">
                 </div>
                 <div class="form-field">
-                    <label for="mobile_allowance">Mobile Allowance</label>
-                    <input type="number" id="mobile_allowance" name="mobile_allowance" step="0.01">
+                    <label for="mobile_provided">Mobile Provided</label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" name="mobile_provided" value="true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" name="mobile_provided" value="false" checked> No
+                        </label>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label for="fuel_litre">Fuel (Litres)</label>
+                    <input type="number" id="fuel_litre" name="fuel_litre" step="0.01">
                 </div>
             </div>
             <!-- Step 3: Proposed Package -->
@@ -112,14 +134,40 @@
                     <input type="number" id="increased_fuel_amount" name="increased_fuel_amount" step="0.01">
                 </div>
                 <div class="form-field">
-                    <label for="mobile_allowance_proposed">Mobile Allowance</label>
-                    <input type="number" id="mobile_allowance_proposed" name="mobile_allowance_proposed" step="0.01">
+                    <label for="mobile_provided_proposed">Mobile Provided</label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" name="mobile_provided_proposed" value="true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" name="mobile_provided_proposed" value="false" checked> No
+                        </label>
+                    </div>
                 </div>
                 <div class="form-field">
                     <label for="vehicle_proposed_id">Vehicle</label>
                     <select id="vehicle_proposed_id" name="vehicle_proposed_id">
                         <option value="">Select Vehicle</option>
                     </select>
+                </div>
+                <div class="form-field">
+                    <label for="fuel_litre">Fuel (Litres)</label>
+                    <input type="number" id="fuel_litre" name="fuel_litre" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="vehicle_allowance">Vehicle Allowance</label>
+                    <input type="number" id="vehicle_allowance" name="vehicle_allowance" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="approved">Approved <span class="req">*</span></label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" name="approved" value="true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" name="approved" value="false" checked> No
+                        </label>
+                    </div>
                 </div>
             </div>
             <!-- Step 4: Financial Impact -->
@@ -319,8 +367,7 @@
             currentSelect.innerHTML = '<option value="">Select Vehicle</option>';
             proposedSelect.innerHTML = '<option value="">Select Vehicle</option>';
             data.forEach(v => {
-                const plateText = `Number Plate (${v.registration_number && v.registration_number.trim() ? v.registration_number : 'Not Assigned'})`;
-                const label = `${v.brand_name} ${v.model_name} ${v.year} (${v.condition}) - ${plateText}`;
+                const label = `${v.brand_name} ${v.model_name} - ${v.vehicle_type}`;
                 const opt1 = document.createElement('option');
                 opt1.value = v.id;
                 opt1.textContent = label;
@@ -436,6 +483,7 @@
             if (q('#resign').value === 'true' && !q('#date_of_resignation').value.trim()) errors.push('Date of Resignation is required');
             if (addNewDesignationCheckbox.checked && !newDesignationInput.value.trim()) errors.push('New Designation Title is required');
             if (!addNewDesignationCheckbox.checked && !designationSelect.value) errors.push('Designation is required');
+            if (!q('input[name="eligible_for_increment"]:checked')) errors.push('Eligible for Increment is required');
             return errors;
         }
 
@@ -460,7 +508,12 @@
                 for (const [key, value] of Object.entries(formDataStore[stepIndex])) {
                     const input = q(`#${key}`);
                     if (input) {
-                        input.value = value || '';
+                        if (input.type === 'radio') {
+                            const radio = q(`input[name="${key}"][value="${value}"]`);
+                            if (radio) radio.checked = true;
+                        } else {
+                            input.value = value || '';
+                        }
                         if (key === 'department_group_id' && value) populateSections(value);
                         if (key === 'resign') updateResignationFieldVisibility();
                         if (key === 'designation_id' || key === 'new_designation_title') updateDesignationFieldVisibility();
@@ -550,7 +603,12 @@
                     showStep(currentStep);
                     form.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
                         if (['employee_id', 'step', 'csrfmiddlewaretoken'].includes(input.id)) return;
-                        input.value = '';
+                        if (input.type === 'radio') {
+                            const radioGroup = form.querySelectorAll(`input[name="${input.name}"]`);
+                            radioGroup.forEach(radio => radio.checked = radio.value === 'false');
+                        } else {
+                            input.value = '';
+                        }
                     });
                     addNewDesignationCheckbox.checked = false;
                     updateDesignationFieldVisibility();
