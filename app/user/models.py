@@ -223,7 +223,7 @@ class VehicleModel(models.Model):
 
 class Employee(models.Model):
 
-    emp_id = models.AutoField(primary_key=True)
+    emp_id = models.IntegerField(unique=True)
     fullname = models.CharField(max_length=255)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     department_team = models.ForeignKey(DepartmentTeams, on_delete=models.CASCADE)
@@ -258,7 +258,7 @@ class CurrentPackageDetails(models.Model):
 
     fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    total = models.IntegerField()
+    total = models.IntegerField(null=True, blank=True)
 
     company_pickup = models.BooleanField(default=False)
 
@@ -299,7 +299,7 @@ class ProposedPackageDetails(models.Model):
     mobile_provided = models.BooleanField(default=False)
     fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    total = models.IntegerField()
+    total = models.IntegerField(null=True, blank=True)
     approved = models.BooleanField(default=False)
 
     company_pickup = models.BooleanField(default=False)
@@ -375,7 +375,7 @@ from django.core.exceptions import ValidationError
 from auditlog.models import AuditlogHistoryField
 
 class EmployeeDraft(models.Model):
-    emp_id = models.AutoField(primary_key=True)
+    emp_id = models.IntegerField(unique=True)
     employee = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='drafts')
 
     fullname = models.CharField(max_length=255, blank=True, null=True)

@@ -14,6 +14,12 @@
             <!-- Step 1: Employee Details -->
             <div class="step" id="step-employee">
                 <h4 class="step-title">Step 1: Employee Details</h4>
+                
+                <div class="form-field">
+                    <label for="emp_id">Employee ID <span class="req">*</span></label>
+                    <input type="text" id="emp_id" name="emp_id" required>
+                </div>
+
                 <div class="form-field">
                     <label for="fullname">Full Name <span class="req">*</span></label>
                     <input type="text" id="fullname" name="fullname" required>
@@ -475,6 +481,7 @@
         function validateEmployeeStep() {
             const errors = [];
             const q = sel => form.querySelector(sel);
+            if (!q('#emp_id').value.trim()) errors.push('Employee ID is required');
             if (!q('#fullname').value.trim()) errors.push('Full Name is required');
             if (!q('#department_group_id').value) errors.push('Department Group is required');
             if (!q('#section_id').value) errors.push('Section is required');
