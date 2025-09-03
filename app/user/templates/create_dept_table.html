@@ -14,6 +14,12 @@
             <!-- Step 1: Employee Details -->
             <div class="step" id="step-employee">
                 <h4 class="step-title">Step 1: Employee Details</h4>
+                
+                <div class="form-field">
+                    <label for="emp_id">Employee ID <span class="req">*</span></label>
+                    <input type="text" id="emp_id" name="emp_id" required>
+                </div>
+
                 <div class="form-field">
                     <label for="fullname">Full Name <span class="req">*</span></label>
                     <input type="text" id="fullname" name="fullname" required>
@@ -96,6 +102,19 @@
                     <label for="gross_salary">Gross Salary</label>
                     <input type="number" id="gross_salary" name="gross_salary" step="0.01">
                 </div>
+
+                <div class="form-field">
+                    <label for="company_pickup">Company Pickup</label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" name="company_pickup" value="true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" name="company_pickup" value="false" checked> No
+                        </label>
+                    </div>
+                </div>
+
                 <div class="form-field">
                     <label for="vehicle_id">Vehicle</label>
                     <select id="vehicle_id" name="vehicle_id">
@@ -121,6 +140,7 @@
                     <label for="fuel_litre">Fuel (Litres)</label>
                     <input type="number" id="fuel_litre" name="fuel_litre" step="0.01">
                 </div>
+
             </div>
             <!-- Step 3: Proposed Package -->
             <div class="step hidden" id="step-proposed_package">
@@ -144,6 +164,19 @@
                         </label>
                     </div>
                 </div>
+
+                <div class="form-field">
+                    <label for="company_pickup">Company Pickup</label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" name="company_pickup" value="true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" name="company_pickup" value="false" checked> No
+                        </label>
+                    </div>
+                </div>
+
                 <div class="form-field">
                     <label for="vehicle_proposed_id">Vehicle</label>
                     <select id="vehicle_proposed_id" name="vehicle_proposed_id">
@@ -169,6 +202,7 @@
                         </label>
                     </div>
                 </div>
+
             </div>
             <!-- Step 4: Financial Impact -->
             <div class="step hidden" id="step-financial_impact">
@@ -475,6 +509,7 @@
         function validateEmployeeStep() {
             const errors = [];
             const q = sel => form.querySelector(sel);
+            if (!q('#emp_id').value.trim()) errors.push('Employee ID is required');
             if (!q('#fullname').value.trim()) errors.push('Full Name is required');
             if (!q('#department_group_id').value) errors.push('Department Group is required');
             if (!q('#section_id').value) errors.push('Section is required');

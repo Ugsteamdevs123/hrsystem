@@ -223,7 +223,7 @@ class VehicleModel(models.Model):
 
 class Employee(models.Model):
 
-    emp_id = models.AutoField(primary_key=True)
+    emp_id = models.IntegerField(unique=True)
     fullname = models.CharField(max_length=255)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     department_team = models.ForeignKey(DepartmentTeams, on_delete=models.CASCADE)
@@ -258,7 +258,7 @@ class CurrentPackageDetails(models.Model):
 
     fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    total = models.IntegerField()
+    total = models.IntegerField(null=True, blank=True)
 
     company_pickup = models.BooleanField(default=False)
 
@@ -299,7 +299,7 @@ class ProposedPackageDetails(models.Model):
     mobile_provided = models.BooleanField(default=False)
     fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    total = models.IntegerField()
+    total = models.IntegerField(null=True, blank=True)
     approved = models.BooleanField(default=False)
 
     company_pickup = models.BooleanField(default=False)
@@ -375,7 +375,7 @@ from django.core.exceptions import ValidationError
 from auditlog.models import AuditlogHistoryField
 
 class EmployeeDraft(models.Model):
-    emp_id = models.AutoField(primary_key=True)
+    emp_id = models.IntegerField(unique=True)
     employee = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='drafts')
 
     fullname = models.CharField(max_length=255, blank=True, null=True)
@@ -403,9 +403,19 @@ class EmployeeDraft(models.Model):
     def __str__(self):
         return f"Draft for {self.employee.fullname}"
 
+    # def save(self, *args, **kwargs):
+    #     # Ensure at least one field is edited
+    #     if not self.edited_fields and not self.pk:
+    #         raise ValidationError("At least one field must be edited to create a draft.")
+    #     super().save(*args, **kwargs)
+
     def save(self, *args, **kwargs):
-        # Ensure at least one field is edited
-        if not self.edited_fields and not self.pk:
+        """
+        Custom save method that enforces edited_fields on create,
+        but allows bypassing validation with `validate=False`.
+        """
+        validate = kwargs.pop('validate', True)
+        if validate and not self.edited_fields and not self.pk:
             raise ValidationError("At least one field must be edited to create a draft.")
         super().save(*args, **kwargs)
 
@@ -513,7 +523,7 @@ class FinancialImpactPerMonthDraft(models.Model):
         super().save(*args, **kwargs)
         
 
-class configurations(models.Model):
+class Configurations(models.Model):
     fuel_rate = models.FloatField(null=True)
     as_of_date = models.DateField(null=True)
 
@@ -580,6 +590,7 @@ class FieldReference(models.Model):
         ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
         ('IncrementDetailsSummary', 'Increment Details Summary'),
         ('Employee', 'Employee'),
+        ('Configurations', 'Configurations')
     ]
 
     model_name = models.CharField(max_length=255, choices=MODEL_CHOICES)

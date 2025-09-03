@@ -14,6 +14,13 @@
             <!-- Step 1: Employee Details -->
             <div class="step" id="step-employee">
                 <h4 class="step-title">Step 1: Employee Details</h4>
+
+                <div class="form-field">
+                    <label for="emp_id">Employee ID <span class="req">*</span></label>
+                    <input type="text" id="emp_id" name="emp_id" required>
+                </div>
+
+
                 <div class="form-field">
                     <label for="fullname">Full Name <span class="req">*</span></label>
                     <input type="text" id="fullname" name="fullname" required>
@@ -96,6 +103,19 @@
                     <label for="gross_salary">Gross Salary</label>
                     <input type="number" id="gross_salary" name="gross_salary" step="0.01">
                 </div>
+
+                <div class="form-field">
+                    <label for="company_pickup_current">Company Pickup</label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" id="company_pickup_current_true" name="company_pickup_current" value="true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" id="company_pickup_current_false" name="company_pickup_current" value="false" checked> No
+                        </label>
+                    </div>
+                </div>
+                
                 <div class="form-field">
                     <label for="vehicle_id">Vehicle</label>
                     <select id="vehicle_id" name="vehicle_id">
@@ -144,6 +164,20 @@
                         </label>
                     </div>
                 </div>
+
+                <div class="form-field">
+                    <label for="company_pickup_proposed">Company Pickup Proposed</label>
+                    <div class="inline-group">
+                        <label class="inline-check">
+                            <input type="radio" id="company_pickup_proposed_true" name="company_pickup_proposed" value="true"> Yes
+                        </label>
+                        <label class="inline-check">
+                            <input type="radio" id="company_pickup_proposed_false" name="company_pickup_proposed" value="false" checked> No
+                        </label>
+                    </div>
+                </div>
+
+
                 <div class="form-field">
                     <label for="vehicle_proposed_id">Vehicle</label>
                     <select id="vehicle_proposed_id" name="vehicle_proposed_id">
@@ -279,6 +313,7 @@
                 return;
             }
             const q = sel => form.querySelector(sel);
+            q('#emp_id').value = data.employee.emp_id || '';
             q('#fullname').value = data.employee.fullname || '';
             q('#department_group_id').value = data.employee.department_group_id || '';
             populateSections(data.employee.department_group_id);
@@ -293,6 +328,10 @@
             q(`input[name="eligible_for_increment"][value="${eligibleValue}"]`).checked = true;
             q('#remarks').value = data.employee.remarks || '';
             q('#gross_salary').value = data.current_package?.gross_salary || '';
+            
+            const companyPickupCurrentValue = data.current_package?.company_pickup ? 'true' : 'false';
+            q(`input[name="company_pickup_current"][value="${companyPickupCurrentValue}"]`).checked = true;
+            
             q('#vehicle_id').value = data.current_package?.vehicle_id || '';
             q('#fuel_limit').value = data.current_package?.fuel_limit || '';
             const mobileProvidedValue = data.current_package?.mobile_provided ? 'true' : 'false';
@@ -302,6 +341,10 @@
             q('#increased_fuel_amount').value = data.proposed_package?.increased_fuel_amount || '';
             const mobileProvidedProposedValue = data.proposed_package?.mobile_provided ? 'true' : 'false';
             q(`input[name="mobile_provided_proposed"][value="${mobileProvidedProposedValue}"]`).checked = true;
+            
+            const companyPickupProposedValue = data.proposed_package?.company_pickup ? 'true' : 'false';
+            q(`input[name="company_pickup_proposed"][value="${companyPickupProposedValue}"]`).checked = true;
+            
             q('#vehicle_proposed_id').value = data.proposed_package?.vehicle_id || '';
             q('#fuel_litre').value = data.proposed_package?.fuel_litre || '';
             q('#vehicle_allowance').value = data.proposed_package?.vehicle_allowance || '';
@@ -309,10 +352,12 @@
             q(`input[name="approved"][value="${approvedValue}"]`).checked = true;
             q('#emp_status_id').value = data.financial_impact?.emp_status_id || '';
             formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, resign: q('#resign').value, date_of_resignation: q('#date_of_resignation').value, eligible_for_increment: eligibleValue, remarks: q('#remarks').value };
-            formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, vehicle_id: q('#vehicle_id').value, fuel_limit: q('#fuel_limit').value, mobile_provided: mobileProvidedValue, fuel_litre: q('#fuel_litre').value };
-            formDataStore[2] = { ...formDataStore[2], increment_percentage: q('#increment_percentage').value, increased_fuel_amount: q('#increased_fuel_amount').value, mobile_provided_proposed: mobileProvidedProposedValue, vehicle_proposed_id: q('#vehicle_proposed_id').value, fuel_litre: q('#fuel_litre').value, vehicle_allowance: q('#vehicle_allowance').value, approved: approvedValue };
+            formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, company_pickup: companyPickupCurrentValue, vehicle_id: q('#vehicle_id').value, fuel_limit: q('#fuel_limit').value, mobile_provided: mobileProvidedValue, fuel_litre: q('#fuel_litre').value };
+            formDataStore[2] = { ...formDataStore[2], increment_percentage: q('#increment_percentage').value, increased_fuel_amount: q('#increased_fuel_amount').value, mobile_provided_proposed: mobileProvidedProposedValue, company_pickup: companyPickupProposedValue, vehicle_proposed_id: q('#vehicle_proposed_id').value, fuel_litre: q('#fuel_litre').value, vehicle_allowance: q('#vehicle_allowance').value, approved: approvedValue };
             formDataStore[3] = { ...formDataStore[3], emp_status_id: q('#emp_status_id').value };
         }
+
+        console.log(populateForm);
 
         async function fetchDropdownData() {
             if (!companyId) {
@@ -519,6 +564,7 @@
         function validateEmployeeStep() {
             const errors = [];
             const q = sel => form.querySelector(sel);
+            if (!q('#emp_id').value.trim()) errors.push('Employee ID is required');
             if (!q('#fullname').value.trim()) errors.push('Full Name is required');
             if (!q('#department_group_id').value) errors.push('Department Group is required');
             if (!q('#section_id').value) errors.push('Section is required');
@@ -664,7 +710,7 @@
                     } else {
                         showSpinner();
                         showSnackbar('Employee updated successfully', '#28a745');
-                        window.location.href = `/department/{{ department_id }}/`;
+                        window.location.href = "{% url 'department_table' department_id=department_id %}";
                     }
                 } catch (e) {
                     showSnackbar('Error saving final step', '#dc3545');

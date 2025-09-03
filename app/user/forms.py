@@ -21,6 +21,8 @@ from .models import (
 )
 
 
+from django.core.exceptions import ValidationError
+
 class FormulaForm(forms.ModelForm):
 
     class Meta:
@@ -70,7 +72,12 @@ class FieldFormulaForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'rows': 3}),
         }
 
-    def __init__(self, user=None, *args, **kwargs):  # Add user parameter
+    # def __init__(self, user=None, *args, **kwargs):  # Add user parameter
+    #     super().__init__(*args, **kwargs)
+    #     self.user = user
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.user = user
 
@@ -144,49 +151,96 @@ class FieldReferenceAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # 1) Model choices (from allowed apps)
+        # Debugging: Log raw POST data and form state
+        print("INIT: Raw POST data:", dict(self.data))
+        print("INIT: Form instance PK:", self.instance.pk if self.instance else None)
+
+        # 1) Set model choices
         model_choices = [(m.__name__, m.__name__) for _, m in iter_allowed_models()]
         model_choices.sort(key=lambda x: x[0].lower())
         self.fields["model_name"].choices = [("", "Select a model…")] + model_choices
+        print("INIT: model_name choices:", self.fields["model_name"].choices)
 
-        # 2) Determine which model is selected for this request
+        # Store choices to ensure they persist
+        self._model_choices = self.fields["model_name"].choices
+
+        # 2) Determine selected model
         selected_model = self.data.get("model_name") or (self.instance.model_name if self.instance.pk else None)
+        print("INIT: Selected model:", selected_model)
 
-        # 3) Build field choices for the selected model (server-side, for validation)
+        # 3) Build field choices
         if selected_model:
-            _, model_cls = get_model_by_name(selected_model)
-            allowed = list_fields(model_cls)
-            choices = [("", "Select a field…")] + [(f, f) for f in allowed]
-            self.fields["field_name"].choices = choices
+            try:
+                _, model_cls = get_model_by_name(selected_model)
+                allowed = list_fields(model_cls)
+                choices = [("", "Select a field…")] + [(f, f) for f in allowed]
+                self.fields["field_name"].choices = choices
+                print("INIT: field_name choices for", selected_model, ":", choices)
 
-            # Guard: if POSTed field was populated via JS but choices weren’t yet built,
-            # temporarily add it so we avoid the generic “Select a valid choice …” error.
-            posted_field = self.data.get("field_name")
-            if posted_field and posted_field not in allowed:
-                self.fields["field_name"].choices += [(posted_field, posted_field)]
+                # Guard: Handle dynamically posted field_name
+                posted_field = self.data.get("field_name")
+                if posted_field and posted_field not in allowed:
+                    self.fields["field_name"].choices += [(posted_field, posted_field)]
+                    print("INIT: Added posted field to choices:", posted_field)
+            except Exception as e:
+                print(f"INIT: Error getting model/fields for {selected_model}: {e}")
         else:
             self.fields["field_name"].choices = [("", "Select a field…")]
+            print("INIT: No selected model, field_name choices:", self.fields["field_name"].choices)
+
+    def clean(self):
+        print("CLEAN: Starting form clean method")
+        print("CLEAN: model_name choices:", self.fields["model_name"].choices)
+        print("CLEAN: cleaned_data before super:", self.cleaned_data)
+        cleaned_data = super().clean()
+        print("CLEAN: cleaned_data after super:", cleaned_data)
+        return cleaned_data
+
+    def clean_model_name(self):
+        model_name = self.cleaned_data.get("model_name")
+        print("CLEAN_MODEL_NAME: Input model_name:", model_name)
+        print("CLEAN_MODEL_NAME: Available choices:", self._model_choices)
+
+        if not model_name:
+            raise ValidationError("Model name is required.")
+
+        model_choices = [m[0] for m in self._model_choices]
+        if model_name not in model_choices:
+            raise ValidationError(f"'{model_name}' is not a valid model name. Choices are: {model_choices}")
+
+        return model_name
 
     def clean_field_name(self):
         field = self.cleaned_data.get("field_name")
-        model_name = self.cleaned_data.get("model_name") or self.data.get("model_name")
-        _, model_cls = get_model_by_name(model_name)
-        allowed = list_fields(model_cls)
-        if field not in allowed:
-            # Clear, precise error instead of the generic one.
-            raise forms.ValidationError(f"'{field}' is not a valid field on {model_name}.")
+        model_name = self.cleaned_data.get("model_name")
+        print("CLEAN_FIELD_NAME: field:", field, "model_name:", model_name)
+        print("CLEAN_FIELD_NAME: cleaned_data:", self.cleaned_data)
+
+        if not model_name:
+            raise ValidationError("A valid model name must be selected.")
+
+        try:
+            _, model_cls = get_model_by_name(model_name)
+            allowed = list_fields(model_cls)
+            print("CLEAN_FIELD_NAME: Allowed fields for", model_name, ":", allowed)
+            if field not in allowed:
+                raise ValidationError(f"'{field}' is not a valid field on {model_name}.")
+            print("CLEAN_FIELD_NAME: Allowed fields forddddddddd")
+        except Exception as e:
+            raise ValidationError(f"Error validating field for model {model_name}: {e}")
+        print("CLEAN_FIELD_NAME: Allowed fields forghfjhgjgh")
         return field
 
     def save(self, commit=True):
+        print("SAVE: Saving FieldReference...")
         obj = super().save(commit=False)
-        # Auto-fill display_name
         if obj.field_name and not obj.display_name:
             obj.display_name = obj.field_name.replace("_", " ").title()
-        # Auto-fill path with the employee__ prefix (as you wanted)
         if obj.model_name and obj.field_name:
             obj.path = f"employee__{obj.model_name.lower()}__{obj.field_name}"
         if commit:
             obj.save()
+        print("SAVE: Saved object:", obj)
         return obj
 
 

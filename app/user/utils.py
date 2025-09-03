@@ -1,4 +1,4 @@
-from .models import CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, configurations, Employee, hr_assigned_companies, DepartmentTeams
+from .models import CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, Configurations, Employee, hr_assigned_companies, DepartmentTeams
 from django.db.models import Sum, Prefetch, Avg
 from decimal import Decimal
 
@@ -27,7 +27,7 @@ def update_department_team_increment_summary(sender, instance, company, departme
 
         if sender is FinancialImpactPerMonth:
             proposed_package = ProposedPackageDetails.objects.get(employee=instance.employee)
-            configuration = configurations.objects.first()
+            configuration = Configurations.objects.first()
             if proposed_package:
                 years = configuration.as_of_date.year - instance.employee.date_of_joining.year
                 if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee.date_of_joining.month, instance.employee.date_of_joining.day):
@@ -98,6 +98,7 @@ def iter_allowed_models():
             yield app_label, m
 
 def get_model_by_name(model_name: str):
+    print("model_name: ", model_name)
     for app_label, m in iter_allowed_models():
         if m.__name__ == model_name:
             return app_label, m
