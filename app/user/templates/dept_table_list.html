@@ -24,9 +24,9 @@
                         <!-- Employee Details -->
                         <th colspan="11" class="group-header">Employee Details</th>
                         <!-- Current Package -->
-                        <th colspan="7" class="group-header">Current Package</th>
+                        <th colspan="8" class="group-header">Current Package</th>
                         <!-- Proposed Package -->
-                        <th colspan="11" class="group-header">Proposed Package</th>
+                        <th colspan="12" class="group-header">Proposed Package</th>
                         <!-- Financial Impact -->
                         <th colspan="9" class="group-header">Financial Impact</th>
                         <th rowspan="2">Actions</th>
@@ -46,6 +46,7 @@
                         <th>Remarks</th>
                         <!-- Current Package Subheaders -->
                         <th>Gross Salary</th>
+                        <th>Company Pickup</th>
                         <th>Vehicle</th>
                         <th>Fuel Limit</th>
                         <th>Fuel Litre</th>
@@ -62,6 +63,7 @@
                         <th>Vehicle Allowance</th>
                         <th>Mobile Provided</th>
                         <th>Approved</th>
+                        <th>Company Pickup</th>
                         <th>Vehicle</th>
                         <th>Total</th>
                         <!-- Financial Impact Subheaders -->
@@ -155,6 +157,7 @@
             <!-- Current Package -->
             {% with current_package=employee.currentpackagedetails %}
                 <td>{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
+                <td>{{ current_package.company_pickup|yesno:"Yes,No,-" }}</td>
                 <td>{{ current_package.vehicle|default:"-" }}</td>
                 <td>{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td>
                 <td>{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
@@ -170,6 +173,7 @@
                 <td class="editable" data-tab="proposed_package" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td>
                 <td>{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
                 <td class="editable" data-tab="proposed_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.fuel_litre|floatformat:2|default:"-" }}</td>
+                <td class="editable" data-tab="proposed_package" data-field="company_pickup" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.company_pickup|yesno:"Yes,No,-" }}</td>
                 <td class="editable" data-tab="proposed_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ proposed_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
                 <td class="editable" data-tab="proposed_package" data-field="mobile_provided" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.mobile_provided|yesno:"Yes,No,-" }}</td>
                 <td class="editable" data-tab="proposed_package" data-field="approved" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.approved|yesno:"Yes,No,-" }}</td>
@@ -200,7 +204,7 @@
         </tr>
     {% empty %}
         <tr>
-            <td colspan="38" style="text-align: center;">No employees found.</td>
+            <td colspan="42" style="text-align: center;">No employees found.</td>
         </tr>
     {% endfor %}
 </tbody>
@@ -583,6 +587,15 @@
             if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
                 editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
             }
+
+            // ... existing ID conversions ...
+            if (editedCells[empId].current_package && editedCells[empId].current_package.company_pickup) {
+                editedCells[empId].current_package.company_pickup = editedCells[empId].current_package.company_pickup === 'true';
+            }
+            if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.company_pickup) {
+                editedCells[empId].proposed_package.company_pickup = editedCells[empId].proposed_package.company_pickup === 'true';
+            }
+            
         });
         try {
             const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');

@@ -403,9 +403,19 @@ class EmployeeDraft(models.Model):
     def __str__(self):
         return f"Draft for {self.employee.fullname}"
 
+    # def save(self, *args, **kwargs):
+    #     # Ensure at least one field is edited
+    #     if not self.edited_fields and not self.pk:
+    #         raise ValidationError("At least one field must be edited to create a draft.")
+    #     super().save(*args, **kwargs)
+
     def save(self, *args, **kwargs):
-        # Ensure at least one field is edited
-        if not self.edited_fields and not self.pk:
+        """
+        Custom save method that enforces edited_fields on create,
+        but allows bypassing validation with `validate=False`.
+        """
+        validate = kwargs.pop('validate', True)
+        if validate and not self.edited_fields and not self.pk:
             raise ValidationError("At least one field must be edited to create a draft.")
         super().save(*args, **kwargs)
 
@@ -513,7 +523,7 @@ class FinancialImpactPerMonthDraft(models.Model):
         super().save(*args, **kwargs)
         
 
-class configurations(models.Model):
+class Configurations(models.Model):
     fuel_rate = models.FloatField(null=True)
     as_of_date = models.DateField(null=True)
 
@@ -580,6 +590,7 @@ class FieldReference(models.Model):
         ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
         ('IncrementDetailsSummary', 'Increment Details Summary'),
         ('Employee', 'Employee'),
+        ('Configurations', 'Configurations')
     ]
 
     model_name = models.CharField(max_length=255, choices=MODEL_CHOICES)

@@ -86,7 +86,7 @@ admin.site.register(models.ProposedPackageDetails)
 admin.site.register(models.FinancialImpactPerMonth)
 admin.site.register(models.Formula)
 admin.site.register(models.FieldFormula)
-admin.site.register(models.configurations)
+admin.site.register(models.Configurations)
 
 admin.site.register(models.Employee)
 
