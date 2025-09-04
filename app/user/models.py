@@ -409,16 +409,16 @@ class EmployeeDraft(models.Model):
     #         raise ValidationError("At least one field must be edited to create a draft.")
     #     super().save(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
-        """
-        Custom save method that enforces edited_fields on create,
-        but allows bypassing validation with `validate=False`.
-        """
-        validate = kwargs.pop('validate', True)
-        print("validate: ", validate)
-        if validate and not self.edited_fields and not self.pk:
-            raise ValidationError("At least one field must be edited to create a draft.")
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     """
+    #     Custom save method that enforces edited_fields on create,
+    #     but allows bypassing validation with `validate=False`.
+    #     """
+    #     validate = kwargs.pop('validate', True)
+    #     print("validate: ", validate)
+    #     if validate and not self.edited_fields and not self.pk:
+    #         raise ValidationError("At least one field must be edited to create a draft.")
+    #     super().save(*args, **kwargs)
 
 class CurrentPackageDetailsDraft(models.Model):
     employee_draft = models.ForeignKey(EmployeeDraft, on_delete=models.CASCADE, related_name='current_package_drafts')
@@ -590,6 +590,10 @@ class FieldReference(models.Model):
         ('ProposedPackageDetails', 'Proposed Package Details'),
         ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
         ('IncrementDetailsSummary', 'Increment Details Summary'),
+        ('CurrentPackageDetailsDraft', 'Current Package Details Draft'),
+        ('ProposedPackageDetailsDraft', 'Proposed Package Details Draft'),
+        ('FinancialImpactPerMonthDraft', 'Financial Impact Per Month Draft'),
+        ('IncrementDetailsSummaryDraft', 'Increment Details Summary Draft'),
         ('Employee', 'Employee'),
         ('Configurations', 'Configurations')
     ]

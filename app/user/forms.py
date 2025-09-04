@@ -64,6 +64,9 @@ class FieldFormulaForm(forms.ModelForm):
                     ('ProposedPackageDetails', 'Proposed Package Details'),
                     ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
                     ('IncrementDetailsSummary', 'Increment Details Summary'),
+                    ('ProposedPackageDetailsDraft', 'Proposed Package Details Draft'),
+                    ('FinancialImpactPerMonthDraft', 'Financial Impact Per Month Draft'),
+                    ('IncrementDetailsSummaryDraft', 'Increment Details Summary Draft'),
                 ],
                 attrs={'required': 'true'}
             ),

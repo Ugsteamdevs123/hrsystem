@@ -1887,6 +1887,7 @@ class DepartmentTableView(View):
             data = {
                 'emp_id': emp.emp_id,
                 'fullname': emp_draft.fullname if is_draft and emp_draft.edited_fields.get('fullname') else emp.fullname,
+                'eligible_for_increment': emp_draft.eligible_for_increment if is_draft and emp_draft.edited_fields.get('eligible_for_increment') else emp.eligible_for_increment,
                 'company': emp.company.name,
                 'department_team': emp.department_team,
                 'department_group': emp_draft.department_group if is_draft and emp_draft.edited_fields.get('department_group_id') else emp.department_group,
@@ -3476,7 +3477,7 @@ class SaveDraftView(View):
                     if not employee_draft:
                         employee_draft = EmployeeDraft(emp_id=employee_id, employee=employee, company=employee.company, department_team=employee.department_team)
                         print("NEW employee_draft: ", employee_draft)
-                        # employee_draft.save()   # <-- save immediately
+                        employee_draft.save()   # <-- save immediately
 
                     # Save employee fields
                     for field, value in tabs.get('employee', {}).items():
@@ -3488,14 +3489,26 @@ class SaveDraftView(View):
                                 setattr(employee_draft, field, value == 'true')
                             else:
                                 setattr(employee_draft, field, value or None)
-
-                    employee_draft.edited_fields = employee_draft_edited
+                    
+                    # employee_draft.edited_fields = employee_draft_edited
                     if employee_draft_edited:
+                        print("employee_draft_edited: ", employee_draft_edited)
+                        existing_edited_fields = employee_draft.edited_fields
+                        
+                        if len(existing_edited_fields) > 0 and not isinstance(existing_edited_fields, dict):
+                            existing_edited_fields = json.loads(existing_edited_fields)
+                            
+                        if existing_edited_fields:
+                            keys_only_in_existing_edited_fields = existing_edited_fields.keys() - employee_draft_edited.keys()
+                            for existing_key in keys_only_in_existing_edited_fields:
+                                employee_draft_edited[existing_key]= True
+                        employee_draft.edited_fields = employee_draft_edited
                         employee_draft.save()
                         drafts_saved = True
 
                     # Save current package fields
                     if current_package_edited:
+                        print("if current_package_edited")
                         draft, _ = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
                         for field, value in tabs.get('current_package', {}).items():
                             if current_package_edited.get(field):
@@ -3511,21 +3524,40 @@ class SaveDraftView(View):
 
                     # Save proposed package fields
                     if proposed_package_edited:
+                        print("if proposed_package_edited")
                         draft, _ = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+                        print("draft: ", draft)
                         for field, value in tabs.get('proposed_package', {}).items():
+                            print("field, value: ", field, value, type(value))
                             if proposed_package_edited.get(field):
                                 if field.endswith('_id'):
                                     setattr(draft, field, int(value) if value else None)
                                 elif isinstance(getattr(ProposedPackageDetailsDraft, field).field, models.BooleanField):
-                                    setattr(draft, field, value == 'true')
+                                    print("boolean field")
+                                    setattr(draft, field, value == True if isinstance(value, bool) else value== 'True')
                                 else:
+                                    print("setting decimal")
                                     setattr(draft, field, Decimal(value) if value else Decimal('0'))
+                        
+                        existing_edited_fields = draft.edited_fields
+                        if len(existing_edited_fields) > 0 and not isinstance(existing_edited_fields, dict):
+                            existing_edited_fields = json.loads(existing_edited_fields)
+                        print("existing_edited_fields: ", existing_edited_fields)
+                        if existing_edited_fields:
+                            keys_only_in_existing_edited_fields = existing_edited_fields.keys() - proposed_package_edited.keys()
+                            print("keys_only_in_existing_edited_fields: ", keys_only_in_existing_edited_fields)
+                            for existing_key in keys_only_in_existing_edited_fields:
+                                proposed_package_edited[existing_key]= True
+
                         draft.edited_fields = proposed_package_edited
+                        print("saving")
                         draft.save()
+                        print("saved")
                         drafts_saved = True
 
                     # Save financial impact fields
                     if financial_impact_edited:
+                        print("if financial_impact_edited")
                         draft, _ = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
                         for field, value in tabs.get('financial_impact', {}).items():
                             if financial_impact_edited.get(field):
@@ -3647,16 +3679,20 @@ class SaveFinalView(View):
         view = ensure_csrf_cookie(view)
         return view
 
-    @method_decorator(require_POST)
+    # @method_decorator(require_POST)
     def post(self, request, department_id):
         try:
+            print("FINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINAL\nFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINAL\n")
             data = json.loads(request.body)
+            print("data: ", data)
             logger.info(f"Received payload for save-final: {data}")
             updated_employees = []
 
             with transaction.atomic():
                 for employee_id, tabs in data.items():
+                    print("employee_id, tabs: ",employee_id, tabs)
                     employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
+                    print("employee: ", employee)
                     if not employee:
                         logger.error(f"Employee {employee_id} not found for department {department_id}")
                         return JsonResponse({'error': f'Employee {employee_id} not found'}, status=404)
@@ -3664,20 +3700,26 @@ class SaveFinalView(View):
                     # Employee Tab
                     if "employee" in tabs:
                         emp_data = tabs["employee"]
+                        print("emp_data: ", emp_data)
                         logger.info(f"Updating employee {employee_id}: {emp_data}")
-                        for field, value in emp_data.items():
-                            if field in [
-                                'fullname', 'department_group_id', 'section_id',
-                                'designation_id', 'location_id', 'date_of_joining',
-                                'resign', 'date_of_resignation', 'eligible_for_increment', 'remarks'
-                            ]:
-                                if field in ['department_group_id', 'section_id', 'designation_id', 'location_id']:
-                                    setattr(employee, field, int(value) if value else None)
-                                elif field in ['resign', 'eligible_for_increment']:
-                                    setattr(employee, field, value == 'true')
-                                elif field in ['date_of_joining', 'date_of_resignation', 'fullname', 'remarks']:
-                                    setattr(employee, field, value or None)
-                        employee.save()
+                        emp_draft = EmployeeDraft.objects.filter(employee=employee).first()
+                        if emp_data:
+                            employee_edited_fields = emp_draft.edited_fields
+                        
+                            for field, value in employee_edited_fields.items():
+                                if field in [
+                                    'fullname', 'department_group_id', 'section_id',
+                                    'designation_id', 'location_id', 'date_of_joining',
+                                    'resign', 'date_of_resignation', 'eligible_for_increment', 'remarks'
+                                ]:
+                                    new_value = getattr(emp_draft, field)
+                                    if field in ['department_group_id', 'section_id', 'designation_id', 'location_id']:
+                                        setattr(employee, field, int(new_value) if new_value else None)
+                                    elif field in ['resign', 'eligible_for_increment']:
+                                        setattr(employee, field, new_value == True if isinstance(value, bool) else new_value == 'True')
+                                    elif field in ['date_of_joining', 'date_of_resignation', 'fullname', 'remarks']:
+                                        setattr(employee, field, new_value or None)
+                            employee.save()
 
                     # Current Package Tab
                     if "current_package" in tabs:
@@ -3699,18 +3741,24 @@ class SaveFinalView(View):
                         prop_data = tabs["proposed_package"]
                         logger.info(f"Updating proposed_package {employee_id}: {prop_data}")
                         proposed_pkg, _ = ProposedPackageDetails.objects.get_or_create(employee=employee)
-                        for field, value in prop_data.items():
-                            if field in [
-                                'increment_percentage', 'increased_fuel_amount', 'fuel_litre',
-                                'vehicle_allowance', 'mobile_provided', 'approved'
-                            ]:
+
+                        emp_draft = EmployeeDraft.objects.filter(employee=employee).first()
+                        proposed_package_draft = ProposedPackageDetailsDraft.objects.filter(employee_draft=emp_draft).first()
+                        if proposed_package_draft:
+                            proposed_package_edited_fields = proposed_package_draft.edited_fields
+                            for field, value in proposed_package_edited_fields.items():
+                                # if field in [
+                                #     'increment_percentage', 'increased_fuel_amount', 'fuel_litre',
+                                #     'vehicle_allowance', 'mobile_provided', 'approved'
+                                # ]:
+                                new_value = getattr(proposed_package_draft, field)
                                 if field == 'vehicle_id':  # Adjust if vehicle_id is used
-                                    proposed_pkg.vehicle_id = int(value) if value else None
+                                    proposed_pkg.vehicle_id = int(new_value) if new_value else None
                                 elif field in ['mobile_provided', 'approved']:
-                                    setattr(proposed_pkg, field, value == 'true')
+                                    setattr(proposed_pkg, field, new_value == True if isinstance(value, bool) else new_value == 'True')
                                 else:
-                                    setattr(proposed_pkg, field, Decimal(value) if value else Decimal('0'))
-                        proposed_pkg.save()
+                                    setattr(proposed_pkg, field, Decimal(new_value) if new_value else Decimal('0'))
+                            proposed_pkg.save()
 
                     # Financial Impact Tab
                     if "financial_impact" in tabs:
