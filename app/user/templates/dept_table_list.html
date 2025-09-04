@@ -114,7 +114,7 @@
                             {% endwith %}
                             <!-- Financial Impact -->
                             {% with financial_impact=employee.financialimpactpermonth %}
-                                <td class="editable" data-tab="financial_impact" data-field="emp_status_id" data-type="select" data-endpoint="/payroll/employee-status-choices/">{{ financial_impact.emp_status.status|default:"-" }}</td>
+                                <td>{{ financial_impact.emp_status.status|default:"-" }}</td>
                                 <td>{{ financial_impact.serving_years|floatformat:1|default:"-" }}</td>
                                 <td>{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
                                 <td>{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
@@ -182,7 +182,7 @@
             {% endwith %}
             <!-- Financial Impact -->
             {% with financial_impact=employee.financialimpactpermonth %}
-                <td class="editable" data-tab="financial_impact" data-field="emp_status_id" data-type="select" data-endpoint="/payroll/employee-status-choices/">{{ financial_impact.emp_status.status|default:"-" }}</td>
+                <td>{{ financial_impact.emp_status.status|default:"-" }}</td>
                 <td>{{ financial_impact.serving_years|floatformat:1|default:"-" }}</td>
                 <td>{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
                 <td>{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>

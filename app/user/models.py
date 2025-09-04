@@ -415,6 +415,7 @@ class EmployeeDraft(models.Model):
         but allows bypassing validation with `validate=False`.
         """
         validate = kwargs.pop('validate', True)
+        print("validate: ", validate)
         if validate and not self.edited_fields and not self.pk:
             raise ValidationError("At least one field must be edited to create a draft.")
         super().save(*args, **kwargs)

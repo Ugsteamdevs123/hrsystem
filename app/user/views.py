@@ -1878,7 +1878,10 @@ class DepartmentTableView(View):
         draft_data = {}
 
         for emp in employees:
+            print(emp.__dict__)
             emp_draft = emp.drafts.first()
+            print(emp_draft.__dict__ if emp_draft else "xoxo")
+            print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
             is_draft = bool(emp_draft)
 
             data = {
@@ -2979,31 +2982,6 @@ class VehiclesDropdownView(View):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-# In app/views.py
-from django.shortcuts import render, redirect
-from .models import FieldFormula, FieldReference
-from .forms import FieldFormulaForm, FormulaForm
-from django.apps import apps
-from django.shortcuts import render, redirect, get_object_or_404
-from django.db import models 
-
-
-# For Formula CRUD view
-
-
 class FormulaListView(PermissionRequiredMixin, View):
     permission_required = "user.view_formula"
     template_name = "view_formula.html"
@@ -3011,7 +2989,8 @@ class FormulaListView(PermissionRequiredMixin, View):
     def get(self, request):
         formulas = Formula.objects.all().order_by('-id')  # latest first
         return render(request, self.template_name, {
-            'formulas': formulas
+            'formulas': formulas,
+            'company_data': get_companies_and_department_teams(request.user)
         })
 
 
@@ -3024,7 +3003,8 @@ class CreateFormulaView(PermissionRequiredMixin, View):
         field_references = FieldReference.objects.all()
         return render(request, self.template_name, {
             'form': form,
-            'field_references': field_references
+            'field_references': field_references,
+            'company_data': get_companies_and_department_teams(request.user)
         })
 
     def post(self, request):
@@ -3036,7 +3016,8 @@ class CreateFormulaView(PermissionRequiredMixin, View):
             return redirect("view_formula")
         return render(request, self.template_name, {
             'form': form,
-            'field_references': field_references
+            'field_references': field_references,
+            'company_data': get_companies_and_department_teams(request.user)
         })
     
 class EditFormulaView(PermissionRequiredMixin, View):
@@ -3050,7 +3031,8 @@ class EditFormulaView(PermissionRequiredMixin, View):
         return render(request, self.template_name, {
             'form': form,
             'field_references': field_references,
-            'formula': formula
+            'formula': formula,
+            'company_data': get_companies_and_department_teams(request.user)
         })
 
     def post(self, request, pk):
@@ -3064,7 +3046,8 @@ class EditFormulaView(PermissionRequiredMixin, View):
         return render(request, self.template_name, {
             'form': form,
             'field_references': field_references,
-            'formula': formula
+            'formula': formula,
+            'company_data': get_companies_and_department_teams(request.user)
         })
 
 
@@ -3408,10 +3391,12 @@ class SaveDraftView(View):
     def post(self, request, department_id):
         try:
             data = json.loads(request.body)
+            print("data: ", data)
             drafts_saved = False
             with transaction.atomic():
                 for employee_id, tabs in data.items():
                     employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
+                    print("employee: ", employee)
                     if not employee:
                         logger.error(f"Employee {employee_id} not found for department {department_id}")
                         return JsonResponse({'error': f'Employee {employee_id} not found'}, status=404)
@@ -3424,43 +3409,60 @@ class SaveDraftView(View):
 
                     # Detect changes
                     for tab, fields in tabs.items():
+                        print("tab, fields: ", tab, fields)
                         if tab == 'employee':
                             for field, value in fields.items():
+                                print("field, value: ", field, value)
                                 current_value = getattr(employee, field, None)
+                                print("current_value: ", current_value)
                                 if field.endswith('_id'):
                                     current_value = getattr(getattr(employee, field.replace('_id', ''), None), 'id', None)
+                                    print("current_value _id: ", current_value)
                                 elif isinstance(current_value, bool):
                                     current_value = str(current_value).lower()
                                 if str(value) != str(current_value):
                                     has_changes = True
                                     employee_draft_edited[field] = True
+                                    print("employee_draft_edited: ", employee_draft_edited)
 
                         elif tab == 'current_package':
                             current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
+                            print("current_package: ", current_package)
                             for field, value in fields.items():
+                                print("field, value: ", field, value)
                                 current_value = getattr(current_package, field, None) if current_package else None
+                                print("current_value: ", current_value)
                                 if field.endswith('_id'):
                                     current_value = current_value.id if current_value else None
+                                    print("current_value _id: ", current_value)
                                 if str(value) != str(current_value):
                                     has_changes = True
                                     current_package_edited[field] = True
 
                         elif tab == 'proposed_package':
                             proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
+                            print("proposed_package: ", proposed_package)
                             for field, value in fields.items():
+                                print("field, value: ", field, value)
                                 current_value = getattr(proposed_package, field, None) if proposed_package else None
+                                print("current_value: ", current_value)
                                 if field.endswith('_id'):
                                     current_value = current_value.id if current_value else None
+                                    print("current_value _id: ", current_value)
                                 if str(value) != str(current_value):
                                     has_changes = True
                                     proposed_package_edited[field] = True
 
                         elif tab == 'financial_impact':
                             financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
+                            print("financial_impact: ", financial_impact)
                             for field, value in fields.items():
+                                print("field, value: ", field, value)
                                 current_value = getattr(financial_impact, field, None) if financial_impact else None
+                                print("current_value: ", current_value)
                                 if field.endswith('_id'):
                                     current_value = current_value.id if current_value else None
+                                    print("current_value _id: ", current_value)
                                 if str(value) != str(current_value):
                                     has_changes = True
                                     financial_impact_edited[field] = True
@@ -3470,12 +3472,15 @@ class SaveDraftView(View):
 
                     # Create or update EmployeeDraft
                     employee_draft = EmployeeDraft.objects.filter(employee=employee).first()
+                    print("employee_draft: ", employee_draft)
                     if not employee_draft:
-                        employee_draft = EmployeeDraft(employee=employee, company=employee.company, department_team=employee.department_team)
-                        employee_draft.save()   # <-- save immediately
+                        employee_draft = EmployeeDraft(emp_id=employee_id, employee=employee, company=employee.company, department_team=employee.department_team)
+                        print("NEW employee_draft: ", employee_draft)
+                        # employee_draft.save()   # <-- save immediately
 
                     # Save employee fields
                     for field, value in tabs.get('employee', {}).items():
+                        print("field, value: ", field, value)
                         if employee_draft_edited.get(field):
                             if field.endswith('_id'):
                                 setattr(employee_draft, field, int(value) if value else None)
