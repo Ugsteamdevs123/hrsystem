@@ -1,14 +1,14 @@
 #version: "3.8"
 
 services:
-  pyroll_develop:
+  payroll_develop:
     build: 
       context: .
       dockerfile: ./compose/django/Dockerfile
-    container_name: pyroll_test_develop
+    container_name: payroll_test_develop
     command: /start
     networks:
-      - pyroll_network
+      - payroll_network
     volumes:
       - .:/code
       - static_volume:/code/app/staticfiles
@@ -21,7 +21,7 @@ services:
 
 
 networks:
-  pyroll_network:
+  payroll_network:
     driver: bridge
 
 volumes:
