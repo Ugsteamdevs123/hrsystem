@@ -60,7 +60,7 @@ def update_increment_summary(sender, instance, created, **kwargs):
         for model_name, field in ordered:
             if model_name in ["ProposedPackageDetailsDraft", "CurrentPackageDetailsDraft", "FinancialImpactPerMonthDraft"]:
                 continue
-            print("model_name, field: ", model_name, field)
+            print("model_name", model_name, " ::: field: ", field)
             # Prefer employee-specific formula, else department-specific
             field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
                            department_formulas.filter(target_model=model_name, target_field=field).first()
@@ -83,6 +83,7 @@ def update_increment_summary(sender, instance, created, **kwargs):
                 continue
 
             expression = field_formula.formula.formula_expression
+            print("expression: ", expression)
             try:
                 value = evaluate_formula(target_instance, expression, model_name)
                 print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)

@@ -3703,22 +3703,22 @@ class SaveFinalView(View):
                         print("emp_data: ", emp_data)
                         logger.info(f"Updating employee {employee_id}: {emp_data}")
                         emp_draft = EmployeeDraft.objects.filter(employee=employee).first()
-                        if emp_data:
+                        if emp_draft:
                             employee_edited_fields = emp_draft.edited_fields
                         
                             for field, value in employee_edited_fields.items():
-                                if field in [
-                                    'fullname', 'department_group_id', 'section_id',
-                                    'designation_id', 'location_id', 'date_of_joining',
-                                    'resign', 'date_of_resignation', 'eligible_for_increment', 'remarks'
-                                ]:
-                                    new_value = getattr(emp_draft, field)
-                                    if field in ['department_group_id', 'section_id', 'designation_id', 'location_id']:
-                                        setattr(employee, field, int(new_value) if new_value else None)
-                                    elif field in ['resign', 'eligible_for_increment']:
-                                        setattr(employee, field, new_value == True if isinstance(value, bool) else new_value == 'True')
-                                    elif field in ['date_of_joining', 'date_of_resignation', 'fullname', 'remarks']:
-                                        setattr(employee, field, new_value or None)
+                                # if field in [
+                                #     'fullname', 'department_group_id', 'section_id',
+                                #     'designation_id', 'location_id', 'date_of_joining',
+                                #     'resign', 'date_of_resignation', 'eligible_for_increment', 'remarks'
+                                # ]:
+                                new_value = getattr(emp_draft, field)
+                                if field in ['department_group_id', 'section_id', 'designation_id', 'location_id']:
+                                    setattr(employee, field, int(new_value) if new_value else None)
+                                elif field in ['resign', 'eligible_for_increment']:
+                                    setattr(employee, field, new_value == True if isinstance(value, bool) else new_value == 'True')
+                                elif field in ['date_of_joining', 'date_of_resignation', 'fullname', 'remarks']:
+                                    setattr(employee, field, new_value or None)
                             employee.save()
 
                     # Current Package Tab
