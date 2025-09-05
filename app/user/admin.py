@@ -86,7 +86,7 @@ admin.site.register(models.ProposedPackageDetails)
 admin.site.register(models.FinancialImpactPerMonth)
 admin.site.register(models.Formula)
 admin.site.register(models.FieldFormula)
-admin.site.register(models.configurations)
+admin.site.register(models.Configurations)
 
 admin.site.register(models.Employee)
 
@@ -95,5 +95,13 @@ admin.site.register(models.Employee)
 
 admin.site.register(models.VehicleBrand)
 admin.site.register(models.VehicleModel)
+
+
+admin.site.register(models.EmployeeDraft)
+admin.site.register(models.CurrentPackageDetailsDraft)
+admin.site.register(models.ProposedPackageDetailsDraft)
+admin.site.register(models.FinancialImpactPerMonthDraft)
+
+
 # admin.site.register(models.VehicleOwnerShipModel)
 

@@ -1,0 +1,30 @@
+#version: "3.8"
+
+services:
+  pyroll_develop:
+    build: 
+      context: .
+      dockerfile: ./compose/django/Dockerfile
+    container_name: pyroll_test_develop
+    command: /start
+    networks:
+      - pyroll_network
+    volumes:
+      - .:/code
+      - static_volume:/code/app/staticfiles
+      - media_volume:/code/app/images
+      - logs:/code/app/logs
+    ports:
+      - "8044:8044"
+    env_file:
+      - /app/.env
+
+
+networks:
+  pyroll_network:
+    driver: bridge
+
+volumes:
+  static_volume:
+  media_volume:
+  logs:

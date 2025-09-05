@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+set -e
+
+export PYTHONPATH=/code/app
+
+python manage.py collectstatic --noinput
+
+echo "Running makemigrations..."
+
+python manage.py migrate
+gunicorn pyroll.wsgi:application --bind 0.0.0.0:8044
+
+
+
+
