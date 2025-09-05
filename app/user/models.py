@@ -196,6 +196,28 @@ class IncrementDetailsSummary(models.Model):
         return self.department_team.company.name + ' ' + self.department_team.name + ' increment summary'
 
 
+class IncrementDetailsSummaryDraft(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    department_team = models.ForeignKey(DepartmentTeams, on_delete=models.CASCADE)
+    total_employees = models.IntegerField(null=True)
+    eligible_for_increment = models.IntegerField(null=True)
+    current_salary = models.FloatField(null=True)
+    effective_increment_rate_hod = models.FloatField(null=True)
+    effective_fuel_percentage_hod = models.FloatField(null=True)
+    salary_increment_impact_hod = models.FloatField(null=True)
+    fuel_increment_impact_hod = models.FloatField(null=True)
+    other_costs_in_p_and_l = models.FloatField(null=True)
+    total_cost_on_p_and_l_per_month = models.FloatField(null=True)
+    revised_department_salary = models.FloatField(null=True)
+    staff_revised_cost = models.FloatField(null=True)
+
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
+    def __str__(self):
+        return self.department_team.company.name + ' ' + self.department_team.name + ' increment summary'
+    
 
 class VehicleBrand(models.Model):
     """Stores vehicle brand details like Toyota, Honda."""
@@ -421,7 +443,7 @@ class EmployeeDraft(models.Model):
     #     super().save(*args, **kwargs)
 
 class CurrentPackageDetailsDraft(models.Model):
-    employee_draft = models.ForeignKey(EmployeeDraft, on_delete=models.CASCADE, related_name='current_package_drafts')
+    employee_draft = models.OneToOneField(EmployeeDraft, on_delete=models.CASCADE)
     gross_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle = models.ForeignKey('VehicleModel', on_delete=models.SET_NULL, null=True, blank=True)
     fuel_limit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -453,7 +475,7 @@ class CurrentPackageDetailsDraft(models.Model):
         super().save(*args, **kwargs)
 
 class ProposedPackageDetailsDraft(models.Model):
-    employee_draft = models.ForeignKey(EmployeeDraft, on_delete=models.CASCADE, related_name='proposed_package_drafts')
+    employee_draft = models.OneToOneField(EmployeeDraft, on_delete=models.CASCADE)
     increment_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     increased_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     revised_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -491,7 +513,7 @@ class ProposedPackageDetailsDraft(models.Model):
 
 
 class FinancialImpactPerMonthDraft(models.Model):
-    employee_draft = models.ForeignKey(EmployeeDraft, on_delete=models.CASCADE, related_name='financial_impact_drafts')
+    employee_draft = models.OneToOneField(EmployeeDraft, on_delete=models.CASCADE)
     emp_status = models.ForeignKey('EmployeeStatus', on_delete=models.CASCADE, null=True, blank=True)
     serving_years = models.IntegerField(null=True, blank=True)
     salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
