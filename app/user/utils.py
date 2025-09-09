@@ -645,7 +645,11 @@ def build_dependency_graph(formulas, company=None, employee=None, department_tea
     indegree = defaultdict(int)
     formula_targets = set()
 
+    # i = 0
     for formula in formulas:
+        # print("\n\nFormula: ", i)
+        # i += 1
+        
         target = (formula.target_model.strip(), formula.target_field.strip().lower())
         if company and formula.company != company:
             continue
@@ -656,51 +660,50 @@ def build_dependency_graph(formulas, company=None, employee=None, department_tea
         formula_targets.add(target)
         expression = formula.formula.formula_expression
 
+        # print("target: ", target)
         if target not in indegree:
             indegree[target] = 0
+            # print(f"indegree for target '{target}' set to 0: ", indegree)
 
         deps = get_variables_from_expression(expression)
+        # print("deps: ", deps)
         for _, model, field in deps:
             dep_node = (model.strip(), field.strip().lower().replace(" ", "_"))
+            # print("dep_node: ", dep_node)
             if dep_node not in indegree:
                 indegree[dep_node] = 0
+                # print(f"indegree for dep_node '{dep_node}' set to 0: ", indegree)
             graph[dep_node].append(target)
+            # print("updated graph: ", graph)
             indegree[target] += 1
+            # print("updated indegree: ", indegree)
 
     return graph, indegree, formula_targets
 
 def topological_sort(formulas, company=None, employee=None, department_team=None):
     graph, indegree, formula_targets = build_dependency_graph(formulas, company, employee, department_team)
     
-    # Define model priority order
-    model_priority = {
-        'ProposedPackageDetails': 0,
-        'FinancialImpactPerMonth': 1,
-        'IncrementDetailsSummary': 2
-    }
+    # print("\n\n\nfinal grpah: ", graph)
+    # print("\nfinal indegree: ", indegree)
     
-    # Sort nodes with zero indegree, prioritizing model order and then field name
-    queue = deque(sorted(
-        [node for node, deg in indegree.items() if deg == 0],
-        key=lambda x: (model_priority.get(x[0], len(model_priority)), x[1])
-    ))
-    order = []
+    queue = deque([node for node, deg in indegree.items() if deg == 0])
 
+    # print("\nformula_targets: ", formula_targets)
+    # print("\nqueue: ", queue)
+    full_order = []
     while queue:
         node = queue.popleft()
-        if node in formula_targets:
-            order.append(node)
+        full_order.append(node)
+
         for neighbor in graph[node]:
             indegree[neighbor] -= 1
             if indegree[neighbor] == 0:
                 queue.append(neighbor)
-                # Re-sort queue to maintain model and field order
-                queue = deque(sorted(
-                    queue,
-                    key=lambda x: (model_priority.get(x[0], len(model_priority)), x[1])
-                ))
 
-    if len(order) != len(formula_targets):
+    # After sorting, only return the target fields, in the order they appeared
+    ordered = [node for node in full_order if node in formula_targets]
+    
+    if len(ordered) != len(formula_targets):
         raise ValueError("Cycle detected or unresolved dependencies in formulas!")
-
-    return order
+        
+    return ordered
