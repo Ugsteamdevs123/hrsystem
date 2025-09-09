@@ -5,9 +5,102 @@ from django.dispatch import receiver
 from django.apps import apps
 
 from .utils import update_department_team_increment_summary, topological_sort, evaluate_formula
-from .models import SummaryStatus, CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, DepartmentTeams, FieldFormula, CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft, IncrementDetailsSummaryDraft
+from .models import Employee, SummaryStatus, CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, DepartmentTeams, FieldFormula, CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft, IncrementDetailsSummaryDraft
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=Employee)
+def update_increment_summary_employee(sender, instance, created, **kwargs):
+    """
+    Signal to check the driver wallet amount when a DriverAdditional is saved.
+    """
+    try:
+        increment_details_summary = IncrementDetailsSummary.objects.filter(company = instance.company, department_team = instance.department_team)
+
+        if not increment_details_summary.exists():
+            IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance.department_team)
+
+        update_department_team_increment_summary(sender, instance, instance.company, instance.department_team)
+        
+
+        # target_models = [ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary]
+
+        # Determine context
+        company = instance.company
+        department_team = instance.department_team
+
+        # Get all formulas for the company
+        # formulas = FieldFormula.objects.filter(company=company).select_related('formula')
+        formulas = FieldFormula.objects.exclude(target_model__endswith='Draft').select_related('formula')
+
+        # Prioritize employee-specific formulas
+        employee_formulas = formulas.filter(employee=instance, department_team=department_team)
+        print("employee_formulas: ", employee_formulas)
+        department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
+        print("department_formulas: ", department_formulas)
+        # Combine, prioritizing employee formulas
+        formula_ids = list(employee_formulas.values_list('id', flat=True))
+        formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+        print("formula_ids: ", formula_ids)
+        formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
+        print("formulas: ", formulas)
+
+        if not formulas:
+            print(f"No formulas found for company={company}, department_team={department_team}, employee={instance}")
+            return
+
+        # Topological sort with context
+        print(formulas)
+        ordered = topological_sort(formulas, company=company, employee=instance, department_team=department_team)
+        print("ordered: ", ordered)
+
+        for model_name, field in ordered:
+            if model_name.endswith("Draft"):
+                continue
+            print("model_name", model_name, " ::: field: ", field)
+            # Prefer employee-specific formula, else department-specific
+            field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
+                           department_formulas.filter(target_model=model_name, target_field=field).first()
+            if not field_formula:
+                print(f"No formula found for {model_name}.{field}")
+                continue
+
+            # Choose instance
+            if model_name == "IncrementDetailsSummary":
+                target_instance = IncrementDetailsSummary.objects.filter(
+                    company=company,
+                    department_team=department_team
+                ).first()
+            elif model_name == "Employee":
+                instance.refresh_from_db()
+                target_instance = instance
+            else:
+                model_class = apps.get_model('user', model_name)
+                target_instance = model_class.objects.filter(employee=instance).first()
+
+            if not target_instance:
+                print(f"No instance found for {model_name} with company={company}, department_team={department_team}")
+                continue
+
+            expression = field_formula.formula.formula_expression
+            print("expression: ", expression)
+            try:
+                value = evaluate_formula(target_instance, expression, model_name)
+                print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)
+                Model = apps.get_model('user', model_name)
+                
+                if model_name in ["IncrementDetailsSummary", "Employee"]:
+                    Model.objects.filter(id=target_instance.id).update(**{field: value})
+                else:
+                    Model.objects.filter(employee=target_instance.employee).update(**{field: value})
+                    
+            except ValueError as e:
+                print(f"Error evaluating formula for {model_name}.{field}: {e}")
+
+    except Exception as e:
+        print(f"Error in updating increment summary: {e}")
+        # logger.error(f"Error in checking driver wallet balance: {e}", extra={'id': instance.id})
 
 
 @receiver(post_save, sender=CurrentPackageDetails)
@@ -103,18 +196,18 @@ def update_increment_summary(sender, instance, created, **kwargs):
         # logger.error(f"Error in checking driver wallet balance: {e}", extra={'id': instance.id})
 
 
-@receiver(post_save,sender=DepartmentTeams)
-def add_new_increment_details_summary_record(sender, instance, created, **kwargs):
-    """
-    Signal to check the driver wallet amount when a DriverAdditional is saved.
-    """
-    try:
-        if created:
-            IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance)
+# @receiver(post_save,sender=DepartmentTeams)
+# def add_new_increment_details_summary_record(sender, instance, created, **kwargs):
+#     """
+#     Signal to check the driver wallet amount when a DriverAdditional is saved.
+#     """
+#     try:
+#         if created:
+#             IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance)
 
-    except Exception as e:
-        print(f"Error in adding new increment details summary record: {e}")
-        # logger.error(f"Error in checking driver wallet balance: {e}", extra={'id': instance.id})
+#     except Exception as e:
+#         print(f"Error in adding new increment details summary record: {e}")
+#         # logger.error(f"Error in checking driver wallet balance: {e}", extra={'id': instance.id})
 
 
 

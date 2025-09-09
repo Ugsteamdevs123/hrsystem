@@ -558,6 +558,7 @@ class FinancialImpactPerMonthDraft(models.Model):
 class Configurations(models.Model):
     fuel_rate = models.FloatField(null=True)
     as_of_date = models.DateField(null=True)
+    # bonus_constant_multiplier = models.FloatField(null=True)
 
     is_deleted = models.BooleanField(default=False)
 

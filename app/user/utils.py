@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from .models import (CurrentPackageDetails, 
 ProposedPackageDetails, 
 FinancialImpactPerMonth, 
@@ -46,7 +48,7 @@ def update_draft_department_team_increment_summary(sender, instance, company, de
                 FinancialImpactPerMonthDraft.objects.filter(id=instance.id).update(serving_years = years)
            
     except Exception as e:
-        print(f"Error in updating department team increment summary: {e}")
+        print(f"Error in updating draft department team increment summary: {e}")
 
 
 def update_department_team_increment_summary(sender, instance, company, department_team):
@@ -69,8 +71,20 @@ def update_department_team_increment_summary(sender, instance, company, departme
             proposed_package = ProposedPackageDetails.objects.get(employee=instance.employee)
             configuration = Configurations.objects.first()
             if proposed_package:
-                years = configuration.as_of_date.year - instance.employee.date_of_joining.year
-                if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee.date_of_joining.month, instance.employee.date_of_joining.day):
+
+                # Ensure both are datetime/date
+                as_of_date = configuration.as_of_date
+                date_of_joining = instance.employee.date_of_joining
+
+                # Convert string to date if needed
+                if isinstance(as_of_date, str):
+                    as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
+
+                if isinstance(date_of_joining, str):
+                    date_of_joining = datetime.strptime(date_of_joining, "%Y-%m-%d").date()
+
+                years = as_of_date.year - date_of_joining.year
+                if (as_of_date.month, as_of_date.day) < (date_of_joining.month, date_of_joining.day):
                     years -= 1
 
                 FinancialImpactPerMonth.objects.filter(id=instance.id).update(serving_years = years)

@@ -846,6 +846,7 @@ class DepartmentTeamView(View):
                     return JsonResponse({'error': 'Company and name are required'}, status=400)
                 company = Company.objects.get(id=company_id, id__in=hr_assigned_companies.objects.filter(hr=request.user).values('company'))
                 DepartmentTeams.objects.create(company=company, name=name)
+                print("successfully")
                 return JsonResponse({'message': 'Department added successfully'})
             except (Company.DoesNotExist, ValueError):
                 return JsonResponse({'error': 'Invalid company or data'}, status=400)
@@ -1197,7 +1198,11 @@ class GetEmployeeDataView(View):
 
 
 
-
+from django.db.models.signals import post_save
+from .signals import (
+    update_increment_summary_employee,
+    update_increment_summary
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -1240,6 +1245,12 @@ class CreateEmployeeView(View):
 
                     # STEP 1: Create Employee
                     if step == 'employee':
+                        # Step 2: Disconnect signal
+                        post_save.disconnect(update_increment_summary_employee, sender=Employee)
+                        post_save.disconnect(update_increment_summary, sender=CurrentPackageDetails)
+                        post_save.disconnect(update_increment_summary, sender=ProposedPackageDetails)
+                        post_save.disconnect(update_increment_summary, sender=FinancialImpactPerMonth)
+
                         employee = Employee.objects.create(
                             emp_id=request.POST.get('emp_id'),
                             fullname=request.POST.get('fullname'),
@@ -1256,6 +1267,23 @@ class CreateEmployeeView(View):
                             image=request.FILES.get('image') if 'image' in request.FILES else None,
                             eligible_for_increment=request.POST.get('eligible_for_increment') == 'true'
                         )
+                        print("employee created")
+                        CurrentPackageDetails.objects.create(employee=employee)
+                        print("current package created")
+                        ProposedPackageDetails.objects.create(employee=employee)
+                        print("proposed package created")
+                        FinancialImpactPerMonth.objects.create(employee=employee)
+                        print("financial impact created")
+
+                        # Step 3: Reconnect signal
+                        post_save.connect(update_increment_summary_employee, sender=Employee)
+                        post_save.connect(update_increment_summary, sender=CurrentPackageDetails)
+                        post_save.connect(update_increment_summary, sender=ProposedPackageDetails)
+                        post_save.connect(update_increment_summary, sender=FinancialImpactPerMonth)
+
+                        # Step 4: Manually run the signal function
+                        update_increment_summary_employee(sender=Employee, instance=employee, created=True)
+                        
                         logger.debug(f"Employee created: {employee.emp_id}")
                         return JsonResponse({'message': 'Employee created', 'employee_id': employee.emp_id})
 
@@ -1263,15 +1291,24 @@ class CreateEmployeeView(View):
                     elif step == 'current_package':
                         employee_id = request.POST.get('employee_id')
                         employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
-                        CurrentPackageDetails.objects.create(
-                            employee=employee,
-                            gross_salary=request.POST.get('gross_salary') or None,
-                            vehicle_id=request.POST.get('vehicle_id') or None,
-                            fuel_limit=request.POST.get('fuel_limit') or None,
-                            mobile_provided=request.POST.get('mobile_provided') == 'true',
-                            fuel_litre=request.POST.get('fuel_litre') or None,
-                            company_pickup=request.POST.get('company_pickup') == 'true'
-                        )
+
+                        current_package_details = CurrentPackageDetails.objects.filter(employee=employee).first()
+
+                        current_package_details.gross_salary = request.POST.get('gross_salary') or None
+                        print("here", request.POST.get('vehicle_id'))
+                        current_package_details.vehicle_id = request.POST.get('vehicle_id') or None
+                        print("here")
+                        current_package_details.fuel_limit = request.POST.get('fuel_limit') or None
+                        print("here")
+                        current_package_details.mobile_provided = request.POST.get('mobile_provided') == 'true'
+                        current_package_details.fuel_litre = request.POST.get('fuel_litre') or None
+                        current_package_details.company_pickup = request.POST.get('company_pickup') == 'true'
+                        print("here")
+
+                        print(current_package_details.__dict__)
+                        current_package_details.save()
+                        print("here")
+
                         logger.debug(f"CurrentPackageDetails created for employee: {employee_id}")
                         return JsonResponse({'message': 'Current Package created'})
 
@@ -1279,16 +1316,18 @@ class CreateEmployeeView(View):
                     elif step == 'proposed_package':
                         employee_id = request.POST.get('employee_id')
                         employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
-                        ProposedPackageDetails.objects.create(
-                            employee=employee,
-                            increment_percentage=request.POST.get('increment_percentage') or None,
-                            increased_fuel_amount=request.POST.get('increased_fuel_amount') or None,
-                            mobile_provided=request.POST.get('mobile_provided_proposed') == 'true',
-                            vehicle_id=request.POST.get('vehicle_proposed_id') or None,
-                            fuel_litre=request.POST.get('fuel_litre') or None,
-                            vehicle_allowance=request.POST.get('vehicle_allowance') or None,
-                            company_pickup=request.POST.get('company_pickup') == 'true'
-                        )
+
+                        proposed_package_details = ProposedPackageDetails.objects.filter(employee=employee).first()
+                        
+                        proposed_package_details.increment_percentage = request.POST.get('increment_percentage') or None
+                        proposed_package_details.increased_fuel_amount = request.POST.get('increased_fuel_amount') or None
+                        proposed_package_details.mobile_provided = request.POST.get('mobile_provided_proposed') == 'true'
+                        proposed_package_details.vehicle_id = request.POST.get('vehicle_proposed_id') or None
+                        proposed_package_details.fuel_litre = request.POST.get('fuel_litre') or None
+                        proposed_package_details.vehicle_allowance = request.POST.get('vehicle_allowance') or None
+                        proposed_package_details.company_pickup = request.POST.get('company_pickup') == 'true'
+                        proposed_package_details.save()
+
                         logger.debug(f"ProposedPackageDetails created for employee: {employee_id}")
                         return JsonResponse({'message': 'Proposed Package created'})
 
@@ -1296,13 +1335,14 @@ class CreateEmployeeView(View):
                     elif step == 'financial_impact':
                         employee_id = request.POST.get('employee_id')
                         employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
-                        FinancialImpactPerMonth.objects.create(
-                            employee=employee,
-                            emp_status_id=request.POST.get('emp_status_id') or None,
-                            serving_years=request.POST.get('serving_years') or None,
-                            salary=request.POST.get('salary') or None,
-                            gratuity=request.POST.get('gratuity') or None
-                        )
+                        financial_impact_per_month = FinancialImpactPerMonth.objects.filter(employee=employee).first()
+                        
+                        financial_impact_per_month.emp_status_id = request.POST.get('emp_status_id') or None
+                        financial_impact_per_month.serving_years = request.POST.get('serving_years') or None
+                        financial_impact_per_month.salary = request.POST.get('salary') or None
+                        financial_impact_per_month.gratuity = request.POST.get('gratuity') or None
+                        financial_impact_per_month.save()
+
                         logger.debug(f"FinancialImpactPerMonth created for employee: {employee_id}")
                         return JsonResponse({'message': 'Financial Impact created'})
 
