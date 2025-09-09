@@ -12,9 +12,7 @@ from decimal import Decimal, InvalidOperation
 # For audit logs 
 from auditlog.registry import auditlog
 from auditlog.models import AuditlogHistoryField
-
-# Create your models here.
-
+    
 
 class Gender(models.Model):
     gender = models.CharField(max_length=12)
@@ -57,7 +55,6 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
 
     history = AuditlogHistoryField()  # Required to store log
 
-
     @staticmethod
     def group_check(name: str) -> Group:
         designation, _ = Group.objects.get_or_create(name=name)
@@ -91,7 +88,6 @@ class hr_assigned_companies(models.Model):
 
     def __str__(self):
         return self.hr.full_name + ' ' + self.company.name
-
 
 
 class Designation(models.Model):
@@ -173,6 +169,17 @@ class Location(models.Model):
     history = AuditlogHistoryField()  # Required to store log
 
 
+class SummaryStatus(models.Model):
+    approved = models.BooleanField(default=False)
+    summary_submitted = models.BooleanField(default=False)
+
+    is_deleted = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField()  # Required to store log
+
+    def __str__(self):
+        return 'Summary Approval Status: ' + str(self.approved)
+        
 class IncrementDetailsSummary(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     department_team = models.ForeignKey(DepartmentTeams, on_delete=models.CASCADE)
@@ -187,6 +194,8 @@ class IncrementDetailsSummary(models.Model):
     total_cost_on_p_and_l_per_month = models.FloatField(null=True)
     revised_department_salary = models.FloatField(null=True)
     staff_revised_cost = models.FloatField(null=True)
+    approved = models.BooleanField(default=False)
+    summaries_status = models.ForeignKey(SummaryStatus, on_delete=models.DO_NOTHING, null=True)
 
     is_deleted = models.BooleanField(default=False)
 
@@ -210,6 +219,8 @@ class IncrementDetailsSummaryDraft(models.Model):
     total_cost_on_p_and_l_per_month = models.FloatField(null=True)
     revised_department_salary = models.FloatField(null=True)
     staff_revised_cost = models.FloatField(null=True)
+    approved = models.BooleanField(default=False)
+    summaries_status = models.ForeignKey(SummaryStatus, on_delete=models.DO_NOTHING, null=True)
 
     is_deleted = models.BooleanField(default=False)
 
@@ -234,12 +245,12 @@ class VehicleModel(models.Model):
 
     brand = models.ForeignKey(VehicleBrand, on_delete=models.CASCADE, related_name='models')
     model_name = models.CharField(max_length=50)
-    vehicle_type = models.CharField(max_length=50) #For count cc
+    engine_cc = models.CharField(max_length=50) #For count cc
 
     history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
-        return f"{self.brand.name} {self.model_name} ({self.vehicle_type})"
+        return f"{self.brand.name} {self.model_name} ({self.engine_cc})"
     
 
 
@@ -322,7 +333,6 @@ class ProposedPackageDetails(models.Model):
     fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.IntegerField(null=True, blank=True)
-    approved = models.BooleanField(default=False)
 
     company_pickup = models.BooleanField(default=False)
 
@@ -486,7 +496,6 @@ class ProposedPackageDetailsDraft(models.Model):
     fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.IntegerField(null=True, blank=True)
-    approved = models.BooleanField(default=False, null=True)
     company_pickup = models.BooleanField(default=False, null=True)
 
     is_deleted = models.BooleanField(default=False)

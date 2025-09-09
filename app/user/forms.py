@@ -250,7 +250,7 @@ class FieldReferenceAdminForm(forms.ModelForm):
 class CustomUserForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
     groups = forms.ModelChoiceField(
-        queryset=Group.objects.all(),
+        queryset=Group.objects.exclude(name='Admin'),
         required=False,
         empty_label="Select Group",
         label="Assign Group"
@@ -349,7 +349,6 @@ class SectionForm(forms.ModelForm):
         }
 
 
-
 class DepartmentGroupsForm(forms.ModelForm):
     class Meta:
         model = DepartmentGroups
@@ -364,7 +363,7 @@ class DepartmentGroupsForm(forms.ModelForm):
 
 class HrAssignedCompaniesForm(forms.ModelForm):
     hr = forms.ModelChoiceField(
-        queryset=CustomUser.objects.filter(is_active=True, is_superuser=False),
+        queryset=CustomUser.objects.filter(is_active=True, is_superuser=False).exclude(groups__name='local Admin'),
         label="HR",
         widget=forms.Select(attrs={'class': 'form-control'}),
         empty_label="Select HR"
@@ -388,7 +387,7 @@ class VehicleModelForm(forms.ModelForm):
 
     class Meta:
         model = VehicleModel
-        fields = ["brand", "model_name", "vehicle_type"]
+        fields = ["brand", "model_name", "engine_cc"]
 
     def clean(self):
         cleaned_data = super().clean()

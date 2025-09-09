@@ -25,6 +25,13 @@
         {{ form.password }}
     </div>
 
+    <!-- Confirm Password -->
+    <div class="form-field">
+        <label for="id_confirm_password">Enter Password Again:</label>
+        <input type="password" name="confirm_password" required id="id_confirm_password">
+        <div class="error" id="confirm_password_error"></div>
+    </div>
+
     <!-- Gender -->
     <div class="form-field">
         {{ form.gender.label_tag }}
@@ -46,7 +53,19 @@
     <!-- Buttons -->
     <div class="button-group">
         <button type="button" class="form-btn btn-submit"
-            onclick="showConfirmPopup('Are you sure you want to add this user?', function(){ 
+            onclick="showConfirmPopup('Are you sure you want to add this user?', function(){
+                const password_error = document.getElementById('confirm_password_error');
+                password_error.textContent = '';
+
+                const password = document.getElementById('id_password').value;
+                const confirm_password = document.getElementById('id_confirm_password').value;
+
+                console.log(password, ' ::: ', confirm_password);
+
+                if (password !== confirm_password) {
+                    password_error.textContent = 'Passwords do not match';
+                    return;
+                }
                 document.getElementById('addUserForm').submit(); 
             })">
             Add User
@@ -71,6 +90,13 @@
     border-radius: 6px;
     font-size: 14px;
     box-sizing: border-box;
+}
+
+/* Error messages */
+.error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 5px;
 }
 
 /* Buttons */

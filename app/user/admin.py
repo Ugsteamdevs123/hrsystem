@@ -3,7 +3,6 @@ from django.contrib.auth.admin import UserAdmin
 from .import models
 from django.utils.translation import gettext_lazy as _
 from .forms import FieldReferenceAdminForm
-from django.contrib import admin
 from django.urls import path
 from django.http import JsonResponse
 from .forms import get_model_by_name, list_fields
@@ -87,7 +86,7 @@ admin.site.register(models.FinancialImpactPerMonth)
 admin.site.register(models.Formula)
 admin.site.register(models.FieldFormula)
 admin.site.register(models.Configurations)
-
+admin.site.register(models.SummaryStatus)
 admin.site.register(models.Employee)
 
 

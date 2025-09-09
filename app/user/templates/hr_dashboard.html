@@ -16,6 +16,13 @@
     </select>
 </div>
 
+<!-- Final Approval Section -->
+<div class="card-like" id="final-approval-box" style="display:none;">
+    <h3>Final Approval</h3>
+    <p>This will approve the entire summary. Please confirm before proceeding.</p>
+    <button class="action-btn btn-primary" onclick="confirmFinalApproval()">Approve Summary</button>
+</div>
+
 <!-- Increment Details -->
 <div id="increment-data" class="mt-20"></div>
 
@@ -107,6 +114,16 @@
 
 #editModal { z-index: 1000; }
 
+.status-col, .status-cell {
+    width: 2px;        /* make it as thin as possible */
+    padding: 0;        /* remove inner spacing */
+    border: none;      /* no border, otherwise it looks wider */
+}
+
+.status-cell.draft {
+    background-color: #ffc107;  /* yellow */
+}
+
 /* Responsive */
 @media screen and (max-width: 768px) {
     .custom-select, .custom-table, th, td { font-size: 14px; }
@@ -121,6 +138,8 @@ function closeModal() { document.getElementById('editModal').style.display = 'no
 async function fetchIncrementData() {
     const companyId = document.getElementById('company-select').value;
     const incrementDataDiv = document.getElementById('increment-data');
+    const finalApprovalBox = document.getElementById('final-approval-box');
+    
     if (!companyId) { incrementDataDiv.innerHTML = ''; return; }
 
     try {
@@ -136,21 +155,71 @@ async function fetchIncrementData() {
         } else if (data.data.length === 0) {
             incrementDataDiv.innerHTML = '<p class="muted">No increment details found.</p>';
         } else {
+            // show/hide approval box
+            if (data.summary_status && data.summary_status.summary_submitted === false) {
+                finalApprovalBox.style.display = 'block';
+                finalApprovalBox.dataset.statusId = data.summary_status.id;
+            } else {
+                finalApprovalBox.style.display = 'none';
+            }
+
             let html = '<h4>Increment Details</h4><table class="custom-table"><thead><tr>';
-            const headers = Object.keys(data.data[0]).filter(h => h !== 'id');
+            // const headers = Object.keys(data.data[0]).filter(h => h !== 'id');
+            // headers.forEach(h => html += `<th>${h}</th>`);
+            // html += '<th>Actions</th></tr></thead><tbody>';
+            
+            html += '<th class="status-col"></th>';  // 👈 nameless thin header
+            const headers = Object.keys(data.data[0]).filter(h => h !== 'id' && h !== 'is_draft');
             headers.forEach(h => html += `<th>${h}</th>`);
-            html += '<th>Actions</th></tr></thead><tbody>';
+            // html += '<th>Actions</th></tr></thead><tbody>';
+
+            // data.data.forEach(row => {
+            //     html += `<tr data-id="${row.id}" data-eligible="${row['eligible for increment'] || ''}">`;
+            //     headers.forEach(h => html += `<td>${row[h] || ''}</td>`);
+            //     {% if perms.user.change_incrementdetailssummary %}
+            //     html += '<td><button class="action-btn btn-primary edit-btn">Edit</button></td></tr>';
+            //     {% else %}
+            //     html += '<td>-</td></tr>';
+            //     {% endif %}
+            // });
 
             data.data.forEach(row => {
                 html += `<tr data-id="${row.id}" data-eligible="${row['eligible for increment'] || ''}">`;
-                headers.forEach(h => html += `<td>${row[h] || ''}</td>`);
-                {% if perms.user.change_incrementdetailssummary %}
-                html += '<td><button class="action-btn btn-primary edit-btn">Edit</button></td></tr>';
-                {% else %}
-                html += '<td>-</td></tr>';
-                {% endif %}
+
+                // 👇 Draft indicator cell
+                html += row.is_draft ? '<td class="status-cell draft"></td>' : '<td class="status-cell"></td>';
+
+                headers.forEach(h => {
+                    if (h === 'approved') {
+                    // 👇 Only show dropdown if row is draft
+                        if (row.is_draft) {
+                            // 👇 Dropdown for Approved field
+                            const approvedVal = row.approved ? 'true' : 'false';
+                            html += `
+                                <td>
+                                    <select class="approved-select" data-id="${row.id}" onchange="updateApproved(this)">
+                                        <option value="true" ${approvedVal === 'true' ? 'selected' : ''}>True</option>
+                                        <option value="false" ${approvedVal === 'false' ? 'selected' : ''}>False</option>
+                                    </select>
+                                </td>
+                            `;
+                        } else {
+                            html += `<td></td>`;  // leave empty if not draft
+                        }
+                    } 
+                    
+                    else {html += `<td>${(row[h] === 0 || row[h]) ? row[h] : ''}</td>`;}
+                });
+
+                // {% if perms.user.change_incrementdetailssummary %}
+                // html += '<td><button class="action-btn btn-primary edit-btn">Edit</button></td></tr>';
+                // {% else %}
+                // html += '<td>-</td></tr>';
+                // {% endif %}
             });
+
             html += '</tbody></table>';
+            // html += '<button class="action-btn btn-primary mt-10" onclick="saveApproved()">Save Approved</button>';
             incrementDataDiv.innerHTML = html;
 
             {% if perms.user.change_incrementdetailssummary %}
@@ -188,6 +257,7 @@ async function fetchIncrementData() {
     }
 }
 
+
 async function submitEdit() {
     const formData = new FormData(document.getElementById('editForm'));
     const entries = {};
@@ -212,5 +282,66 @@ async function submitEdit() {
         showSnackbar('Error updating increment detail. Please try again.', '#dc3545');
     }
 }
+
+
+async function updateApproved(select) {
+    const rowId = select.dataset.id;
+    const newVal = select.value === 'true';  // convert string → boolean
+
+    try {
+        const resp = await fetch('/payroll/hr/approved/', {
+            method: 'PATCH',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id: rowId, approved: newVal })
+        });
+
+        if (!resp.ok) throw new Error('Failed to save approved');
+        showSnackbar(`Row ${rowId} approved status updated to ${newVal}`);
+    } catch (e) {
+        console.error(e);
+        showSnackbar('Error updating approved status. Please try again.', '#dc3545');
+    }
+}
+
+
+function confirmFinalApproval() {
+    const statusId = document.getElementById('final-approval-box').dataset.statusId;
+
+    showConfirmPopup(
+        "Are you sure you want to approve this summary? This action is final.",
+        async function yesCallback() {
+            await updateFinalApproval(statusId);
+        },
+        function noCallback() {
+            // do nothing
+        }
+    );
+}
+
+async function updateFinalApproval(statusId) {
+    try {
+        const resp = await fetch('/payroll/hr/final-approve/', {
+            method: 'PATCH',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id: statusId })
+        });
+
+        if (!resp.ok) throw new Error("Failed to approve summary");
+        await fetchIncrementData();
+        showSnackbar("Summary approved successfully!");
+    } catch (e) {
+        console.error(e);
+        showSnackbar("Error approving summary", "#dc3545");
+    }
+}
+
 </script>
 {% endblock %}

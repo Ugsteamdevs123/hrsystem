@@ -5,7 +5,7 @@ from django.dispatch import receiver
 from django.apps import apps
 
 from .utils import update_department_team_increment_summary, topological_sort, evaluate_formula
-from .models import CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, DepartmentTeams, FieldFormula, CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft, IncrementDetailsSummaryDraft
+from .models import SummaryStatus, CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, DepartmentTeams, FieldFormula, CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft, IncrementDetailsSummaryDraft
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +125,7 @@ from .models import (
     CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft,
     IncrementDetailsSummary, ProposedPackageDetails, FinancialImpactPerMonth, FieldFormula
 )
-from .utils import topological_sort, evaluate_formula
+from .utils import topological_sort, evaluate_formula, update_draft_department_team_increment_summary
 
 @receiver(post_save, sender=CurrentPackageDetailsDraft)
 @receiver(post_save, sender=ProposedPackageDetailsDraft)
@@ -135,6 +135,21 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
     Signal to update increment summary when a draft model is saved.
     """
     try:
+
+        increment_details_summary = IncrementDetailsSummaryDraft.objects.filter(company = instance.employee_draft.company, department_team = instance.employee_draft.department_team)
+
+        if not increment_details_summary.exists():
+            existing_summary_status = SummaryStatus.objects.filter(summary_submitted=False)
+            if not existing_summary_status.exists():
+                new_summary_status = SummaryStatus.objects.create()
+                IncrementDetailsSummaryDraft.objects.create(company = instance.employee_draft.company, department_team = instance.employee_draft.department_team, summaries_status = new_summary_status)
+                print("new_summary_status: ", new_summary_status)
+            else:
+                IncrementDetailsSummaryDraft.objects.create(company = instance.employee_draft.company, department_team = instance.employee_draft.department_team, summaries_status = existing_summary_status.first())
+                print("existing_summary_status: ", existing_summary_status)
+
+        update_draft_department_team_increment_summary(sender, instance, instance.employee_draft.company, instance.employee_draft.department_team)
+
         # Determine context
         employee_draft = getattr(instance, 'employee_draft', None)
         employee = employee_draft.employee if employee_draft else getattr(instance, 'employee', None)    
@@ -170,8 +185,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
             #     mobile_provided=proposedpackagedetails.mobile_provided, 
             #     fuel_litre=proposedpackagedetails.fuel_litre, 
             #     vehicle_allowance=proposedpackagedetails.vehicle_allowance, 
-            #     total=proposedpackagedetails.total, 
-            #     approved=proposedpackagedetails.approved, 
+            #     total=proposedpackagedetails.total,
             #     company_pickup=proposedpackagedetails.company_pickup, 
             #     is_deleted=proposedpackagedetails.is_deleted
             # )
@@ -219,7 +233,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
 
         # Perform topological sort with context
         print(formulas)
-        ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team, is_draft=is_draft)
+        ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
         print("ordered: ", ordered)
 
         for model_name, field in ordered:
@@ -261,11 +275,11 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
                 Model = apps.get_model('user', target_model_name)
                 # Model.objects.filter(id=target_instance.id).update(**{field: value})
 
-                if model_name == "IncrementDetailsSummaryDraft":
+                if Model._meta.model_name == "incrementdetailssummarydraft":
                     Model.objects.filter(id=target_instance.id).update(**{field: value})
                 else:
                     Model.objects.filter(employee_draft=target_instance.employee_draft).update(**{field: value})
-
+                instance.refresh_from_db()
             except ValueError as e:
                 print(f"Error evaluating formula for {target_model_name}.{field}: {e}")
 
@@ -352,11 +366,19 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
 @receiver(post_save,sender=DepartmentTeams)
 def add_new_increment_details_summary_record(sender, instance, created, **kwargs):
     """
-    Signal to check the driver wallet amount when a DriverAdditional is saved.
+    Signal to create incremental detail summary entry for the newly created department team.
+    Also checks if a new summary status entry has to be created or not. 
     """
     try:
         if created:
-            IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance)
+            existing_summary_status = SummaryStatus.objects.filter(summary_submitted=False)
+            if not existing_summary_status.exists():
+                new_summary_status = SummaryStatus.objects.create()
+                IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance, summaries_status = new_summary_status)
+                print("new_summary_status: ", new_summary_status)
+            else:
+                IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance, summaries_status = existing_summary_status.first())
+                print("existing_summary_status: ", existing_summary_status)
 
     except Exception as e:
         print(f"Error in adding new increment details summary record: {e}")
