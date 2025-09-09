@@ -2136,10 +2136,12 @@ class SaveDraftView(View):
                                 print("current_value _id: ", current_value)
                             elif isinstance(current_value, bool):
                                 current_value = str(current_value).lower()
-                            if str(value) != str(current_value):
-                                has_changes = True
-                                employee_draft_edited[field] = True
-                                print("employee_draft_edited: ", employee_draft_edited)
+                            # if str(value) != str(current_value):
+                            #     has_changes = True
+                            #     employee_draft_edited[field] = True
+                            #     print("employee_draft_edited: ", employee_draft_edited)
+                            has_changes = True
+                            employee_draft_edited[field] = True
 
                     elif tab == 'current_package':
                         current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
@@ -2151,9 +2153,11 @@ class SaveDraftView(View):
                             if field.endswith('_id'):
                                 current_value = current_value.id if current_value else None
                                 print("current_value _id: ", current_value)
-                            if str(value) != str(current_value):
-                                has_changes = True
-                                current_package_edited[field] = True
+                            # if str(value) != str(current_value):
+                            #     has_changes = True
+                            #     current_package_edited[field] = True
+                            has_changes = True
+                            current_package_edited[field] = True
 
                     elif tab == 'proposed_package':
                         proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
@@ -2165,9 +2169,11 @@ class SaveDraftView(View):
                             if field.endswith('_id'):
                                 current_value = current_value.id if current_value else None
                                 print("current_value _id: ", current_value)
-                            if str(value) != str(current_value):
-                                has_changes = True
-                                proposed_package_edited[field] = True
+                            # if str(value) != str(current_value):
+                            #     has_changes = True
+                            #     proposed_package_edited[field] = True
+                            has_changes = True
+                            proposed_package_edited[field] = True
 
                     elif tab == 'financial_impact':
                         financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
@@ -2288,7 +2294,8 @@ class SaveDraftView(View):
                     drafts_saved = True
 
                 return JsonResponse({'message': 'Draft saved' if drafts_saved else 'No changes to save'}, status=200)
-
+                
+            return JsonResponse({'message': 'Draft processed, No changes detected to be drafted', 'drafts_saved': drafts_saved})
         except Exception as e:
             logger.error(f"Error in SaveDraftView for department {department_id}: {str(e)}", exc_info=True)
             return JsonResponse({'error': str(e)}, status=500)

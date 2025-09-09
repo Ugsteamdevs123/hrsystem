@@ -216,9 +216,186 @@ from django.dispatch import receiver
 from django.apps import apps
 from .models import (
     CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft,
-    IncrementDetailsSummary, ProposedPackageDetails, FinancialImpactPerMonth, FieldFormula
+    IncrementDetailsSummary, ProposedPackageDetails, FinancialImpactPerMonth, FieldFormula,
+    EmployeeDraft
 )
 from .utils import topological_sort, evaluate_formula, update_draft_department_team_increment_summary
+
+
+@receiver(post_save, sender=EmployeeDraft)
+def update_draft_increment_summary_employee(sender, instance, created, **kwargs):
+    """
+    Signal to update increment summary when a draft model is saved.
+    """
+    try:
+
+        increment_details_summary_draft = IncrementDetailsSummaryDraft.objects.filter(company = instance.company, department_team = instance.department_team)
+
+        if not increment_details_summary_draft.exists():
+            existing_summary_status = SummaryStatus.objects.filter(summary_submitted=False)
+            if not existing_summary_status.exists():
+                new_summary_status = SummaryStatus.objects.create()
+                IncrementDetailsSummaryDraft.objects.create(company = instance.company, department_team = instance.department_team, summaries_status = new_summary_status)
+                print("new_summary_status: ", new_summary_status)
+            else:
+                IncrementDetailsSummaryDraft.objects.create(company = instance.company, department_team = instance.department_team, summaries_status = existing_summary_status.first())
+                print("existing_summary_status: ", existing_summary_status)
+
+        update_draft_department_team_increment_summary(sender, instance, instance.company, instance.department_team)
+
+        # Determine context
+        employee_draft = instance
+        employee = instance.employee
+
+        print("instance.id: ", instance.id)
+
+        currentpackagedetailsdraft_dr = getattr(instance, 'currentpackagedetailsdraft', None)
+        if not currentpackagedetailsdraft_dr:
+            currentpackagedetails = employee.currentpackagedetails
+            CurrentPackageDetailsDraft.objects.get_or_create(
+                employee_draft=instance, 
+                gross_salary=currentpackagedetails.gross_salary, 
+                vehicle=currentpackagedetails.vehicle, 
+                fuel_limit=currentpackagedetails.fuel_limit, 
+                mobile_provided=currentpackagedetails.mobile_provided, 
+                fuel_litre=currentpackagedetails.fuel_litre, 
+                vehicle_allowance=currentpackagedetails.vehicle_allowance, 
+                total=currentpackagedetails.total, 
+                company_pickup=currentpackagedetails.company_pickup, 
+                is_deleted=currentpackagedetails.is_deleted
+            )
+            
+        
+        proposedpackagedetailsdraft_dr = getattr(instance, 'proposedpackagedetailsdraft', None)
+        if not proposedpackagedetailsdraft_dr:
+            proposedpackagedetails = employee.proposedpackagedetails
+            print("proposedpackagedetails employeedraft: ", proposedpackagedetails.__dict__)
+            # ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=instance)
+            ProposedPackageDetailsDraft.objects.get_or_create(
+                employee_draft=instance,
+                increment_percentage=proposedpackagedetails.increment_percentage, 
+                # increased_amount=proposedpackagedetails.increased_amount, 
+                # revised_salary=proposedpackagedetails.revised_salary, 
+                increased_fuel_amount=proposedpackagedetails.increased_fuel_amount, 
+                # revised_fuel_allowance=proposedpackagedetails.revised_fuel_allowance, 
+                vehicle=proposedpackagedetails.vehicle, 
+                mobile_provided=proposedpackagedetails.mobile_provided, 
+                fuel_litre=proposedpackagedetails.fuel_litre, 
+                vehicle_allowance=proposedpackagedetails.vehicle_allowance, 
+                # total=proposedpackagedetails.total,
+                company_pickup=proposedpackagedetails.company_pickup, 
+                is_deleted=proposedpackagedetails.is_deleted
+            )
+            
+        financialimpactpermonthdraft_dr = getattr(instance, 'financialimpactpermonthdraft', None)
+        if not financialimpactpermonthdraft_dr:
+            financialimpactpermonth = employee.financialimpactpermonth
+            FinancialImpactPerMonthDraft.objects.get_or_create(
+                employee_draft=instance, 
+                emp_status=financialimpactpermonth.emp_status, 
+                serving_years=financialimpactpermonth.serving_years
+            )    
+
+        company = getattr(instance, 'company', None) or (employee.company if employee else None)
+        department_team = getattr(instance, 'department_team', None) or (employee.department_team if employee else None)
+
+        # Create IncrementDetailsSummary if it doesn't exist
+        # increment_details_summary = IncrementDetailsSummary.objects.filter(
+        #     company=company, department_team=department_team
+        # )
+        # if not increment_details_summary.exists():
+        #     IncrementDetailsSummary.objects.create(
+        #         company=company, department_team=department_team
+        #     )
+
+        # Map sender to corresponding non-draft model for reference
+        model_mapping = {
+            'CurrentPackageDetailsDraft': 'CurrentPackageDetails',
+            'ProposedPackageDetailsDraft': 'ProposedPackageDetails',
+            'FinancialImpactPerMonthDraft': 'FinancialImpactPerMonth',
+            'IncrementDetailsSummaryDraft': 'IncrementDetailsSummary'
+        }
+        sender_name = sender._meta.model_name
+        is_draft = sender_name.endswith('draft')
+
+        # Get all formulas for the company
+        formulas = FieldFormula.objects.filter(company=company).select_related('formula')
+
+        # Prioritize employee-specific formulas
+        employee_formulas = formulas.filter(employee=employee, department_team=department_team) if employee else formulas.none()
+        department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
+        formula_ids = list(employee_formulas.values_list('id', flat=True))
+        formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+        formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
+
+        if not formulas:
+            print(f"No formulas found for company={company}, department_team={department_team}, employee={employee}")
+            return
+
+        # Perform topological sort with context
+        print(formulas)
+        ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
+        print("ordered: ", ordered)
+
+        for model_name, field in ordered:
+            print("model_name, field: ", model_name, field)
+            # Map model to draft version if sender is a draft model
+            target_model_name = model_name + 'Draft' if is_draft and model_name in model_mapping.values() else model_name
+            if not target_model_name.endswith('Draft') and is_draft:
+                continue  # Skip non-draft models when processing drafts
+
+            print("target_model_name: ", target_model_name)
+            # Prefer employee-specific formula, else department-specific
+            field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
+                           department_formulas.filter(target_model=model_name, target_field=field).first()
+            if not field_formula:
+                print(f"No formula found for {model_name}.{field}")
+                continue
+
+            # Choose instance
+            if target_model_name == "IncrementDetailsSummary" or target_model_name == "IncrementDetailsSummaryDraft":
+                target_instance = IncrementDetailsSummary.objects.filter(
+                    company=company, department_team=department_team
+                ).first() if target_model_name == "IncrementDetailsSummary" else \
+                IncrementDetailsSummaryDraft.objects.filter(
+                    company=company, department_team=department_team
+                ).first()
+            elif target_model_name == "EmployeeDraft":
+                instance.refresh_from_db()
+                target_instance = instance
+            else:
+                model_class = apps.get_model('user', target_model_name)
+                target_instance = model_class.objects.filter(employee_draft=instance).first()
+
+            if not target_instance:
+                print(f"No instance found for {target_model_name} with company={company}, department_team={department_team}")
+                continue
+
+            expression = field_formula.formula.formula_expression
+            try:
+                print("eveavavavav isdraff: ", is_draft, "  ::: target_model_name: ", target_model_name)
+                value = evaluate_formula(
+                    target_instance, expression, target_model_name, is_draft=is_draft, employee_draft=employee_draft
+                )
+                print(f"model_name: {target_model_name}, field: {field}, value: {value}")
+                Model = apps.get_model('user', target_model_name)
+                # Model.objects.filter(id=target_instance.id).update(**{field: value})
+                print("Model._meta.model_name: ", Model._meta.model_name)
+
+                if Model._meta.model_name in ["incrementdetailssummarydraft", "employee"]:
+                    print("hi 1")
+                    Model.objects.filter(id=target_instance.id).update(**{field: value})
+                    print("saved 1")
+                else:
+                    print("hi 2")
+                    Model.objects.filter(employee_draft=target_instance.employee_draft).update(**{field: value})
+                instance.refresh_from_db()
+            except ValueError as e:
+                print(f"Error evaluating formula for {target_model_name}.{field}: {e}")
+
+    except Exception as e:
+        print(f"Error in updating increment summary draft: {e}")
+
 
 @receiver(post_save, sender=CurrentPackageDetailsDraft)
 @receiver(post_save, sender=ProposedPackageDetailsDraft)
@@ -252,41 +429,50 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
         currentpackagedetailsdraft_dr = getattr(employee_draft, 'currentpackagedetailsdraft', None)
         if not currentpackagedetailsdraft_dr:
             currentpackagedetails = employee.currentpackagedetails
-            CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft, 
-                                                    gross_salary=currentpackagedetails.gross_salary, 
-                                                    vehicle=currentpackagedetails.vehicle, 
-                                                    fuel_limit=currentpackagedetails.fuel_limit, 
-                                                    mobile_provided=currentpackagedetails.mobile_provided, 
-                                                    fuel_litre=currentpackagedetails.fuel_litre, 
-                                                    vehicle_allowance=currentpackagedetails.vehicle_allowance, 
-                                                    total=currentpackagedetails.total, 
-                                                    company_pickup=currentpackagedetails.company_pickup, 
-                                                    is_deleted=currentpackagedetails.is_deleted
-                                                )
+            CurrentPackageDetailsDraft.objects.get_or_create(
+                employee_draft=employee_draft, 
+                gross_salary=currentpackagedetails.gross_salary, 
+                vehicle=currentpackagedetails.vehicle, 
+                fuel_limit=currentpackagedetails.fuel_limit, 
+                mobile_provided=currentpackagedetails.mobile_provided, 
+                fuel_litre=currentpackagedetails.fuel_litre, 
+                vehicle_allowance=currentpackagedetails.vehicle_allowance, 
+                total=currentpackagedetails.total, 
+                company_pickup=currentpackagedetails.company_pickup, 
+                is_deleted=currentpackagedetails.is_deleted
+            )
             
         
         proposedpackagedetailsdraft_dr = getattr(employee_draft, 'proposedpackagedetailsdraft', None)
         if not proposedpackagedetailsdraft_dr:
+            print("creating here: ")
             proposedpackagedetails = employee.proposedpackagedetails
-            ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-            # ProposedPackageDetailsDraft.objects.create(employee_draft=employee_draft, increment_percentage=proposedpackagedetails.increment_percentage, 
-            #     increased_amount=proposedpackagedetails.increased_amount, 
-            #     revised_salary=proposedpackagedetails.revised_salary, 
-            #     increased_fuel_amount=proposedpackagedetails.increased_fuel_amount, 
-            #     revised_fuel_allowance=proposedpackagedetails.revised_fuel_allowance, 
-            #     vehicle=proposedpackagedetails.vehicle, 
-            #     mobile_provided=proposedpackagedetails.mobile_provided, 
-            #     fuel_litre=proposedpackagedetails.fuel_litre, 
-            #     vehicle_allowance=proposedpackagedetails.vehicle_allowance, 
-            #     total=proposedpackagedetails.total,
-            #     company_pickup=proposedpackagedetails.company_pickup, 
-            #     is_deleted=proposedpackagedetails.is_deleted
-            # )
+            # ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+            ProposedPackageDetailsDraft.objects.get_or_create(
+                employee_draft=employee_draft,
+                increment_percentage=proposedpackagedetails.increment_percentage, 
+                # increased_amount=proposedpackagedetails.increased_amount, 
+                # revised_salary=proposedpackagedetails.revised_salary, 
+                increased_fuel_amount=proposedpackagedetails.increased_fuel_amount, 
+                # revised_fuel_allowance=proposedpackagedetails.revised_fuel_allowance, 
+                vehicle=proposedpackagedetails.vehicle, 
+                mobile_provided=proposedpackagedetails.mobile_provided, 
+                fuel_litre=proposedpackagedetails.fuel_litre, 
+                vehicle_allowance=proposedpackagedetails.vehicle_allowance, 
+                # total=proposedpackagedetails.total,
+                company_pickup=proposedpackagedetails.company_pickup, 
+                is_deleted=proposedpackagedetails.is_deleted
+            )
             
         financialimpactpermonthdraft_dr = getattr(employee_draft, 'financialimpactpermonthdraft', None)
         if not financialimpactpermonthdraft_dr:
             financialimpactpermonth = employee.financialimpactpermonth
-            FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)    
+            # FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)    
+            FinancialImpactPerMonthDraft.objects.get_or_create(
+                employee_draft=inemployee_draftstance, 
+                emp_status=financialimpactpermonth.emp_status, 
+                serving_years=financialimpactpermonth.serving_years
+            )    
 
         company = getattr(instance, 'company', None) or (employee.company if employee else None)
         department_team = getattr(instance, 'department_team', None) or (employee.department_team if employee else None)

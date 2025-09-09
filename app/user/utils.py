@@ -332,7 +332,7 @@ def get_variables_from_expression(expression):
     """Extract field references with optional aggregates like SUM[Model: Field]."""
     pattern = r'(SUM|AVG|COUNT)?\[([^:]+): ([^\]]+)\]'
     matches = re.findall(pattern, expression)
-    print(f"Expression: {expression}, Matches: {matches}")
+    # print(f"Expression: {expression}, Matches: {matches}")
     if not matches:
         raise ValueError(f"No valid field references found in expression: {expression}")
     return [(match[0] or None, match[1], match[2]) for match in matches]
@@ -354,17 +354,17 @@ def get_field_path(model_name, display_name):
 
 def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employee_draft=None):
     """Fetch value via Django-style path, applying aggregate if specified, prioritizing draft tables."""
-    print("PATH: is draft?", path, is_draft)
+    # print("PATH: is draft?", path, is_draft)
     if 'employee__employee' in path:
         path = path.replace('employee__employee', 'employee')
-    print("PATH: is draft?", path, is_draft)
+    # print("PATH: is draft?", path, is_draft)
     path = path.replace('employee', 'employee_draft') if is_draft else path
     parts = path.split('__')
     if parts[-2] == "employee_draft":
         parts[-2] = "employeedraft"
     elif parts[-2] != 'configurations':
         parts[-2] = parts[-2]+'draft' if is_draft else parts[-2]
-    print("parts: ", parts)
+    # print("parts: ", parts)
     model_mapping = {
         'employee': 'Employee',
         'currentpackagedetails': 'CurrentPackageDetails',
@@ -384,7 +384,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
     if len(parts) > 1:  # External model field
         model_name = parts[-2]
         field_name = parts[-1]
-        print("model name: ", model_name)
+        # print("model name: ", model_name)
         target_model_name = model_mapping_draft.get(model_name, model_name) if is_draft else model_mapping.get(model_name, model_name)
         Model = apps.get_model('user', target_model_name)
 
@@ -402,17 +402,26 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
         #                     if hasattr(instance, 'employee_draft') else instance.employee.company,
         #                     "employee__department_team": instance.employee_draft.employee.department_team 
         #                     if hasattr(instance, 'employee_draft') else instance.employee.department_team}
-        print("abcdefg is_draft: ", is_draft, " ::: target_model_name: ", target_model_name, " ::: model_name: ", model_name)
+
+
+        # print("abcdefg is_draft: ", is_draft, " ::: target_model_name: ", target_model_name, " ::: model_name: ", model_name)
+        # Get filter kwargs for non_draft tables at all case as they will be used to fetch those records for increment details summary draft where some employee
+        # records are not draft and their values need to be fetched from original tables.
         if is_draft and target_model_name.endswith('Draft'):
             if instance._meta.object_name == "IncrementDetailsSummaryDraft" and (target_model_name=="IncrementDetailsSummaryDraft" or target_model_name=='EmployeeDraft'):
                 filter_kwargs = {"company": instance.company, "department_team": instance.department_team}
+                filter_kwargs_non_draft = {"company": instance.company, "department_team": instance.department_team}
             elif instance._meta.object_name != "IncrementDetailsSummaryDraft" and (target_model_name=="IncrementDetailsSummaryDraft" or target_model_name=='EmployeeDraft'):
                 filter_kwargs = {"company": instance.employee_draft.employee.company, "department_team": instance.employee_draft.employee.department_team}
+                filter_kwargs_non_draft = {"company": instance.employee_draft.employee.company, "department_team": instance.employee_draft.employee.department_team}
             elif instance._meta.object_name == "IncrementDetailsSummaryDraft" and target_model_name!="IncrementDetailsSummaryDraft":
                 filter_kwargs = {"employee_draft__company": instance.company, "employee_draft__department_team": instance.department_team}
+                filter_kwargs_non_draft = {"employee__company": instance.company, "employee__department_team": instance.department_team}
             else:
                 filter_kwargs = {"employee_draft__company": instance.employee_draft.employee.company, "employee_draft__department_team": instance.employee_draft.employee.department_team}
-            print("filter_kwargs: ", filter_kwargs)
+                filter_kwargs_non_draft = {"employee__company": instance.employee_draft.employee.company, "employee__department_team": instance.employee_draft.employee.department_team}
+            # print("filter_kwargs draft: ", filter_kwargs)
+            # print("filter_kwargs_non_draft draft (for non draft): ", filter_kwargs_non_draft)
         else:
             if target_model_name!='configurations':
                 if instance._meta.object_name == "IncrementDetailsSummary" and (model_name=="IncrementDetailsSummary" or target_model_name=="Employee"):
@@ -424,24 +433,24 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                 else:
                     filter_kwargs = {"employee__company": instance.employee.company, "employee__department_team": instance.employee.department_team}
 
-                print("filter_kwargs: ", filter_kwargs)
+                # print("filter_kwargs: ", filter_kwargs)
 
         if aggregate_type:
             if aggregate_type in ['SUM', 'AVG']:
                 # First, get draft rows for employees with drafts
                 draft_model_name = f"{model_name}Draft" if model_name in model_mapping else model_name
-                print("instance name: ", instance._meta.object_name)
-                print("aggrgate - model name", model_name)
-                print("aggrgate - draft model name", draft_model_name)
+                # print("instance name: ", instance._meta.object_name)
+                # print("aggrgate - model name", model_name)
+                # print("aggrgate - draft model name", draft_model_name)
                 
                 draft_values = []
                 non_draft_employees = []
 
                 if is_draft:
                     draft_model_name = model_mapping_draft.get(model_name, model_name)
-                    print("aggrgate - updated draft model name", draft_model_name)
+                    # print("aggrgate - updated draft model name", draft_model_name)
                     DraftModel = apps.get_model('user', draft_model_name) if model_name in model_mapping_draft else None
-                    print("draft model: ", DraftModel)
+                    # print("draft model: ", DraftModel)
                     
                     if target_model_name == 'EmployeeDraft':
                         draft_rows = Model.objects.filter(**filter_kwargs).values('employee_id', field_name)
@@ -465,11 +474,14 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                             else:
                                 draft_employee_ids.add(row['employee_draft__employee_id'])
 
-                    # Get non-draft rows for employees without drafts
+                    # Get non-draft rows for employees without drafts (from original non-draft tables)
+                    non_draft_model = apps.get_model('user', target_model_name[:-5]) # target_model_name ends with 'Draft' in this case so we slice it to remove 'Draft'
                     if Model._meta.model_name == 'employeedraft':
-                        non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_id__in=draft_employee_ids).values(field_name)
+                        # non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_id__in=draft_employee_ids).values(field_name)
+                        non_draft_employees = non_draft_model.objects.filter(**filter_kwargs_non_draft).exclude(id__in=draft_employee_ids).values(field_name)
                     else:
-                        non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_draft__employee_id__in=draft_employee_ids).values(field_name)
+                        # non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_draft__employee_id__in=draft_employee_ids).values(field_name)
+                        non_draft_employees = non_draft_model.objects.filter(**filter_kwargs_non_draft).exclude(employee_id__in=draft_employee_ids).values(field_name)
                     # non_draft_employees = Model.objects.filter(
                     #     employee__company=instance.employee_draft.employee.company
                     #     if hasattr(instance, 'employee_draft') else instance.employee.company,
@@ -526,7 +538,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                     ConfigurationModel = apps.get_model('user', 'Configurations').objects.first()  # or filter by relation
                     obj = getattr(ConfigurationModel, part)
                 else:
-                    if obj._meta.object_name == 'IncrementDetailsSummary' and part in ['employee', 'incrementdetailssummary']:
+                    if obj._meta.object_name in ['IncrementDetailsSummary', 'IncrementDetailsSummaryDraft'] and part in ['employee', 'employee_draft', 'incrementdetailssummary', 'incrementdetailssummarydraft']:
                         continue
                     # if is_draft and part == 'employee' and hasattr(obj, 'employee_draft'):
                     #     obj = getattr(obj, 'employee_draft').employee
@@ -575,7 +587,7 @@ def evaluate_formula(instance, expression, target_model, is_draft=False, employe
     try:
         expr = expression.split('=', 1)[1].strip() if '=' in expression else expression
         expr, safe_context = sanitize_expression(expr, context)
-        print(safe_context)
+        # print(safe_context)
         result = eval(expr, {"__builtins__": {}}, safe_context)
         return Decimal(result)
     except Exception as e:
