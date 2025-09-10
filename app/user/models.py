@@ -43,6 +43,7 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
         null=True,
         unique=True
     )
+    first_time_login_to_reset_pass = models.BooleanField(default=True)
 
     # for admin check
     is_staff = models.BooleanField(default=False)
@@ -62,7 +63,8 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
     
     class Meta:
         permissions = [
-            ('can_admin_access', 'Can Admin Access')
+            ('can_admin_access', 'Can Admin Access'),
+            ('can_hr_level_access', 'Can HR Level Access')
         ]
 
 

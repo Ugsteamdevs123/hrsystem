@@ -19,18 +19,18 @@
         {{ form.email }}
     </div>
 
-    <!-- Password -->
+    {% comment %} <!-- Password -->
     <div class="form-field">
         {{ form.password.label_tag }}
         {{ form.password }}
-    </div>
+    </div> {% endcomment %}
 
-    <!-- Confirm Password -->
+    {% comment %} <!-- Confirm Password -->
     <div class="form-field">
         <label for="id_confirm_password">Enter Password Again:</label>
         <input type="password" name="confirm_password" required id="id_confirm_password">
         <div class="error" id="confirm_password_error"></div>
-    </div>
+    </div> {% endcomment %}
 
     <!-- Gender -->
     <div class="form-field">
@@ -54,18 +54,18 @@
     <div class="button-group">
         <button type="button" class="form-btn btn-submit"
             onclick="showConfirmPopup('Are you sure you want to add this user?', function(){
-                const password_error = document.getElementById('confirm_password_error');
+                {% comment %} const password_error = document.getElementById('confirm_password_error');
                 password_error.textContent = '';
 
                 const password = document.getElementById('id_password').value;
-                const confirm_password = document.getElementById('id_confirm_password').value;
+                const confirm_password = document.getElementById('id_confirm_password').value; {% endcomment %}
 
-                console.log(password, ' ::: ', confirm_password);
+                {% comment %} console.log(password, ' ::: ', confirm_password);
 
                 if (password !== confirm_password) {
                     password_error.textContent = 'Passwords do not match';
                     return;
-                }
+                } {% endcomment %}
                 document.getElementById('addUserForm').submit(); 
             })">
             Add User

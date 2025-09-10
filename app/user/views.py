@@ -88,6 +88,11 @@ class LoginView(View):
         if user is not None:
             if user.is_active:
                 login(request, user)
+
+                # 👇 Check if first login → redirect to password change
+                if user.first_time_login_to_reset_pass == True:
+                    return redirect("password_change")
+
                 if user.is_superuser:
                     # Redirect superuser to view users page
                     return redirect("view_users")
@@ -103,6 +108,41 @@ class LoginView(View):
             messages.error(request, "Invalid email or password.")
 
         return render(request, self.template_name)
+
+
+'''
+When user login he redirect to pass reset
+'''
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import update_session_auth_hash
+from .forms import CustomPasswordChangeForm
+
+
+class CustomPasswordChangeView(LoginRequiredMixin, View):
+    template_name = "reset_password.html"   # will add below
+
+    def get(self, request):
+        form = CustomPasswordChangeForm(user=request.user)
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CustomPasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            # keep user logged in after password change
+            update_session_auth_hash(request, user)
+
+            # clear first-time flag
+            request.user.first_time_login_to_reset_pass = False
+            request.user.save(update_fields=["first_time_login_to_reset_pass"])
+
+            messages.success(request, "Password changed successfully.")
+            # redirect where you want after reset (dashboard or login)
+            return redirect("login")  # or "dashboard" / "view_users" etc.
+        else:
+            messages.error(request, "Please correct the errors below.")
+        return render(request, self.template_name, {"form": form})
 
 
 
