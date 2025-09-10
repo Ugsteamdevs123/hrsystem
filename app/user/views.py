@@ -1006,6 +1006,18 @@ class DepartmentTableView(View):
         ).first()
         if not department:
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
+        
+        print(department , 'depts')
+
+        print(department.company.name , department.company)
+        
+        # formula = FieldFormula.objects.filter(
+        #     department_team = department.pk,
+        #     company = department.company.pk
+        # )
+        # print(formula , 'mmmmmmmmm')
+
+        
 
         company_data = get_companies_and_department_teams(request.user)
         employees = Employee.objects.filter(department_team=department).select_related(
@@ -1016,6 +1028,38 @@ class DepartmentTableView(View):
 
         employee_data = []
         draft_data = {}
+
+        '''
+        Passing formula to frontend
+        '''
+
+        formulas_qs = FieldFormula.objects.filter(
+            company=department.company
+        ).filter(
+            Q(department_team=department) |
+            Q(department_team__isnull=True) |
+            Q(employee__in=employees)  # where employees = list of dept employees
+        )
+
+        print(formulas_qs , 'mmmmmmmmm')
+
+        formulas_data = []
+
+        for f in formulas_qs:
+            try:
+                formulas_data.append({
+                    "target_model": f.target_model or "",   # fallback empty string
+                    "target_field": f.target_field or "",
+                    "formula": str(f.formula) if f.formula else "",  # safe check for None
+                    "employee_id": f.employee_id if f.employee_id is not None else None,
+                    "department_id": f.department_team_id if f.department_team_id is not None else None,
+                    "company_id": f.company_id if f.company_id is not None else None,
+                })
+            except Exception as e:
+                # Log or skip the problematic formula
+                print(f"Error serializing formula {f.id if f.id else 'unknown'}: {e}")
+
+            print(formulas_data,'data')
 
         for emp in employees:
             emp_draft = emp.drafts.first()
@@ -1102,7 +1146,8 @@ class DepartmentTableView(View):
             'employees': employee_data,
             'department_id': department_id,
             'company_data': company_data,
-            'draft_data': draft_data
+            'draft_data': draft_data,
+            "formulas": json.dumps(formulas_data),   # 👉 pass as JSON
         })
 
 
@@ -1565,6 +1610,15 @@ class GetDataView(View):
 
 
 
+
+'''
+For Fetch the formula on frontend
+'''
+
+class FetchFormulaView(View):
+
+    def get(self,request):
+        formula = FieldFormula.objects.filter()
 
 
 
