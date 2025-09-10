@@ -285,12 +285,11 @@ class CurrentPackageDetails(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
     gross_salary = models.DecimalField(max_digits=10, decimal_places=2)
     vehicle = models.ForeignKey(VehicleModel, on_delete=models.SET_NULL, null=True)
-    fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
+    # fuel_limit = models.DecimalField(max_digits=10, decimal_places=2)
 
     mobile_provided = models.BooleanField(default=False)
-
+    fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.IntegerField(null=True, blank=True)
 
     company_pickup = models.BooleanField(default=False)
@@ -317,7 +316,6 @@ class CurrentPackageDetails(models.Model):
 
         # Everything else (CharField, ForeignKey, etc.) is saved as-is
         super().save(*args, **kwargs)
-    
 
 
 class ProposedPackageDetails(models.Model):
@@ -325,13 +323,13 @@ class ProposedPackageDetails(models.Model):
     increment_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     increased_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     revised_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
-    increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    increased_fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    increased_fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     revised_fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     vehicle = models.ForeignKey(VehicleModel, on_delete=models.SET_NULL, null=True)
 
     mobile_provided = models.BooleanField(default=False)
-    fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.IntegerField(null=True, blank=True)
 
     company_pickup = models.BooleanField(default=False)
@@ -456,10 +454,10 @@ class CurrentPackageDetailsDraft(models.Model):
     employee_draft = models.OneToOneField(EmployeeDraft, on_delete=models.CASCADE)
     gross_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle = models.ForeignKey('VehicleModel', on_delete=models.SET_NULL, null=True, blank=True)
-    fuel_limit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # fuel_limit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     mobile_provided = models.BooleanField(default=False, null=True)
     fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.IntegerField(null=True, blank=True)
     company_pickup = models.BooleanField(default=False, null=True)
 
@@ -489,12 +487,12 @@ class ProposedPackageDetailsDraft(models.Model):
     increment_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     increased_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     revised_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # increased_fuel_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    increased_fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    increased_fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     revised_fuel_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     vehicle = models.ForeignKey('VehicleModel', on_delete=models.SET_NULL, null=True, blank=True)
     mobile_provided = models.BooleanField(default=False, null=True)
-    fuel_litre = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    vehicle_allowance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total = models.IntegerField(null=True, blank=True)
     company_pickup = models.BooleanField(default=False, null=True)
 
@@ -558,14 +556,14 @@ class FinancialImpactPerMonthDraft(models.Model):
 class Configurations(models.Model):
     fuel_rate = models.FloatField(null=True)
     as_of_date = models.DateField(null=True)
-    # bonus_constant_multiplier = models.FloatField(null=True)
+    bonus_constant_multiplier = models.FloatField(null=True)
 
     is_deleted = models.BooleanField(default=False)
 
     history = AuditlogHistoryField()  # Required to store log
 
     def __str__(self):
-        return f"{self.fuel_rate} - {self.as_of_date}"
+        return f"{self.fuel_rate} - {self.as_of_date} - {self.bonus_constant_multiplier}"
     
 
 

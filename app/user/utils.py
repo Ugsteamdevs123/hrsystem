@@ -1,4 +1,6 @@
 from datetime import datetime
+from decimal import Decimal
+from collections import defaultdict, deque
 
 from .models import (CurrentPackageDetails, 
 ProposedPackageDetails, 
@@ -15,8 +17,8 @@ FinancialImpactPerMonthDraft,
 IncrementDetailsSummaryDraft
 )
 
+from django.apps import apps
 from django.db.models import Sum, Prefetch, Avg
-from decimal import Decimal
 
 
 def update_draft_department_team_increment_summary(sender, instance, company, department_team):
@@ -34,9 +36,7 @@ def update_draft_department_team_increment_summary(sender, instance, company, de
             proposed_package = ProposedPackageDetailsDraft.objects.filter(employee_draft__company=company, employee_draft__department_team=department_team)
             if proposed_package.exists():
 
-                IncrementDetailsSummaryDraft.objects.filter(company=company, 
-                                                    department_team=department_team
-                                                    ).update(total_employees = employee_count,)
+                IncrementDetailsSummaryDraft.objects.filter(company=company, department_team=department_team).update(total_employees = employee_count,)
 
         if sender is FinancialImpactPerMonthDraft:
             configuration = Configurations.objects.first()
@@ -63,9 +63,7 @@ def update_department_team_increment_summary(sender, instance, company, departme
             proposed_package = ProposedPackageDetails.objects.filter(employee__company=company, employee__department_team=department_team)
             if proposed_package.exists():
 
-                IncrementDetailsSummary.objects.filter(company=company, 
-                                                    department_team=department_team
-                                                    ).update(total_employees = employee_count,)
+                IncrementDetailsSummary.objects.filter(company=company, department_team=department_team).update(total_employees = employee_count,)
 
         if sender is FinancialImpactPerMonth:
             proposed_package = ProposedPackageDetails.objects.get(employee=instance.employee)
@@ -123,8 +121,6 @@ def get_companies_and_department_teams(hr_id):
         print(f"Error in fetching hr assigned companies and their respective deparment teams: {e}")
 
 
-from django.apps import apps
-
 # ✅ Put your app labels here
 ALLOWED_APPS = ["user"]  # e.g. ["hr"]
 
@@ -150,8 +146,6 @@ def list_fields(model):
         and not getattr(f, "auto_created", False)
         and not getattr(f, "many_to_many", False)
     ]
-
-from collections import defaultdict, deque
 
 # def build_dependency_graph(formulas, company=None, employee=None, department_team=None):
 #     graph = defaultdict(list)

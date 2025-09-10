@@ -86,8 +86,9 @@
                                 <th>Full Name</th>
                                 <th>Gross Salary</th>
                                 <th>Vehicle</th>
-                                <th>Fuel Limit</th>
-                                <th>Mobile Allowance</th>
+                                <th>Fuel Allowance</th>
+                                <th>Fuel Litre</th>
+                                <th>Mobile Provided</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -98,8 +99,10 @@
                                         <td>{{ employee.fullname|default:"-" }}</td>
                                         <td class="editable" data-field="gross_salary" data-type="number" data-step="0.01">{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
                                         <td class="editable" data-field="vehicle_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ current_package.vehicle|default:"-" }}</td>
-                                        <td class="editable" data-field="fuel_limit" data-type="number" data-step="0.01">{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td>
-                                        <td class="editable" data-field="mobile_allowance" data-type="number" data-step="0.01">{{ current_package.mobile_allowance|floatformat:2|default:"-" }}</td>
+                                        <!-- <td class="editable" data-field="fuel_limit" data-type="number" data-step="0.01">{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td> -->
+                                        <td class="editable" data-field="fuel_allowance" data-type="number" data-step="0.01">{{ current_package.fuel_allowance|floatformat:2|default:"-" }}</td>
+                                        <td class="editable" data-field="fuel_litre" data-type="number" data-step="0.01">{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
+                                        <td class="editable" data-field="mobile_provided" data-type="number" data-step="0.01">{{ current_package.mobile_provided|floatformat:2|default:"-" }}</td>
                                     </tr>
                                 {% endwith %}
                             {% empty %}
@@ -122,9 +125,10 @@
                                 <th>Increment Percentage</th>
                                 <th>Increased Amount</th>
                                 <th>Revised Salary</th>
-                                <th>Increased Fuel Amount</th>
+                                <th>Increased Fuel Allowance</th>
+                                <th>Increased Fuel Litre</th>
                                 <th>Revised Fuel Allowance</th>
-                                <th>Mobile Allowance</th>
+                                <th>Mobile Provided</th>
                                 <th>Vehicle</th>
                             </tr>
                         </thead>
@@ -137,9 +141,12 @@
                                         <td class="editable" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
                                         <td>{{ proposed_package.increased_amount|floatformat:2|default:"-" }}</td>
                                         <td>{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
-                                        <td class="editable" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td>
+                                        <!-- <td class="editable" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td> -->
+                                         <td class="editable" data-field="increased_fuel_allowance" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_allowance|floatformat:2|default:"-" }}</td>
+                                         <td class="editable" data-field="increased_fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_litre|floatformat:2|default:"-" }}</td>
                                         <td>{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
-                                        <td class="editable" data-field="mobile_allowance_proposed" data-type="number" data-step="0.01">{{ proposed_package.mobile_allowance|floatformat:2|default:"-" }}</td>
+                                        <!-- <td class="editable" data-field="mobile_allowance_proposed" data-type="number" data-step="0.01">{{ proposed_package.mobile_allowance|floatformat:2|default:"-" }}</td> -->
+                                        <td class="editable" data-field="mobile_provided_proposed" data-type="number" data-step="0.01">{{ proposed_package.mobile_provided|floatformat:2|default:"-" }}</td>
                                         <td class="editable" data-field="vehicle_proposed_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ proposed_package.vehicle|default:"-" }}</td>
                                     </tr>
                                 {% endwith %}
@@ -290,13 +297,21 @@
                                 <option value="">Select Vehicle</option>
                             </select>
                         </div>
-                        <div class="form-field">
+                        <!-- <div class="form-field">
                             <label for="fuel_limit">Fuel Limit</label>
                             <input type="number" id="fuel_limit" name="fuel_limit" step="0.01">
+                        </div> -->
+                        <div class="form-field">
+                            <label for="fuel_allowance">Fuel Allowance</label>
+                            <input type="number" id="fuel_allowance" name="fuel_allowance" step="0.01">
                         </div>
                         <div class="form-field">
-                            <label for="mobile_allowance">Mobile Allowance</label>
-                            <input type="number" id="mobile_allowance" name="mobile_allowance" step="0.01">
+                            <label for="fuel_litre">Fuel Litre</label>
+                            <input type="number" id="fuel_litre" name="fuel_litre" step="0.01">
+                        </div>
+                        <div class="form-field">
+                            <label for="mobile_provided">Mobile Provided</label>
+                            <input type="number" id="mobile_provided" name="mobile_provided" step="0.01">
                         </div>
                     </div>
                     <!-- Step 3: Proposed Package -->
@@ -311,8 +326,8 @@
                             <input type="number" id="increased_fuel_amount" name="increased_fuel_amount" step="0.01">
                         </div>
                         <div class="form-field">
-                            <label for="mobile_allowance_proposed">Mobile Allowance</label>
-                            <input type="number" id="mobile_allowance_proposed" name="mobile_allowance_proposed" step="0.01">
+                            <label for="mobile_provided_proposed">Mobile Provided</label>
+                            <input type="number" id="mobile_provided_proposed" name="mobile_provided_proposed" step="0.01">
                         </div>
                         <div class="form-field">
                             <label for="vehicle_proposed_id">Vehicle</label>
@@ -996,17 +1011,22 @@
             q('#remarks').value = data.employee.remarks || '';
             q('#gross_salary').value = data.current_package?.gross_salary || '';
             q('#vehicle_id').value = data.current_package?.vehicle_id || '';
-            q('#fuel_limit').value = data.current_package?.fuel_limit || '';
-            q('#mobile_allowance').value = data.current_package?.mobile_allowance || '';
+            q('#fuel_allowance').value = data.current_package?.fuel_allowance || '';
+            q('#fuel_litre').value = data.current_package?.fuel_litre || '';
+            q('#mobile_provided').value = data.current_package?.mobile_provided || '';
+            // q('#fuel_limit').value = data.current_package?.fuel_limit || '';
+            // q('#mobile_allowance').value = data.current_package?.mobile_allowance || '';
             q('#increment_percentage').value = data.proposed_package?.increment_percentage || '';
-            q('#increased_fuel_amount').value = data.proposed_package?.increased_fuel_amount || '';
-            q('#mobile_allowance_proposed').value = data.proposed_package?.mobile_allowance || '';
+            // q('#increased_fuel_amount').value = data.proposed_package?.increased_fuel_amount || '';
+            q('#increased_fuel_allowance').value = data.proposed_package?.increased_fuel_allowance || '';
+            q('#increased_fuel_litre').value = data.proposed_package?.increased_fuel_litre || '';
+            q('#mobile_provided_proposed').value = data.proposed_package?.mobile_provided || '';
             q('#vehicle_proposed_id').value = data.proposed_package?.vehicle_id || '';
             q('#emp_status_id').value = data.financial_impact?.emp_status_id || '';
             if (modal.dataset.mode === 'edit') {
                 formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, resign: q('#resign').value, date_of_resignation: q('#date_of_resignation').value, remarks: q('#remarks').value };
-                formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, vehicle_id: q('#vehicle_id').value, fuel_limit: q('#fuel_limit').value, mobile_allowance: q('#mobile_allowance').value };
-                formDataStore[2] = { ...formDataStore[2], increment_percentage: q('#increment_percentage').value, increased_fuel_amount: q('#increased_fuel_amount').value, mobile_allowance_proposed: q('#mobile_allowance_proposed').value, vehicle_proposed_id: q('#vehicle_proposed_id').value };
+                formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, vehicle_id: q('#vehicle_id').value, fuel_allowance: q('#fuel_allowance').value, fuel_litre: q('#fuel_litre').value, mobile_provided: q('#mobile_provided').value };
+                formDataStore[2] = { ...formDataStore[2], increment_percentage: q('#increment_percentage').value, increased_fuel_allowance: q('#increased_fuel_allowance').value, increased_fuel_litre: q('#increased_fuel_litre').value, mobile_provided_proposed: q('#mobile_provided_proposed').value, vehicle_proposed_id: q('#vehicle_proposed_id').value };
                 formDataStore[3] = { ...formDataStore[3], emp_status_id: q('#emp_status_id').value };
             }
         }

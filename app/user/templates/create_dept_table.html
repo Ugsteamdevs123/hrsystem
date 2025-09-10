@@ -121,10 +121,10 @@
                         <option value="">Select Vehicle</option>
                     </select>
                 </div>
-                <div class="form-field">
+                <!-- <div class="form-field">
                     <label for="fuel_limit">Fuel Limit</label>
                     <input type="number" id="fuel_limit" name="fuel_limit" step="0.01">
-                </div>
+                </div> -->
                 <div class="form-field">
                     <label for="mobile_provided">Mobile Provided</label>
                     <div class="inline-group">
@@ -135,6 +135,10 @@
                             <input type="radio" name="mobile_provided" value="false" checked> No
                         </label>
                     </div>
+                </div>
+                <div class="form-field">
+                    <label for="fuel_allowance">Fuel Allowance</label>
+                    <input type="number" id="fuel_allowance" name="fuel_allowance" step="0.01">
                 </div>
                 <div class="form-field">
                     <label for="fuel_litre">Fuel (Litres)</label>
@@ -150,8 +154,12 @@
                     <input type="number" id="increment_percentage" name="increment_percentage" step="0.01">
                 </div>
                 <div class="form-field">
-                    <label for="increased_fuel_amount">Increased Fuel Amount</label>
-                    <input type="number" id="increased_fuel_amount" name="increased_fuel_amount" step="0.01">
+                    <label for="increased_fuel_allowance">Increased Fuel Allowance</label>
+                    <input type="number" id="increased_fuel_allowance" name="increased_fuel_allowance" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label for="increased_fuel_litre">Increased Fuel Litres</label>
+                    <input type="number" id="increased_fuel_litre" name="increased_fuel_litre" step="0.01">
                 </div>
                 <div class="form-field">
                     <label for="mobile_provided_proposed">Mobile Provided</label>
@@ -188,8 +196,8 @@
                     <input type="number" id="fuel_litre" name="fuel_litre" step="0.01">
                 </div>
                 <div class="form-field">
-                    <label for="vehicle_allowance">Vehicle Allowance</label>
-                    <input type="number" id="vehicle_allowance" name="vehicle_allowance" step="0.01">
+                    <label for="increased_fuel_allowance">Increased Fuel Allowance</label>
+                    <input type="number" id="increased_fuel_allowance" name="increased_fuel_allowance" step="0.01">
                 </div>
 
             </div>
