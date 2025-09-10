@@ -41,8 +41,8 @@ def update_draft_department_team_increment_summary(sender, instance, company, de
         if sender is FinancialImpactPerMonthDraft:
             configuration = Configurations.objects.first()
             if configuration:
-                years = configuration.as_of_date.year - instance.employee.date_of_joining.year
-                if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee.date_of_joining.month, instance.employee.date_of_joining.day):
+                years = configuration.as_of_date.year - instance.employee_draft.employee.date_of_joining.year
+                if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee_draft.employee.date_of_joining.month, instance.employee_draft.employee.date_of_joining.day):
                     years -= 1
 
                 FinancialImpactPerMonthDraft.objects.filter(id=instance.id).update(serving_years = years)

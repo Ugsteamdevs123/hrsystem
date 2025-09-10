@@ -1424,7 +1424,7 @@ class UpdateEmployeeView(View):
                 elif step == 'current_package':
                     current_package, _ = CurrentPackageDetails.objects.get_or_create(employee=employee)
                     current_package.gross_salary = request.POST.get('gross_salary') or None
-                    current_package.company_pickup = request.POST.get('company_pickup') == 'true'
+                    current_package.company_pickup = request.POST.get('company_pickup_current') == 'true'
                     current_package.vehicle_id = request.POST.get('vehicle_id') or None
                     current_package.fuel_limit = request.POST.get('fuel_limit') or None
                     current_package.mobile_provided = request.POST.get('mobile_provided') == 'true'
@@ -1440,7 +1440,7 @@ class UpdateEmployeeView(View):
                     proposed_package.increment_percentage = request.POST.get('increment_percentage') or None
                     proposed_package.increased_fuel_amount = request.POST.get('increased_fuel_amount') or None
                     proposed_package.mobile_provided = request.POST.get('mobile_provided_proposed') == 'true'
-                    proposed_package.company_pickup = request.POST.get('company_pickup') == 'true'
+                    proposed_package.company_pickup = request.POST.get('company_pickup_proposed') == 'true'
                     proposed_package.vehicle_id = request.POST.get('vehicle_proposed_id') or None
                     proposed_package.fuel_litre = request.POST.get('proposed_package_fuel_litre') or None
                     proposed_package.vehicle_allowance = request.POST.get('vehicle_allowance') or None
@@ -2249,7 +2249,19 @@ class SaveDraftView(View):
                 # Save proposed package fields
                 if proposed_package_edited:
                     print("if proposed_package_edited")
+                    proposed_package_details = employee_draft.employee.proposedpackagedetails
+                    print("proposed_package_details: ", proposed_package_details)
                     draft, _ = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+                    # if _:
+                    #     draft.increment_percentage = proposed_package_details.increment_percentage
+                    #     draft.increased_fuel_amount = proposed_package_details.increased_fuel_amount
+                    #     draft.vehicle = proposed_package_details.vehicle
+                    #     draft.mobile_provided = proposed_package_details.mobile_provided
+                    #     draft.fuel_litre = proposed_package_details.fuel_litre
+                    #     draft.vehicle_allowance = proposed_package_details.vehicle_allowance
+                    #     draft.company_pickup = proposed_package_details.company_pickup
+                    #     draft.is_deleted = proposed_package_details.is_deleted
+
                     print("draft: ", draft)
                     for field, value in tabs.get('proposed_package', {}).items():
                         print("field, value: ", field, value, type(value))

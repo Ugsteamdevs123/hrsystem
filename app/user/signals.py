@@ -99,7 +99,7 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
                 print(f"Error evaluating formula for {model_name}.{field}: {e}")
 
     except Exception as e:
-        print(f"Error in updating increment summary: {e}")
+        print(f"Error in updating increment summary employee: {e}")
         # logger.error(f"Error in checking driver wallet balance: {e}", extra={'id': instance.id})
 
 
@@ -394,7 +394,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                 print(f"Error evaluating formula for {target_model_name}.{field}: {e}")
 
     except Exception as e:
-        print(f"Error in updating increment summary draft: {e}")
+        print(f"Error in updating increment summary draft employee: {e}")
 
 
 @receiver(post_save, sender=CurrentPackageDetailsDraft)
@@ -469,7 +469,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
             financialimpactpermonth = employee.financialimpactpermonth
             # FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)    
             FinancialImpactPerMonthDraft.objects.get_or_create(
-                employee_draft=inemployee_draftstance, 
+                employee_draft=employee_draft, 
                 emp_status=financialimpactpermonth.emp_status, 
                 serving_years=financialimpactpermonth.serving_years
             )    
@@ -563,7 +563,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
                 print(f"Error evaluating formula for {target_model_name}.{field}: {e}")
 
     except Exception as e:
-        print(f"Error in updating increment summary: {e}")
+        print(f"Error in updating increment summary draft: {e}")
 
 # @receiver(post_save, sender=CurrentPackageDetailsDraft)
 # @receiver(post_save, sender=ProposedPackageDetailsDraft)
