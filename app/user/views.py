@@ -9,6 +9,7 @@ from .models import (
     SummaryStatus,
     IncrementDetailsSummary,
     Employee,
+    Configurations,
     CurrentPackageDetails,
     ProposedPackageDetails,
     FinancialImpactPerMonth,
@@ -846,6 +847,7 @@ class DepartmentTeamView(View):
                     return JsonResponse({'error': 'Company and name are required'}, status=400)
                 company = Company.objects.get(id=company_id, id__in=hr_assigned_companies.objects.filter(hr=request.user).values('company'))
                 DepartmentTeams.objects.create(company=company, name=name)
+                print("successfully")
                 return JsonResponse({'message': 'Department added successfully'})
             except (Company.DoesNotExist, ValueError):
                 return JsonResponse({'error': 'Invalid company or data'}, status=400)
@@ -1094,11 +1096,12 @@ class DepartmentTableView(View):
             if current_package:
                 data['currentpackagedetails'] = {
                     'gross_salary': current_package.gross_salary,
-                    'company_pickup': current_package.company_pickup,
                     'vehicle': current_package.vehicle,
-                    'fuel_limit': current_package.fuel_limit,
+                    'company_pickup': current_package.company_pickup,
+                    # 'fuel_limit': current_package.fuel_limit,
                     'fuel_litre': current_package.fuel_litre,
-                    'vehicle_allowance': current_package.vehicle_allowance,
+                    # 'vehicle_allowance': current_package.vehicle_allowance,
+                    'fuel_allowance': current_package.fuel_allowance,
                     'mobile_provided': current_package.mobile_provided,
                     'total': current_package.total,
                 }
@@ -1112,11 +1115,12 @@ class DepartmentTableView(View):
                     'increment_percentage': proposed_package.increment_percentage,
                     'increased_amount': proposed_package.increased_amount,
                     'revised_salary': proposed_package.revised_salary,
-                    'increased_fuel_amount': proposed_package.increased_fuel_amount,
+                    # 'increased_fuel_amount': proposed_package.increased_fuel_amount,
+                    'increased_fuel_allowance': proposed_package.increased_fuel_allowance,
+                    'increased_fuel_litre': proposed_package.increased_fuel_litre,
                     'revised_fuel_allowance': proposed_package.revised_fuel_allowance,
-                    'fuel_litre': proposed_package.fuel_litre,
                     'company_pickup': proposed_package.company_pickup,
-                    'vehicle_allowance': proposed_package.vehicle_allowance,
+                    # 'vehicle_allowance': proposed_package.vehicle_allowance,
                     'mobile_provided': proposed_package.mobile_provided,
                     'total': proposed_package.total,
                     'vehicle': proposed_package.vehicle,
@@ -1214,7 +1218,8 @@ class GetEmployeeDataView(View):
                     'gross_salary': fmt_float(getattr(use_current, 'gross_salary', None)),
                     'company_pickup': getattr(getattr(use_current, 'company_pickup', None), 'id', ''),
                     'vehicle_id': getattr(getattr(use_current, 'vehicle', None), 'id', ''),
-                    'fuel_limit': fmt_float(getattr(use_current, 'fuel_limit', None)),
+                    # 'fuel_limit': fmt_float(getattr(use_current, 'fuel_limit', None)),
+                    'fuel_litre': fmt_float(getattr(use_current, 'fuel_litre', None)),
                     'mobile_allowance': fmt_float(getattr(use_current, 'mobile_allowance', None)),
                 },
                 'proposed_package': {
@@ -1242,7 +1247,11 @@ class GetEmployeeDataView(View):
 
 
 
-
+from django.db.models.signals import post_save
+from .signals import (
+    update_increment_summary_employee,
+    update_increment_summary
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -1285,6 +1294,12 @@ class CreateEmployeeView(View):
 
                     # STEP 1: Create Employee
                     if step == 'employee':
+                        # Step 2: Disconnect signal
+                        post_save.disconnect(update_increment_summary_employee, sender=Employee)
+                        post_save.disconnect(update_increment_summary, sender=CurrentPackageDetails)
+                        post_save.disconnect(update_increment_summary, sender=ProposedPackageDetails)
+                        post_save.disconnect(update_increment_summary, sender=FinancialImpactPerMonth)
+
                         employee = Employee.objects.create(
                             emp_id=request.POST.get('emp_id'),
                             fullname=request.POST.get('fullname'),
@@ -1301,6 +1316,23 @@ class CreateEmployeeView(View):
                             image=request.FILES.get('image') if 'image' in request.FILES else None,
                             eligible_for_increment=request.POST.get('eligible_for_increment') == 'true'
                         )
+                        print("employee created")
+                        CurrentPackageDetails.objects.create(employee=employee)
+                        print("current package created")
+                        ProposedPackageDetails.objects.create(employee=employee)
+                        print("proposed package created")
+                        FinancialImpactPerMonth.objects.create(employee=employee)
+                        print("financial impact created")
+
+                        # Step 3: Reconnect signal
+                        post_save.connect(update_increment_summary_employee, sender=Employee)
+                        post_save.connect(update_increment_summary, sender=CurrentPackageDetails)
+                        post_save.connect(update_increment_summary, sender=ProposedPackageDetails)
+                        post_save.connect(update_increment_summary, sender=FinancialImpactPerMonth)
+
+                        # Step 4: Manually run the signal function
+                        update_increment_summary_employee(sender=Employee, instance=employee, created=True)
+                        
                         logger.debug(f"Employee created: {employee.emp_id}")
                         return JsonResponse({'message': 'Employee created', 'employee_id': employee.emp_id})
 
@@ -1308,15 +1340,29 @@ class CreateEmployeeView(View):
                     elif step == 'current_package':
                         employee_id = request.POST.get('employee_id')
                         employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
-                        CurrentPackageDetails.objects.create(
-                            employee=employee,
-                            gross_salary=request.POST.get('gross_salary') or None,
-                            vehicle_id=request.POST.get('vehicle_id') or None,
-                            fuel_limit=request.POST.get('fuel_limit') or None,
-                            mobile_provided=request.POST.get('mobile_provided') == 'true',
-                            fuel_litre=request.POST.get('fuel_litre') or None,
-                            company_pickup=request.POST.get('company_pickup') == 'true'
-                        )
+
+                        current_package_details = CurrentPackageDetails.objects.filter(employee=employee).first()
+
+                        current_package_details.gross_salary = request.POST.get('gross_salary') or None
+                        current_package_details.vehicle_id = request.POST.get('vehicle_id') or None
+                        # current_package_details.fuel_limit = request.POST.get('fuel_limit') or None
+                        current_package_details.mobile_provided = request.POST.get('mobile_provided') == 'true'
+                        if not request.POST.get('fuel_litre'):
+                            current_package_details.fuel_allowance = request.POST.get('fuel_allowance') or None
+                        else:
+                            fuel_rate = Configurations.objects.values_list('fuel_rate', flat=True).first()
+                            # current_package_details.fuel_allowance = (float(request.POST.get('fuel_litre')) + fuel_rate) or None
+                            try:
+                                fuel_litre = float(request.POST.get('fuel_litre'))
+                                current_package_details.fuel_allowance = fuel_litre * fuel_rate
+                            except (TypeError, ValueError):
+                                current_package_details.fuel_allowance = None
+                        current_package_details.fuel_litre = request.POST.get('fuel_litre') or None
+                        current_package_details.company_pickup = request.POST.get('company_pickup') == 'true'
+
+                        print(current_package_details.__dict__)
+                        current_package_details.save()
+
                         logger.debug(f"CurrentPackageDetails created for employee: {employee_id}")
                         return JsonResponse({'message': 'Current Package created'})
 
@@ -1324,16 +1370,31 @@ class CreateEmployeeView(View):
                     elif step == 'proposed_package':
                         employee_id = request.POST.get('employee_id')
                         employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
-                        ProposedPackageDetails.objects.create(
-                            employee=employee,
-                            increment_percentage=request.POST.get('increment_percentage') or None,
-                            increased_fuel_amount=request.POST.get('increased_fuel_amount') or None,
-                            mobile_provided=request.POST.get('mobile_provided_proposed') == 'true',
-                            vehicle_id=request.POST.get('vehicle_proposed_id') or None,
-                            fuel_litre=request.POST.get('fuel_litre') or None,
-                            vehicle_allowance=request.POST.get('vehicle_allowance') or None,
-                            company_pickup=request.POST.get('company_pickup') == 'true'
-                        )
+
+                        proposed_package_details = ProposedPackageDetails.objects.filter(employee=employee).first()
+                        
+                        proposed_package_details.increment_percentage = request.POST.get('increment_percentage') or None
+                        # proposed_package_details.increased_fuel_amount = request.POST.get('increased_fuel_amount') or None
+
+                        if not request.POST.get('increased_fuel_litre'):
+                            proposed_package_details.increased_fuel_allowance = request.POST.get('increased_fuel_allowance') or None
+                        else:
+                            fuel_rate = Configurations.objects.values_list('fuel_rate', flat=True).first()
+                            # proposed_package_details.fuel_allowance = (float(request.POST.get('fuel_litre')) + fuel_rate) or None
+                            try:
+                                fuel_litre = float(request.POST.get('increased_fuel_litre'))
+                                proposed_package_details.increased_fuel_allowance = fuel_litre * fuel_rate
+                            except (TypeError, ValueError):
+                                proposed_package_details.increased_fuel_allowance = None
+
+                        proposed_package_details.increased_fuel_litre = request.POST.get('increased_fuel_litre') or None
+                        proposed_package_details.mobile_provided = request.POST.get('mobile_provided_proposed') == 'true'
+                        proposed_package_details.vehicle_id = request.POST.get('vehicle_proposed_id') or None
+                        # proposed_package_details.fuel_litre = request.POST.get('fuel_litre') or None
+                        # proposed_package_details.vehicle_allowance = request.POST.get('vehicle_allowance') or None
+                        proposed_package_details.company_pickup = request.POST.get('company_pickup') == 'true'
+                        proposed_package_details.save()
+
                         logger.debug(f"ProposedPackageDetails created for employee: {employee_id}")
                         return JsonResponse({'message': 'Proposed Package created'})
 
@@ -1341,13 +1402,14 @@ class CreateEmployeeView(View):
                     elif step == 'financial_impact':
                         employee_id = request.POST.get('employee_id')
                         employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
-                        FinancialImpactPerMonth.objects.create(
-                            employee=employee,
-                            emp_status_id=request.POST.get('emp_status_id') or None,
-                            serving_years=request.POST.get('serving_years') or None,
-                            salary=request.POST.get('salary') or None,
-                            gratuity=request.POST.get('gratuity') or None
-                        )
+                        financial_impact_per_month = FinancialImpactPerMonth.objects.filter(employee=employee).first()
+                        
+                        financial_impact_per_month.emp_status_id = request.POST.get('emp_status_id') or None
+                        financial_impact_per_month.serving_years = request.POST.get('serving_years') or None
+                        financial_impact_per_month.salary = request.POST.get('salary') or None
+                        financial_impact_per_month.gratuity = request.POST.get('gratuity') or None
+                        financial_impact_per_month.save()
+
                         logger.debug(f"FinancialImpactPerMonth created for employee: {employee_id}")
                         return JsonResponse({'message': 'Financial Impact created'})
 
@@ -1429,11 +1491,23 @@ class UpdateEmployeeView(View):
                 elif step == 'current_package':
                     current_package, _ = CurrentPackageDetails.objects.get_or_create(employee=employee)
                     current_package.gross_salary = request.POST.get('gross_salary') or None
-                    current_package.company_pickup = request.POST.get('company_pickup') == 'true'
+                    current_package.company_pickup = request.POST.get('company_pickup_current') == 'true'
                     current_package.vehicle_id = request.POST.get('vehicle_id') or None
-                    current_package.fuel_limit = request.POST.get('fuel_limit') or None
+                    # current_package.fuel_limit = request.POST.get('fuel_limit') or None
                     current_package.mobile_provided = request.POST.get('mobile_provided') == 'true'
-                    current_package.fuel_litre = request.POST.get('current_package_fuel_litre') or None
+                    if not request.POST.get('fuel_litre'):
+                            current_package.fuel_allowance = request.POST.get('fuel_allowance') or None
+                    else:
+                        fuel_rate = Configurations.objects.values_list('fuel_rate', flat=True).first()
+                        # current_package.fuel_allowance = (float(request.POST.get('fuel_litre')) + fuel_rate) or None
+                        try:
+                            fuel_litre = float(request.POST.get('fuel_litre'))
+                            current_package.fuel_allowance = fuel_litre * fuel_rate
+                        except (TypeError, ValueError):
+                            current_package.fuel_allowance = None
+                    current_package.fuel_litre = request.POST.get('fuel_litre') or None
+
+                    current_package.fuel_litre = request.POST.get('fuel_litre') or None
                     current_package.save()
                     logger.debug(f"CurrentPackageDetails updated for employee: {employee_id}")
                     return JsonResponse({'message': 'Current Package updated'})
@@ -1445,10 +1519,23 @@ class UpdateEmployeeView(View):
                     proposed_package.increment_percentage = request.POST.get('increment_percentage') or None
                     proposed_package.increased_fuel_amount = request.POST.get('increased_fuel_amount') or None
                     proposed_package.mobile_provided = request.POST.get('mobile_provided_proposed') == 'true'
-                    proposed_package.company_pickup = request.POST.get('company_pickup') == 'true'
+                    proposed_package.company_pickup = request.POST.get('company_pickup_proposed') == 'true'
                     proposed_package.vehicle_id = request.POST.get('vehicle_proposed_id') or None
-                    proposed_package.fuel_litre = request.POST.get('proposed_package_fuel_litre') or None
-                    proposed_package.vehicle_allowance = request.POST.get('vehicle_allowance') or None
+                    
+                    if not request.POST.get('increased_fuel_litre'):
+                            proposed_package.increased_fuel_allowance = request.POST.get('increased_fuel_allowance') or None
+                    else:
+                        fuel_rate = Configurations.objects.values_list('fuel_rate', flat=True).first()
+                        # proposed_package.fuel_allowance = (float(request.POST.get('fuel_litre')) + fuel_rate) or None
+                        try:
+                            fuel_litre = float(request.POST.get('increased_fuel_litre'))
+                            proposed_package.increased_fuel_allowance = fuel_litre * fuel_rate
+                        except (TypeError, ValueError):
+                            proposed_package.increased_fuel_allowance = None
+
+                    # proposed_package.fuel_litre = request.POST.get('proposed_package_fuel_litre') or None
+                    proposed_package.increased_fuel_litre = request.POST.get('increased_fuel_litre') or None
+                    # proposed_package.vehicle_allowance = request.POST.get('vehicle_allowance') or None
                     proposed_package.save()
                     logger.debug(f"ProposedPackageDetails updated for employee: {employee_id}")
                     return JsonResponse({'message': 'Proposed Package updated'})
@@ -1473,9 +1560,6 @@ class UpdateEmployeeView(View):
                 return JsonResponse({'error': 'Invalid data'}, status=400)
 
         return JsonResponse({'error': 'Invalid request'}, status=400)
-
-
-
 
 
 class DeleteEmployeeView(View):
@@ -1578,19 +1662,22 @@ class GetDataView(View):
                         'gross_salary': str(current_package.gross_salary) if current_package and current_package.gross_salary else '',
                         'company_pickup': current_package.company_pickup if current_package else False,
                         'vehicle_id': current_package.vehicle_id if current_package else '',
-                        'fuel_limit': str(current_package.fuel_limit) if current_package and current_package.fuel_limit else '',
+                        # 'fuel_limit': str(current_package.fuel_limit) if current_package and current_package.fuel_limit else '',
                         'mobile_provided': current_package.mobile_provided if current_package else False,
+                        'fuel_allowance': str(current_package.fuel_allowance) if current_package and current_package.fuel_allowance else '',
                         'fuel_litre': str(current_package.fuel_litre) if current_package and current_package.fuel_litre else ''
                     },
                     'proposed_package': {
                         'increment_percentage': str(proposed_package.increment_percentage) if proposed_package and proposed_package.increment_percentage else '',
-                        'increased_fuel_amount': str(proposed_package.increased_fuel_amount) if proposed_package and proposed_package.increased_fuel_amount else '',
+                        # 'increased_fuel_amount': str(proposed_package.increased_fuel_amount) if proposed_package and proposed_package.increased_fuel_amount else '',
                         'revised_salary': str(proposed_package.revised_salary) if proposed_package and proposed_package.revised_salary else '',
                         'mobile_provided': proposed_package.mobile_provided if proposed_package else False,
                         'company_pickup': proposed_package.company_pickup if proposed_package else False,
                         'vehicle_id': proposed_package.vehicle_id if proposed_package else '',
-                        'fuel_litre': str(proposed_package.fuel_litre) if proposed_package and proposed_package.fuel_litre else '',
-                        'vehicle_allowance': str(proposed_package.vehicle_allowance) if proposed_package and proposed_package.vehicle_allowance else '',
+                        'increased_fuel_litre': str(proposed_package.increased_fuel_litre) if proposed_package and proposed_package.increased_fuel_litre else '',
+                        'increased_fuel_allowance': str(proposed_package.increased_fuel_allowance) if proposed_package and proposed_package.increased_fuel_allowance else '',
+                        # 'fuel_litre': str(proposed_package.fuel_litre) if proposed_package and proposed_package.fuel_litre else '',
+                        # 'vehicle_allowance': str(proposed_package.vehicle_allowance) if proposed_package and proposed_package.vehicle_allowance else '',
                     },
                     'financial_impact': {
                         'emp_status_id': str(financial_impact.emp_status_id) if financial_impact and financial_impact.emp_status_id else '',
@@ -1611,14 +1698,7 @@ class GetDataView(View):
 
 
 
-'''
-For Fetch the formula on frontend
-'''
 
-class FetchFormulaView(View):
-
-    def get(self,request):
-        formula = FieldFormula.objects.filter()
 
 
 
@@ -2150,10 +2230,12 @@ class SaveDraftView(View):
                                 print("current_value _id: ", current_value)
                             elif isinstance(current_value, bool):
                                 current_value = str(current_value).lower()
-                            if str(value) != str(current_value):
-                                has_changes = True
-                                employee_draft_edited[field] = True
-                                print("employee_draft_edited: ", employee_draft_edited)
+                            # if str(value) != str(current_value):
+                            #     has_changes = True
+                            #     employee_draft_edited[field] = True
+                            #     print("employee_draft_edited: ", employee_draft_edited)
+                            has_changes = True
+                            employee_draft_edited[field] = True
 
                     elif tab == 'current_package':
                         current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
@@ -2165,9 +2247,11 @@ class SaveDraftView(View):
                             if field.endswith('_id'):
                                 current_value = current_value.id if current_value else None
                                 print("current_value _id: ", current_value)
-                            if str(value) != str(current_value):
-                                has_changes = True
-                                current_package_edited[field] = True
+                            # if str(value) != str(current_value):
+                            #     has_changes = True
+                            #     current_package_edited[field] = True
+                            has_changes = True
+                            current_package_edited[field] = True
 
                     elif tab == 'proposed_package':
                         proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
@@ -2179,9 +2263,11 @@ class SaveDraftView(View):
                             if field.endswith('_id'):
                                 current_value = current_value.id if current_value else None
                                 print("current_value _id: ", current_value)
-                            if str(value) != str(current_value):
-                                has_changes = True
-                                proposed_package_edited[field] = True
+                            # if str(value) != str(current_value):
+                            #     has_changes = True
+                            #     proposed_package_edited[field] = True
+                            has_changes = True
+                            proposed_package_edited[field] = True
 
                     elif tab == 'financial_impact':
                         financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
@@ -2256,13 +2342,39 @@ class SaveDraftView(View):
 
                 # Save proposed package fields
                 if proposed_package_edited:
-                    print("if proposed_package_edited")
+                    print("if proposed_package_edited: ", proposed_package_edited)
+                    proposed_package_details = employee_draft.employee.proposedpackagedetails
+                    print("proposed_package_details: ", proposed_package_details)
                     draft, _ = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
+                    # if _:
+                    #     draft.increment_percentage = proposed_package_details.increment_percentage
+                    #     draft.increased_fuel_amount = proposed_package_details.increased_fuel_amount
+                    #     draft.vehicle = proposed_package_details.vehicle
+                    #     draft.mobile_provided = proposed_package_details.mobile_provided
+                    #     draft.fuel_litre = proposed_package_details.fuel_litre
+                    #     draft.vehicle_allowance = proposed_package_details.vehicle_allowance
+                    #     draft.company_pickup = proposed_package_details.company_pickup
+                    #     draft.is_deleted = proposed_package_details.is_deleted
+
+                    proposed_package = tabs.get('proposed_package', {})
+                    fuel_litre = float(proposed_package.get('increased_fuel_litre', 0))
+                    if fuel_litre > 0 and 'increased_fuel_allowance' in proposed_package:
+                        print("Removing increased_fuel_allowance because fuel_litre > 0")
+                        del proposed_package['increased_fuel_allowance']
+                            
                     print("draft: ", draft)
                     for field, value in tabs.get('proposed_package', {}).items():
                         print("field, value: ", field, value, type(value))
                         if proposed_package_edited.get(field):
-                            if field.endswith('_id'):
+                            if field == 'increased_fuel_litre':
+                                setattr(draft, field, Decimal(value) if value else Decimal('0'))
+                                fuel_litre = float(value)
+                                if fuel_litre == 0:
+                                    continue  # ❌ Skip processing if litres are zero
+                                fuel_rate = Configurations.objects.values_list('fuel_rate', flat=True).first()
+                                setattr(draft, 'increased_fuel_allowance', Decimal(fuel_litre * fuel_rate) if value else Decimal('0'))
+
+                            elif field.endswith('_id'):
                                 setattr(draft, field, int(value) if value else None)
                             elif isinstance(getattr(ProposedPackageDetailsDraft, field).field, models.BooleanField):
                                 print("boolean field")
@@ -2302,7 +2414,8 @@ class SaveDraftView(View):
                     drafts_saved = True
 
                 return JsonResponse({'message': 'Draft saved' if drafts_saved else 'No changes to save'}, status=200)
-
+                
+            return JsonResponse({'message': 'Draft processed, No changes detected to be drafted', 'drafts_saved': drafts_saved})
         except Exception as e:
             logger.error(f"Error in SaveDraftView for department {department_id}: {str(e)}", exc_info=True)
             return JsonResponse({'error': str(e)}, status=500)
@@ -2459,7 +2572,7 @@ class SaveFinalView(View):
                         logger.info(f"Updating current_package {employee_id}: {pkg_data}")
                         current_pkg, _ = CurrentPackageDetails.objects.get_or_create(employee=employee)
                         for field, value in pkg_data.items():
-                            if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'fuel_litre', 'mobile_provided']:
+                            if field in ['gross_salary', 'vehicle_id', 'fuel_allowance', 'fuel_litre', 'mobile_provided']:
                                 if field == 'vehicle_id':
                                     current_pkg.vehicle_id = int(value) if value else None
                                 elif field == 'mobile_provided':

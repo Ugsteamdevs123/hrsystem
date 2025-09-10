@@ -1,3 +1,7 @@
+from datetime import datetime
+from decimal import Decimal
+from collections import defaultdict, deque
+
 from .models import (CurrentPackageDetails, 
 ProposedPackageDetails, 
 FinancialImpactPerMonth, 
@@ -13,8 +17,8 @@ FinancialImpactPerMonthDraft,
 IncrementDetailsSummaryDraft
 )
 
+from django.apps import apps
 from django.db.models import Sum, Prefetch, Avg
-from decimal import Decimal
 
 
 def update_draft_department_team_increment_summary(sender, instance, company, department_team):
@@ -32,21 +36,19 @@ def update_draft_department_team_increment_summary(sender, instance, company, de
             proposed_package = ProposedPackageDetailsDraft.objects.filter(employee_draft__company=company, employee_draft__department_team=department_team)
             if proposed_package.exists():
 
-                IncrementDetailsSummaryDraft.objects.filter(company=company, 
-                                                    department_team=department_team
-                                                    ).update(total_employees = employee_count,)
+                IncrementDetailsSummaryDraft.objects.filter(company=company, department_team=department_team).update(total_employees = employee_count,)
 
         if sender is FinancialImpactPerMonthDraft:
             configuration = Configurations.objects.first()
             if configuration:
-                years = configuration.as_of_date.year - instance.employee.date_of_joining.year
-                if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee.date_of_joining.month, instance.employee.date_of_joining.day):
+                years = configuration.as_of_date.year - instance.employee_draft.employee.date_of_joining.year
+                if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee_draft.employee.date_of_joining.month, instance.employee_draft.employee.date_of_joining.day):
                     years -= 1
 
                 FinancialImpactPerMonthDraft.objects.filter(id=instance.id).update(serving_years = years)
            
     except Exception as e:
-        print(f"Error in updating department team increment summary: {e}")
+        print(f"Error in updating draft department team increment summary: {e}")
 
 
 def update_department_team_increment_summary(sender, instance, company, department_team):
@@ -61,16 +63,26 @@ def update_department_team_increment_summary(sender, instance, company, departme
             proposed_package = ProposedPackageDetails.objects.filter(employee__company=company, employee__department_team=department_team)
             if proposed_package.exists():
 
-                IncrementDetailsSummary.objects.filter(company=company, 
-                                                    department_team=department_team
-                                                    ).update(total_employees = employee_count,)
+                IncrementDetailsSummary.objects.filter(company=company, department_team=department_team).update(total_employees = employee_count,)
 
         if sender is FinancialImpactPerMonth:
             proposed_package = ProposedPackageDetails.objects.get(employee=instance.employee)
             configuration = Configurations.objects.first()
             if proposed_package:
-                years = configuration.as_of_date.year - instance.employee.date_of_joining.year
-                if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee.date_of_joining.month, instance.employee.date_of_joining.day):
+
+                # Ensure both are datetime/date
+                as_of_date = configuration.as_of_date
+                date_of_joining = instance.employee.date_of_joining
+
+                # Convert string to date if needed
+                if isinstance(as_of_date, str):
+                    as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
+
+                if isinstance(date_of_joining, str):
+                    date_of_joining = datetime.strptime(date_of_joining, "%Y-%m-%d").date()
+
+                years = as_of_date.year - date_of_joining.year
+                if (as_of_date.month, as_of_date.day) < (date_of_joining.month, date_of_joining.day):
                     years -= 1
 
                 FinancialImpactPerMonth.objects.filter(id=instance.id).update(serving_years = years)
@@ -109,8 +121,6 @@ def get_companies_and_department_teams(hr_id):
         print(f"Error in fetching hr assigned companies and their respective deparment teams: {e}")
 
 
-from django.apps import apps
-
 # ✅ Put your app labels here
 ALLOWED_APPS = ["user"]  # e.g. ["hr"]
 
@@ -136,8 +146,6 @@ def list_fields(model):
         and not getattr(f, "auto_created", False)
         and not getattr(f, "many_to_many", False)
     ]
-
-from collections import defaultdict, deque
 
 # def build_dependency_graph(formulas, company=None, employee=None, department_team=None):
 #     graph = defaultdict(list)
@@ -318,7 +326,7 @@ def get_variables_from_expression(expression):
     """Extract field references with optional aggregates like SUM[Model: Field]."""
     pattern = r'(SUM|AVG|COUNT)?\[([^:]+): ([^\]]+)\]'
     matches = re.findall(pattern, expression)
-    print(f"Expression: {expression}, Matches: {matches}")
+    # print(f"Expression: {expression}, Matches: {matches}")
     if not matches:
         raise ValueError(f"No valid field references found in expression: {expression}")
     return [(match[0] or None, match[1], match[2]) for match in matches]
@@ -340,17 +348,17 @@ def get_field_path(model_name, display_name):
 
 def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employee_draft=None):
     """Fetch value via Django-style path, applying aggregate if specified, prioritizing draft tables."""
-    print("PATH: is draft?", path, is_draft)
+    # print("PATH: is draft?", path, is_draft)
     if 'employee__employee' in path:
         path = path.replace('employee__employee', 'employee')
-    print("PATH: is draft?", path, is_draft)
+    # print("PATH: is draft?", path, is_draft)
     path = path.replace('employee', 'employee_draft') if is_draft else path
     parts = path.split('__')
     if parts[-2] == "employee_draft":
         parts[-2] = "employeedraft"
     elif parts[-2] != 'configurations':
         parts[-2] = parts[-2]+'draft' if is_draft else parts[-2]
-    print("parts: ", parts)
+    # print("parts: ", parts)
     model_mapping = {
         'employee': 'Employee',
         'currentpackagedetails': 'CurrentPackageDetails',
@@ -370,7 +378,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
     if len(parts) > 1:  # External model field
         model_name = parts[-2]
         field_name = parts[-1]
-        print("model name: ", model_name)
+        # print("model name: ", model_name)
         target_model_name = model_mapping_draft.get(model_name, model_name) if is_draft else model_mapping.get(model_name, model_name)
         Model = apps.get_model('user', target_model_name)
 
@@ -388,17 +396,26 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
         #                     if hasattr(instance, 'employee_draft') else instance.employee.company,
         #                     "employee__department_team": instance.employee_draft.employee.department_team 
         #                     if hasattr(instance, 'employee_draft') else instance.employee.department_team}
-        print("abcdefg is_draft: ", is_draft, " ::: target_model_name: ", target_model_name, " ::: model_name: ", model_name)
+
+
+        # print("abcdefg is_draft: ", is_draft, " ::: target_model_name: ", target_model_name, " ::: model_name: ", model_name)
+        # Get filter kwargs for non_draft tables at all case as they will be used to fetch those records for increment details summary draft where some employee
+        # records are not draft and their values need to be fetched from original tables.
         if is_draft and target_model_name.endswith('Draft'):
             if instance._meta.object_name == "IncrementDetailsSummaryDraft" and (target_model_name=="IncrementDetailsSummaryDraft" or target_model_name=='EmployeeDraft'):
                 filter_kwargs = {"company": instance.company, "department_team": instance.department_team}
+                filter_kwargs_non_draft = {"company": instance.company, "department_team": instance.department_team}
             elif instance._meta.object_name != "IncrementDetailsSummaryDraft" and (target_model_name=="IncrementDetailsSummaryDraft" or target_model_name=='EmployeeDraft'):
                 filter_kwargs = {"company": instance.employee_draft.employee.company, "department_team": instance.employee_draft.employee.department_team}
+                filter_kwargs_non_draft = {"company": instance.employee_draft.employee.company, "department_team": instance.employee_draft.employee.department_team}
             elif instance._meta.object_name == "IncrementDetailsSummaryDraft" and target_model_name!="IncrementDetailsSummaryDraft":
                 filter_kwargs = {"employee_draft__company": instance.company, "employee_draft__department_team": instance.department_team}
+                filter_kwargs_non_draft = {"employee__company": instance.company, "employee__department_team": instance.department_team}
             else:
                 filter_kwargs = {"employee_draft__company": instance.employee_draft.employee.company, "employee_draft__department_team": instance.employee_draft.employee.department_team}
-            print("filter_kwargs: ", filter_kwargs)
+                filter_kwargs_non_draft = {"employee__company": instance.employee_draft.employee.company, "employee__department_team": instance.employee_draft.employee.department_team}
+            # print("filter_kwargs draft: ", filter_kwargs)
+            # print("filter_kwargs_non_draft draft (for non draft): ", filter_kwargs_non_draft)
         else:
             if target_model_name!='configurations':
                 if instance._meta.object_name == "IncrementDetailsSummary" and (model_name=="IncrementDetailsSummary" or target_model_name=="Employee"):
@@ -410,24 +427,24 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                 else:
                     filter_kwargs = {"employee__company": instance.employee.company, "employee__department_team": instance.employee.department_team}
 
-                print("filter_kwargs: ", filter_kwargs)
+                # print("filter_kwargs: ", filter_kwargs)
 
         if aggregate_type:
             if aggregate_type in ['SUM', 'AVG']:
                 # First, get draft rows for employees with drafts
                 draft_model_name = f"{model_name}Draft" if model_name in model_mapping else model_name
-                print("instance name: ", instance._meta.object_name)
-                print("aggrgate - model name", model_name)
-                print("aggrgate - draft model name", draft_model_name)
+                # print("instance name: ", instance._meta.object_name)
+                # print("aggrgate - model name", model_name)
+                # print("aggrgate - draft model name", draft_model_name)
                 
                 draft_values = []
                 non_draft_employees = []
 
                 if is_draft:
                     draft_model_name = model_mapping_draft.get(model_name, model_name)
-                    print("aggrgate - updated draft model name", draft_model_name)
+                    # print("aggrgate - updated draft model name", draft_model_name)
                     DraftModel = apps.get_model('user', draft_model_name) if model_name in model_mapping_draft else None
-                    print("draft model: ", DraftModel)
+                    # print("draft model: ", DraftModel)
                     
                     if target_model_name == 'EmployeeDraft':
                         draft_rows = Model.objects.filter(**filter_kwargs).values('employee_id', field_name)
@@ -451,11 +468,14 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                             else:
                                 draft_employee_ids.add(row['employee_draft__employee_id'])
 
-                    # Get non-draft rows for employees without drafts
+                    # Get non-draft rows for employees without drafts (from original non-draft tables)
+                    non_draft_model = apps.get_model('user', target_model_name[:-5]) # target_model_name ends with 'Draft' in this case so we slice it to remove 'Draft'
                     if Model._meta.model_name == 'employeedraft':
-                        non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_id__in=draft_employee_ids).values(field_name)
+                        # non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_id__in=draft_employee_ids).values(field_name)
+                        non_draft_employees = non_draft_model.objects.filter(**filter_kwargs_non_draft).exclude(id__in=draft_employee_ids).values(field_name)
                     else:
-                        non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_draft__employee_id__in=draft_employee_ids).values(field_name)
+                        # non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_draft__employee_id__in=draft_employee_ids).values(field_name)
+                        non_draft_employees = non_draft_model.objects.filter(**filter_kwargs_non_draft).exclude(employee_id__in=draft_employee_ids).values(field_name)
                     # non_draft_employees = Model.objects.filter(
                     #     employee__company=instance.employee_draft.employee.company
                     #     if hasattr(instance, 'employee_draft') else instance.employee.company,
@@ -512,7 +532,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                     ConfigurationModel = apps.get_model('user', 'Configurations').objects.first()  # or filter by relation
                     obj = getattr(ConfigurationModel, part)
                 else:
-                    if obj._meta.object_name == 'IncrementDetailsSummary' and part in ['employee', 'incrementdetailssummary']:
+                    if obj._meta.object_name in ['IncrementDetailsSummary', 'IncrementDetailsSummaryDraft'] and part in ['employee', 'employee_draft', 'incrementdetailssummary', 'incrementdetailssummarydraft']:
                         continue
                     # if is_draft and part == 'employee' and hasattr(obj, 'employee_draft'):
                     #     obj = getattr(obj, 'employee_draft').employee
@@ -561,7 +581,7 @@ def evaluate_formula(instance, expression, target_model, is_draft=False, employe
     try:
         expr = expression.split('=', 1)[1].strip() if '=' in expression else expression
         expr, safe_context = sanitize_expression(expr, context)
-        print(safe_context)
+        # print(safe_context)
         result = eval(expr, {"__builtins__": {}}, safe_context)
         return Decimal(result)
     except Exception as e:
@@ -631,7 +651,11 @@ def build_dependency_graph(formulas, company=None, employee=None, department_tea
     indegree = defaultdict(int)
     formula_targets = set()
 
+    # i = 0
     for formula in formulas:
+        # print("\n\nFormula: ", i)
+        # i += 1
+        
         target = (formula.target_model.strip(), formula.target_field.strip().lower())
         if company and formula.company != company:
             continue
@@ -642,51 +666,50 @@ def build_dependency_graph(formulas, company=None, employee=None, department_tea
         formula_targets.add(target)
         expression = formula.formula.formula_expression
 
+        # print("target: ", target)
         if target not in indegree:
             indegree[target] = 0
+            # print(f"indegree for target '{target}' set to 0: ", indegree)
 
         deps = get_variables_from_expression(expression)
+        # print("deps: ", deps)
         for _, model, field in deps:
             dep_node = (model.strip(), field.strip().lower().replace(" ", "_"))
+            # print("dep_node: ", dep_node)
             if dep_node not in indegree:
                 indegree[dep_node] = 0
+                # print(f"indegree for dep_node '{dep_node}' set to 0: ", indegree)
             graph[dep_node].append(target)
+            # print("updated graph: ", graph)
             indegree[target] += 1
+            # print("updated indegree: ", indegree)
 
     return graph, indegree, formula_targets
 
 def topological_sort(formulas, company=None, employee=None, department_team=None):
     graph, indegree, formula_targets = build_dependency_graph(formulas, company, employee, department_team)
     
-    # Define model priority order
-    model_priority = {
-        'ProposedPackageDetails': 0,
-        'FinancialImpactPerMonth': 1,
-        'IncrementDetailsSummary': 2
-    }
+    # print("\n\n\nfinal grpah: ", graph)
+    # print("\nfinal indegree: ", indegree)
     
-    # Sort nodes with zero indegree, prioritizing model order and then field name
-    queue = deque(sorted(
-        [node for node, deg in indegree.items() if deg == 0],
-        key=lambda x: (model_priority.get(x[0], len(model_priority)), x[1])
-    ))
-    order = []
+    queue = deque([node for node, deg in indegree.items() if deg == 0])
 
+    # print("\nformula_targets: ", formula_targets)
+    # print("\nqueue: ", queue)
+    full_order = []
     while queue:
         node = queue.popleft()
-        if node in formula_targets:
-            order.append(node)
+        full_order.append(node)
+
         for neighbor in graph[node]:
             indegree[neighbor] -= 1
             if indegree[neighbor] == 0:
                 queue.append(neighbor)
-                # Re-sort queue to maintain model and field order
-                queue = deque(sorted(
-                    queue,
-                    key=lambda x: (model_priority.get(x[0], len(model_priority)), x[1])
-                ))
 
-    if len(order) != len(formula_targets):
+    # After sorting, only return the target fields, in the order they appeared
+    ordered = [node for node in full_order if node in formula_targets]
+    
+    if len(ordered) != len(formula_targets):
         raise ValueError("Cycle detected or unresolved dependencies in formulas!")
-
-    return order
+        
+    return ordered
