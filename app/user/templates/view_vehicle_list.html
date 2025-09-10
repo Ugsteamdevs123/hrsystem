@@ -16,7 +16,7 @@
             <th>SR.No</th>
             <th>Brand</th>
             <th>Model Name</th>
-            <th>Vehicle Type</th>
+            <th>Engine CC</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -26,7 +26,7 @@
             <td>{{ forloop.counter }}</td>
             <td>{{ v.brand }}</td>
             <td>{{ v.model_name }}</td>
-            <td>{{ v.vehicle_type }}</td>  <!-- FIXED -->
+            <td>{{ v.engine_cc }}</td>  <!-- FIXED -->
             <td>
                 {% if perms.user.change_vehiclemodel %}
                 <a href="{% url 'update_vehicle' v.id %}" class="action-btn edit-btn">Update</a>

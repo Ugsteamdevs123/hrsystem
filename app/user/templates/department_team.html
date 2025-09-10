@@ -295,11 +295,30 @@ document.getElementById('departmentForm')?.addEventListener('submit', async func
         if (deptId) formData.append('id', deptId);
 
         try {
-            const response = await fetch("{% url 'department_team' %}", {
-                method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                body: formData
-            });
+            let response;
+            if (deptId) {
+                const dataObject = Object.fromEntries(formData);
+                console.log(dataObject);
+                const payload = {
+                    id: dataObject['id'],
+                    company_id: dataObject['company_id'],
+                    name: dataObject['name']
+                };
+                const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                response = await fetch("{% url 'department_team' %}", {
+                    method: 'PATCH',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfInput.value, "Content-Type": 'application/json' },
+                    body: JSON.stringify(dataObject)
+                });
+            }
+            else {
+                response = await fetch("{% url 'department_team' %}", {
+                    method: deptId ? 'PATCH' : 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest'},
+                    body: formData
+                });
+            }
+            
             if (!response.ok) throw new Error('Failed to save department');
             const result = await response.json();
             if (result.error) {
@@ -319,9 +338,10 @@ document.getElementById('departmentForm')?.addEventListener('submit', async func
 // Delete department
 async function deleteDepartment(id) {
     try {
+        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
         const response = await fetch("{% url 'department_team' %}", {
             method: 'DELETE',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' },
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json', 'X-CSRFToken': csrfInput.value },
             body: JSON.stringify({ id })
         });
         if (!response.ok) throw new Error('Failed to delete');

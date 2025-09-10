@@ -26,7 +26,7 @@
                         <!-- Current Package -->
                         <th colspan="8" class="group-header">Current Package</th>
                         <!-- Proposed Package -->
-                        <th colspan="12" class="group-header">Proposed Package</th>
+                        <th colspan="10" class="group-header">Proposed Package</th>
                         <!-- Financial Impact -->
                         <th colspan="9" class="group-header">Financial Impact</th>
                         <th rowspan="2">Actions</th>
@@ -49,24 +49,21 @@
                         <th>Gross Salary</th>
                         <th>Company Pickup</th>
                         <th>Vehicle</th>
-                        <th>Fuel Limit</th>
+                        <th>Fuel Allowance</th>
                         <th>Fuel Litre</th>
-                        <th>Vehicle Allowance</th>
                         <th>Mobile Provided</th>
                         <th>Total</th>
                         <!-- Proposed Package Subheaders -->
                         <th>Increment Percentage</th>
                         <th>Increased Amount</th>
                         <th>Revised Salary</th>
-                        <th>Increased Fuel Amount</th>
+                        <th>Increased Fuel Allowance</th>
+                        <th>Increased Fuel Litre</th>
                         <th>Revised Fuel Allowance</th>
-                        <th>Fuel Litre</th>
-                        <th>Vehicle Allowance</th>
                         <th>Mobile Provided</th>
                         <th>Company Pickup</th>
                         <th>Vehicle</th>
                         <th>Total</th>
-                        <th>Approved</th>
                         <!-- Financial Impact Subheaders -->
                         <th>Employee Status</th>
                         <th>Serving Years</th>
@@ -99,19 +96,21 @@
                             {% with current_package=employee.currentpackagedetails %}
                                 <td>{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
                                 <td>{{ current_package.vehicle|default:"-" }}</td>
-                                <td>{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td>
+                                <!-- <td>{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td> -->
+                                 <td>{{ current_package.fuel_allowance|floatformat:2|default:"-" }}</td>
                                 <td>{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
                                 <td>{{ current_package.mobile_provided|yesno:"Yes,No,-" }}</td>
                             {% endwith %}
                             <!-- Proposed Package -->
                             {% with proposed_package=employee.proposedpackagedetails %}
                                 <td class="editable" data-tab="proposed_package" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td>
+                                <!-- <td class="editable" data-tab="proposed_package" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td> -->
                                 <td>{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.fuel_litre|floatformat:2|default:"-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ proposed_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="increased_fuel_allowance" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="editable" data-tab="proposed_package" data-field="increased_fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_litre|floatformat:2|default:"-" }}</td>
+                                <!-- <td class="editable" data-tab="proposed_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.fuel_litre|floatformat:2|default:"-" }}</td> -->
+                                <!-- <td class="editable" data-tab="proposed_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ proposed_package.vehicle_allowance|floatformat:2|default:"-" }}</td> -->
                                 <td class="editable" data-tab="proposed_package" data-field="mobile_provided" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.mobile_provided|yesno:"Yes,No,-" }}</td>
-                                <td class="editable" data-tab="proposed_package" data-field="approved" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.approved|yesno:"Yes,No,-" }}</td>
                             {% endwith %}
                             <!-- Financial Impact -->
                             {% with financial_impact=employee.financialimpactpermonth %}
@@ -161,9 +160,8 @@
                 <td>{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
                 <td>{{ current_package.company_pickup|yesno:"Yes,No,-" }}</td>
                 <td>{{ current_package.vehicle|default:"-" }}</td>
-                <td>{{ current_package.fuel_limit|floatformat:2|default:"-" }}</td>
+                <td>{{ current_package.fuel_allowance|floatformat:2|default:"-" }}</td>
                 <td>{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
-                <td>{{ current_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
                 <td>{{ current_package.mobile_provided|yesno:"Yes,No,-" }}</td>
                 <td>{{ current_package.total|floatformat:2|default:"-" }}</td>
             {% endwith %}
@@ -172,15 +170,16 @@
                 <td class="editable" data-tab="proposed_package" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
                 <td>{{ proposed_package.increased_amount|floatformat:2|default:"-" }}</td>
                 <td>{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
-                <td class="editable" data-tab="proposed_package" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td>
+                <!-- <td class="editable" data-tab="proposed_package" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td> -->
+                <td class="editable" data-tab="proposed_package" data-field="increased_fuel_allowance" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_allowance|floatformat:2|default:"-" }}</td>
+                <td class="editable" data-tab="proposed_package" data-field="increased_fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_litre|floatformat:2|default:"-" }}</td>
                 <td>{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
-                <td class="editable" data-tab="proposed_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.fuel_litre|floatformat:2|default:"-" }}</td>
-                <td class="editable" data-tab="proposed_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ proposed_package.vehicle_allowance|floatformat:2|default:"-" }}</td>
+                <!-- <td class="editable" data-tab="proposed_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.fuel_litre|floatformat:2|default:"-" }}</td> -->
+                <!-- <td class="editable" data-tab="proposed_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ proposed_package.vehicle_allowance|floatformat:2|default:"-" }}</td> -->
                 <td class="editable" data-tab="proposed_package" data-field="mobile_provided" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.mobile_provided|yesno:"Yes,No,-" }}</td>
                 <td class="editable" data-tab="proposed_package" data-field="company_pickup" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.company_pickup|yesno:"Yes,No,-" }}</td>
                 <td>{{ proposed_package.vehicle|default:"-" }}</td>
                 <td>{{ proposed_package.total|floatformat:2|default:"-" }}</td>
-                <td class="editable" data-tab="proposed_package" data-field="approved" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.approved|yesno:"Yes,No,-" }}</td>
             {% endwith %}
             <!-- Financial Impact -->
             {% with financial_impact=employee.financialimpactpermonth %}
@@ -490,7 +489,7 @@
                             const opt = document.createElement('option');
                             opt.value = item.id;
                             opt.textContent = field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle'
-                                ? `${item.brand_name} ${item.model_name} - (${item.vehicle_type})`
+                                ? `${item.brand_name} ${item.model_name} - (${item.engine_cc})`
                                 : (item.title || item.location || item.status || item.name);
                             input.appendChild(opt);
                         });
@@ -862,7 +861,7 @@
                         const item = items.find(i => i.id == draftValue);
                         if (item) {
                             if (field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle') {
-                                cell.textContent = `${item.brand_name} ${item.model_name} (${item.vehicle_type})cc`;
+                                cell.textContent = `${item.brand_name} ${item.model_name} (${item.engine_cc})cc`;
                             } else {
                                 // fallback for other select fields
                                 cell.textContent = item.title || item.location || item.status || item.name;
@@ -991,7 +990,7 @@
                                 const opt = document.createElement('option');
                                 opt.value = item.id;
                                 opt.textContent = field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle'
-                                    ? `${item.brand_name} ${item.model_name} - (${item.vehicle_type})`
+                                    ? `${item.brand_name} ${item.model_name} - (${item.engine_cc})`
                                     : (item.title || item.location || item.status || item.name);
                                 input.appendChild(opt);
                             });
@@ -1348,7 +1347,7 @@
                             const item = items.find(i => i.id == draftValue);
                             if (item) {
                                 if (field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle') {
-                                    cell.textContent = `${item.brand_name} ${item.model_name} (${item.vehicle_type})cc`;
+                                    cell.textContent = `${item.brand_name} ${item.model_name} (${item.engine_cc})cc`;
                                 } else {
                                     // fallback for other select fields
                                     cell.textContent = item.title || item.location || item.status || item.name;

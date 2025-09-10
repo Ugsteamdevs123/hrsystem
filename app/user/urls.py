@@ -36,9 +36,6 @@ urlpatterns = [
     path('hr-assigned-companies/<int:pk>/edit/', views.UpdateHrAssignedCompanyView.as_view(), name='update_hr_assigned_company'),
     path('hr-assigned-companies/<int:pk>/delete/', views.DeleteHrAssignedCompanyView.as_view(), name='delete_hr_assigned_company'),
 
-
-
-
     # formula crud
     path('formula/create/', views.CreateFormulaView.as_view(), name='create_formula'),
     path('formula/view/', views.FormulaListView.as_view(), name='view_formula'),
@@ -49,6 +46,7 @@ urlpatterns = [
     path('field-formulas/create/', views.CreateFieldFormulaView.as_view(), name='create_field_formula'),
     path('field-formulas/edit/<int:pk>/', views.EditFieldFormulaView.as_view(), name='edit_field_formula'),
 
+    # manage vehicle CRUD
     path('vehicles/', views.ViewVehicleListView.as_view(), name='view_vehicles'),
     path('vehicles/add/', views.AddVehicleView.as_view(), name='add_vehicle'),
     path('vehicles/update/<int:pk>/', views.UpdateVehicleView.as_view(), name='update_vehicle'),
@@ -57,7 +55,10 @@ urlpatterns = [
     path('vehicles_brands/edit/<int:pk>/', views.AddVehicleBrandView.as_view(), name='edit_vehicle_brand'),
     path('vehicles_brands/delete/<int:pk>/', views.DeleteVehicleBrandView.as_view(), name='delete_vehicle_brand'),
 
+    #manage HR Dashboard CRUD
     path('hr/', views.HrDashboardView.as_view(), name='hr_dashboard'),
+    path('hr/approved/', views.HrUpdateApprovedView.as_view(), name='hr_approved'),
+    path('hr/final-approve/', views.HrFinalApproveSummaryView.as_view(), name='hr_final_approve'),
     path('department-team/', views.DepartmentTeamView.as_view(), name='department_team'),
     path('get-companies-and-department-teams/', views.GetCompaniesAndDepartmentTeamsView.as_view(), name='get_companies_and_department_teams'),
     path('company-summary/<int:company_id>/', views.CompanySummaryView.as_view(), name='company_summary'),

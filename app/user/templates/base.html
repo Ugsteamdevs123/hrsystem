@@ -216,7 +216,7 @@
             <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
             {% endif %}
 
-            {% if perms.user.view_vehicleinfo %}
+            {% if perms.user.view_vehiclebrand and perms.user.view_vehiclemodel %}
             <a href="{% url 'view_vehicles' %}">Vehicle Information</a>
             {% endif %}
 
