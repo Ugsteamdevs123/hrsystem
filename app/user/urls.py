@@ -12,6 +12,10 @@ urlpatterns = [
     path("users/", views.ViewUsersView.as_view(), name="view_users"),
     path("user/<int:pk>/delete/", views.DeleteUserView.as_view(), name="delete_user"),
 
+    # For password reset
+    path("reset-password/", views.CustomPasswordChangeView.as_view(), name="password_change"),    
+
+
     # company crud
     path('company/' , views.ViewCompaniesView.as_view() , name='view_company'),
     path("add-company/", views.AddCompanyView.as_view(), name="add_company"),

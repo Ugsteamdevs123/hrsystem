@@ -88,6 +88,11 @@ class LoginView(View):
         if user is not None:
             if user.is_active:
                 login(request, user)
+
+                # 👇 Check if first login → redirect to password change
+                if user.first_time_login_to_reset_pass == True:
+                    return redirect("password_change")
+
                 if user.is_superuser:
                     # Redirect superuser to view users page
                     return redirect("view_users")
@@ -103,6 +108,41 @@ class LoginView(View):
             messages.error(request, "Invalid email or password.")
 
         return render(request, self.template_name)
+
+
+'''
+When user login he redirect to pass reset
+'''
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import update_session_auth_hash
+from .forms import CustomPasswordChangeForm
+
+
+class CustomPasswordChangeView(LoginRequiredMixin, View):
+    template_name = "reset_password.html"   # will add below
+
+    def get(self, request):
+        form = CustomPasswordChangeForm(user=request.user)
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CustomPasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            # keep user logged in after password change
+            update_session_auth_hash(request, user)
+
+            # clear first-time flag
+            request.user.first_time_login_to_reset_pass = False
+            request.user.save(update_fields=["first_time_login_to_reset_pass"])
+
+            messages.success(request, "Password changed successfully.")
+            # redirect where you want after reset (dashboard or login)
+            return redirect("login")  # or "dashboard" / "view_users" etc.
+        else:
+            messages.error(request, "Please correct the errors below.")
+        return render(request, self.template_name, {"form": form})
 
 
 
@@ -1008,6 +1048,18 @@ class DepartmentTableView(View):
         ).first()
         if not department:
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
+        
+        print(department , 'depts')
+
+        print(department.company.name , department.company)
+        
+        # formula = FieldFormula.objects.filter(
+        #     department_team = department.pk,
+        #     company = department.company.pk
+        # )
+        # print(formula , 'mmmmmmmmm')
+
+        
 
         company_data = get_companies_and_department_teams(request.user)
         employees = Employee.objects.filter(department_team=department).select_related(
@@ -1018,6 +1070,38 @@ class DepartmentTableView(View):
 
         employee_data = []
         draft_data = {}
+
+        '''
+        Passing formula to frontend
+        '''
+
+        formulas_qs = FieldFormula.objects.filter(
+            company=department.company
+        ).filter(
+            Q(department_team=department) |
+            Q(department_team__isnull=True) |
+            Q(employee__in=employees)  # where employees = list of dept employees
+        )
+
+        print(formulas_qs , 'mmmmmmmmm')
+
+        formulas_data = []
+
+        for f in formulas_qs:
+            try:
+                formulas_data.append({
+                    "target_model": f.target_model or "",   # fallback empty string
+                    "target_field": f.target_field or "",
+                    "formula": str(f.formula) if f.formula else "",  # safe check for None
+                    "employee_id": f.employee_id if f.employee_id is not None else None,
+                    "department_id": f.department_team_id if f.department_team_id is not None else None,
+                    "company_id": f.company_id if f.company_id is not None else None,
+                })
+            except Exception as e:
+                # Log or skip the problematic formula
+                print(f"Error serializing formula {f.id if f.id else 'unknown'}: {e}")
+
+            print(formulas_data,'data')
 
         for emp in employees:
             emp_draft = emp.drafts.first()
@@ -1106,7 +1190,8 @@ class DepartmentTableView(View):
             'employees': employee_data,
             'department_id': department_id,
             'company_data': company_data,
-            'draft_data': draft_data
+            'draft_data': draft_data,
+            "formulas": json.dumps(formulas_data),   # 👉 pass as JSON
         })
 
 
@@ -1649,6 +1734,14 @@ class GetDataView(View):
         except Exception as e:
             logger.error(f"Error in GetDataView: {str(e)}")
             return JsonResponse({'error': f'Invalid data: {str(e)}'}, status=400)
+
+
+
+
+
+
+
+
 
 
 class DepartmentGroupsSectionsView(View):
