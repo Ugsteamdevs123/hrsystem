@@ -67,7 +67,7 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
 
         # Send password to user via email
-        # self.send_password_email(user.email, password, user.full_name)
+        self.send_password_email(user.email, password, user.full_name)
 
         return user 
         

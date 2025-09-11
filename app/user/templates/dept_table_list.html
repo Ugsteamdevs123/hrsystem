@@ -494,6 +494,12 @@
             const hasEdits = Object.keys(editedCells[employeeId] || {}).some(tab => Object.keys(editedCells[employeeId][tab]).length > 0);
             row.classList.toggle('edited-row', hasEdits);
             console.log('Updated editedCells:', JSON.stringify(editedCells));
+
+            // trigger recalculation if increment_percentage (or other triggers)
+            if (field === "increment_percentage" || field === "increased_fuel_allowance" || field === "increased_fuel_litre") {
+                recalcProposedPackage(cell.closest("tr"));
+            }
+            
         });
 
         input.addEventListener('keypress', (e) => {
@@ -773,6 +779,30 @@
         document.body.appendChild(spinner);
         setTimeout(() => spinner.remove(), 1000);
     }
+
+    {% comment %} For RunTime Edit {% endcomment %}
+
+    function recalcProposedPackage(row) {
+        const grossSalary = parseFloat(row.querySelector('td:nth-child(15)')?.textContent) || 0; // Current Gross Salary col
+        const totalCurrent = parseFloat(row.querySelector('td:nth-child(21)')?.textContent) || 0; // Current Package Total col
+
+        const incrementCell = row.querySelector('[data-tab="proposed_package"][data-field="increment_percentage"]');
+        const increasedAmountCell = row.querySelector('td:nth-child(23)'); // Increased Amount col
+        const revisedSalaryCell = row.querySelector('td:nth-child(24)');   // Revised Salary col
+        const totalProposedCell = row.querySelector('td:nth-child(32)');   // Proposed Package Total col
+
+        if (!incrementCell || !increasedAmountCell || !revisedSalaryCell || !totalProposedCell) return;
+
+        const incPercent = parseFloat(incrementCell.textContent) || 0;
+        const increasedAmount = (grossSalary * incPercent) / 100;
+        const revisedSalary = grossSalary + increasedAmount;
+        const totalProposed = totalCurrent + increasedAmount; // simplified — adjust if more fields affect total
+
+        increasedAmountCell.textContent = increasedAmount.toFixed(2);
+        revisedSalaryCell.textContent = revisedSalary.toFixed(2);
+        totalProposedCell.textContent = totalProposed.toFixed(2);
+    }
+
 
     document.addEventListener('DOMContentLoaded', () => {
         // Log CSRF token on page load for debugging
