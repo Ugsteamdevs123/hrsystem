@@ -228,6 +228,10 @@
             <a href="{% url 'view_field_formulas' %}">Formulas Manage</a>
             {% endif %}
 
+            {% if perms.user.view_employee %}
+            <a href="{% url 'employees_view' %}">Manage Employees</a>
+            {% endif %}
+
             {# --- Dynamic Companies → Departments (RBAC on Employee) --- #}
             {% if perms.user.view_employee and company_data %}
             <div class="company-tree">

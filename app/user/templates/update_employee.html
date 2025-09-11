@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
-{% block title %}Update Employee - {{ department.name }}{% endblock %}
+{% block title %}Update Employee{% endblock %}
 
 {% block content %}
 {% if perms.user.change_employee %}
     <div class="section-head">
-        <h2>Update Employee — {{ department.name }}</h2>
-        <a href="{% url 'department_table' department_id=department_id %}" class="form-btn btn-back">Back to Department List</a>
+        <h2>Update Employee</h2>
+        <a href="{% url 'employees_view' %}" class="form-btn btn-back">Back to Employees List</a>
     </div>
 
-    <div class="form-container" data-company-id="{{ department.company.id }}" data-employee-id="{{ employee_id }}">
+    <div class="form-container" data-company-id="{{ company.id }}" data-employee-id="{{ employee_id }}">
         <form id="updateForm" method="POST" enctype="multipart/form-data">
             {% csrf_token %}
             <!-- Step 1: Employee Details -->
@@ -59,18 +59,9 @@
                         <option value="">Select Location</option>
                     </select>
                 </div>
-                <div class="form-field split">
-                    <div>
-                        <label for="date_of_joining">Date of Joining <span class="req">*</span></label>
-                        <input type="date" id="date_of_joining" name="date_of_joining">
-                    </div>
-                    <div>
-                        <label for="resign">Resign</label>
-                        <select id="resign" name="resign">
-                            <option value="false">No</option>
-                            <option value="true">Yes</option>
-                        </select>
-                    </div>
+                <div class="form-field">
+                    <label for="date_of_joining">Date of Joining <span class="req">*</span></label>
+                    <input type="date" id="date_of_joining" name="date_of_joining">
                 </div>
                 <div class="form-field" id="resignation_date_container" style="display: none;">
                     <label for="date_of_resignation">Date of Resignation</label>
@@ -146,60 +137,10 @@
                     <input type="number" id="fuel_litre" name="fuel_litre" step="0.01">
                 </div>
             </div>
-            <!-- Step 3: Proposed Package -->
-            <div class="step hidden" id="step-proposed_package">
-                <h4 class="step-title">Step 3: Proposed Package Details</h4>
-                <div class="form-field">
-                    <label for="increment_percentage">Increment Percentage</label>
-                    <input type="number" id="increment_percentage" name="increment_percentage" step="0.01">
-                </div>
-                <!-- <div class="form-field">
-                    <label for="increased_fuel_amount">Increased Fuel Amount</label>
-                    <input type="number" id="increased_fuel_amount" name="increased_fuel_amount" step="0.01">
-                </div> -->
-                <div class="form-field">
-                    <label for="mobile_provided_proposed">Mobile Provided Proposed</label>
-                    <div class="inline-group">
-                        <label class="inline-check">
-                            <input type="radio" name="mobile_provided_proposed" value="true" id="mobile_provided_proposed_true"> Yes
-                        </label>
-                        <label class="inline-check">
-                            <input type="radio" name="mobile_provided_proposed" value="false" id="mobile_provided_proposed_false"> No
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-field">
-                    <label for="company_pickup_proposed">Company Pickup Proposed</label>
-                    <div class="inline-group">
-                        <label class="inline-check">
-                            <input type="radio" id="company_pickup_proposed_true" name="company_pickup_proposed" value="true"> Yes
-                        </label>
-                        <label class="inline-check">
-                            <input type="radio" id="company_pickup_proposed_false" name="company_pickup_proposed" value="false" checked> No
-                        </label>
-                    </div>
-                </div>
-
-
-                <div class="form-field">
-                    <label for="vehicle_proposed_id">Vehicle</label>
-                    <select id="vehicle_proposed_id" name="vehicle_proposed_id">
-                        <option value="">Select Vehicle</option>
-                    </select>
-                </div>
-                <div class="form-field">
-                    <label for="increased_fuel_allowance">Increased Fuel Allowance</label>
-                    <input type="number" id="increased_fuel_allowance" name="increased_fuel_allowance" step="0.01">
-                </div>
-                <div class="form-field">
-                    <label for="increased_fuel_litre">Increased Fuel Litres</label>
-                    <input type="number" id="increased_fuel_litre" name="increased_fuel_litre" step="0.01">
-                </div>
-            </div>
-            <!-- Step 4: Financial Impact -->
+            
+            <!-- Step 3: Financial Impact -->
             <div class="step hidden" id="step-financial_impact">
-                <h4 class="step-title">Step 4: Financial Impact Details</h4>
+                <h4 class="step-title">Step 3: Financial Impact Details</h4>
                 <div class="form-field">
                     <label for="emp_status_id">Employee Status</label>
                     <select id="emp_status_id" name="emp_status_id">
@@ -215,7 +156,7 @@
                 <button type="button" class="form-btn btn-back hidden" id="prevBtn">Previous</button>
                 <button type="button" class="form-btn btn-submit" id="nextBtn">Next</button>
                 <button type="button" class="form-btn btn-submit hidden" id="submitBtn">Submit</button>
-                <a href="{% url 'department_table' department_id=department_id %}" class="form-btn btn-back">Cancel</a>
+                <a href="{% url 'employees_view' %}" class="form-btn btn-back">Cancel</a>
             </div>
         </form>
     </div>
@@ -238,7 +179,6 @@
         .req { color: #dc3545; }
         .step-title { font-size: 18px; margin-bottom: 16px; color: #343a40; }
         .hidden { display: none !important; }
-        .form-field.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .form-footer { padding: 12px 16px; border-top: 1px solid #eee; display: flex; gap: 8px; justify-content: flex-end; }
         .confirm-popup { background: #fff; width: min(960px, 94vw); max-width: 500px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); padding: 16px; text-align: center; }
         .confirm-popup p { margin: 0 0 20px; font-size: 16px; }
@@ -260,7 +200,7 @@
         const employeeId = document.querySelector('.form-container').dataset.employeeId;
         const formDataStore = {};
         let currentStep = 0;
-        const steps = ['employee', 'current_package', 'proposed_package', 'financial_impact'];
+        const steps = ['employee', 'current_package', 'financial_impact'];
 
         async function fetchJSON(url, opts = {}, timeoutMs = 5000) {
             const controller = new AbortController();
@@ -314,8 +254,6 @@
             q('#designation_id').value = data.employee.designation_id || '';
             q('#location_id').value = data.employee.location_id || '';
             q('#date_of_joining').value = data.employee.date_of_joining || '';
-            q('#resign').value = data.employee.resign ? 'true' : 'false';
-            updateResignationFieldVisibility();
             q('#date_of_resignation').value = data.employee.date_of_resignation || '';
             const eligibleValue = data.employee.eligible_for_increment ? 'true' : 'false';
             q(`input[name="eligible_for_increment"][value="${eligibleValue}"]`).checked = true;
@@ -331,28 +269,16 @@
             q(`input[name="mobile_provided"][value="${mobileProvidedValue}"]`).checked = true;
             q('#fuel_allowance').value = data.current_package?.fuel_allowance || '';
             q('#fuel_litre').value = data.current_package?.fuel_litre || '';
-            q('#increment_percentage').value = data.proposed_package?.increment_percentage || '';
-            // q('#increased_fuel_amount').value = data.proposed_package?.increased_fuel_amount || '';
-            const mobileProvidedProposedValue = data.proposed_package?.mobile_provided ? 'true' : 'false';
-            q(`input[name="mobile_provided_proposed"][value="${mobileProvidedProposedValue}"]`).checked = true;
-            
-            const companyPickupProposedValue = data.proposed_package?.company_pickup ? 'true' : 'false';
-            q(`input[name="company_pickup_proposed"][value="${companyPickupProposedValue}"]`).checked = true;
-            
-            q('#vehicle_proposed_id').value = data.proposed_package?.vehicle_id || '';
-            q('#increased_fuel_allowance').value = data.proposed_package?.increased_fuel_allowance || '';
-            q('#increased_fuel_litre').value = data.proposed_package?.increased_fuel_litre || '';
-            // q('#vehicle_allowance').value = data.proposed_package?.vehicle_allowance || '';
             q('#emp_status_id').value = data.financial_impact?.emp_status_id || '';
-            formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, resign: q('#resign').value, date_of_resignation: q('#date_of_resignation').value, eligible_for_increment: eligibleValue, remarks: q('#remarks').value };
+            formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, date_of_resignation: q('#date_of_resignation').value, eligible_for_increment: eligibleValue, remarks: q('#remarks').value };
             formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, company_pickup_current: companyPickupCurrentValue, vehicle_id: q('#vehicle_id').value, fuel_allowance: q('#fuel_allowance').value, mobile_provided: mobileProvidedValue, fuel_litre: q('#fuel_litre').value };
-            formDataStore[2] = { ...formDataStore[2], increment_percentage: q('#increment_percentage').value, mobile_provided_proposed: mobileProvidedProposedValue, company_pickup_proposed: companyPickupProposedValue, vehicle_proposed_id: q('#vehicle_proposed_id').value, increased_fuel_litre: q('#increased_fuel_litre').value, increased_fuel_allowance: q('#increased_fuel_allowance').value};
-            formDataStore[3] = { ...formDataStore[3], emp_status_id: q('#emp_status_id').value };
+            formDataStore[2] = { ...formDataStore[2], emp_status_id: q('#emp_status_id').value };
         }
 
         console.log(populateForm);
 
         async function fetchDropdownData() {
+            console.log('here');
             if (!companyId) {
                 showSnackbar('Company ID is missing', '#dc3545');
                 return;
@@ -386,21 +312,25 @@
                 if (designationsRaw.error || !designations) {
                     showSnackbar(designationsRaw.error || 'Invalid designations data', '#dc3545');
                 } else {
+                    console.log("populateDesignations");
                     populateDesignations(designations);
                 }
                 if (locationsRaw.error || !locations) {
                     showSnackbar(locationsRaw.error || 'Invalid locations data', '#dc3545');
                 } else {
+                    console.log("location");
                     populateLocations(locations);
                 }
                 if (vehiclesRaw.error || !vehicles) {
                     showSnackbar('No vehicles available', '#dc3545');
                 } else {
+                    console.log("vehicle");
                     populateVehicles(vehicles);
                 }
                 if (statusRaw.error || !statuses) {
                     showSnackbar(statusRaw.error || 'No employee status choices available', '#dc3545');
                 } else {
+                    console.log("populateEmployeeStatusDropdown");
                     populateEmployeeStatusDropdown(statuses);
                 }
             } catch (e) {
@@ -444,10 +374,13 @@
         }
 
         function populateVehicles(data) {
+            console.log('1');
             const currentSelect = document.getElementById('vehicle_id');
+            console.log('1');
             const proposedSelect = document.getElementById('vehicle_proposed_id');
+            console.log('1');
             currentSelect.innerHTML = '<option value="">Select Vehicle</option>';
-            proposedSelect.innerHTML = '<option value="">Select Vehicle</option>';
+            console.log('1');
             data.forEach(v => {
                 const label = `${v.brand_name} ${v.model_name} - ${v.engine_cc}`;
                 const opt1 = document.createElement('option');
@@ -491,21 +424,12 @@
                 }
             }
         }
-
-        const resignDropdown = document.getElementById('resign');
-        const resignationInput = document.getElementById('date_of_resignation');
+        
         const resignationContainer = document.getElementById('resignation_date_container');
         const addNewDesignationCheckbox = document.getElementById('add_new_designation');
         const newDesignationInput = document.getElementById('new_designation_title');
         const newDesignationContainer = document.getElementById('new_designation_container');
         const designationSelect = document.getElementById('designation_id');
-
-        function updateResignationFieldVisibility() {
-            const isResigned = resignDropdown.value === 'true';
-            resignationContainer.style.display = isResigned ? 'block' : 'none';
-            resignationInput.disabled = !isResigned;
-            if (!isResigned) resignationInput.value = '';
-        }
 
         function updateDesignationFieldVisibility() {
             const isAddNew = addNewDesignationCheckbox.checked;
@@ -517,8 +441,7 @@
                 designationSelect.value = formDataStore[currentStep]?.designation_id || '';
             }
         }
-
-        resignDropdown.addEventListener('change', updateResignationFieldVisibility);
+        
         addNewDesignationCheckbox.addEventListener('change', updateDesignationFieldVisibility);
         document.getElementById('department_group_id').addEventListener('change', function () {
             populateSections(this.value);
@@ -563,7 +486,6 @@
             if (!q('#section_id').value) errors.push('Section is required');
             if (!q('#location_id').value) errors.push('Location is required');
             if (!q('#date_of_joining').value) errors.push('Date of Joining is required');
-            if (q('#resign').value === 'true' && !q('#date_of_resignation').value.trim()) errors.push('Date of Resignation is required');
             if (addNewDesignationCheckbox.checked && !newDesignationInput.value.trim()) errors.push('New Designation Title is required');
             if (!addNewDesignationCheckbox.checked && !designationSelect.value) errors.push('Designation is required');
             if (!q('input[name="eligible_for_increment"]:checked')) errors.push('Eligible for Increment is required');
@@ -591,7 +513,6 @@
                             input.value = value || '';
                         }
                         if (key === 'department_group_id' && value) populateSections(value);
-                        if (key === 'resign') updateResignationFieldVisibility();
                         if (key === 'designation_id' || key === 'new_designation_title') updateDesignationFieldVisibility();
                     }
                 }
@@ -647,7 +568,7 @@
             if (!formData) return;
 
             try {
-                const res = await fetch(`/payroll/department/{{ department_id }}/update/${employeeId}/`, {
+                const res = await fetch(`/payroll/department/update/${employeeId}/`, {
                     method: 'POST',
                     headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                     body: formData
@@ -676,8 +597,6 @@
                     });
                     addNewDesignationCheckbox.checked = false;
                     updateDesignationFieldVisibility();
-                    resignDropdown.value = formDataStore[currentStep]?.resign || 'false';
-                    updateResignationFieldVisibility();
                 }
             } catch (e) {
                 showSnackbar('Error saving step', '#dc3545');
@@ -691,7 +610,7 @@
                 if (!formData) return;
 
                 try {
-                    const res = await fetch(`/payroll/department/{{ department_id }}/update/${employeeId}/`, {
+                    const res = await fetch(`/payroll/department/update/${employeeId}/`, {
                         method: 'POST',
                         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                         body: formData
@@ -703,7 +622,7 @@
                     } else {
                         showSpinner();
                         showSnackbar('Employee updated successfully', '#28a745');
-                        window.location.href = "{% url 'department_table' department_id=department_id %}";
+                        window.location.href = "{% url 'employees_view' %}";
                     }
                 } catch (e) {
                     showSnackbar('Error saving final step', '#dc3545');
@@ -768,10 +687,10 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log("hi");
             await fetchDropdownData();
             const employeeData = await fetchEmployeeData();
             if (employeeData) populateForm(employeeData);
-            updateResignationFieldVisibility();
             updateDesignationFieldVisibility();
             showStep(currentStep);
             document.getElementById('prevBtn').addEventListener('click', () => {

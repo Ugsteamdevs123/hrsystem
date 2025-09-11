@@ -153,6 +153,9 @@ class Formula(models.Model):
     formula_name = models.CharField(max_length=255)
     formula_expression = models.CharField(max_length=255)
 
+    target_model = models.CharField(max_length=255)  # e.g., 'ProposedPackageDetails'
+    target_field = models.CharField(max_length=255)  # e.g., 'revised_salary'
+
     is_deleted = models.BooleanField(default=False)
 
     history = AuditlogHistoryField()  # Required to store log
@@ -576,17 +579,15 @@ class Configurations(models.Model):
 
 
 class FieldFormula(models.Model):
-    target_model = models.CharField(max_length=255)  # e.g., 'ProposedPackageDetails'
-    target_field = models.CharField(max_length=255)  # e.g., 'revised_salary'
     formula = models.ForeignKey(Formula, on_delete=models.CASCADE, null=True, blank=True, default=None)
     description = models.TextField(blank=True)  # Optional help text
-    employee = models.ForeignKey(
-        Employee,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        help_text="Optional: Formula applies to this employee only."
-    )
+    # employee = models.ForeignKey(
+    #     Employee,
+    #     on_delete=models.CASCADE,
+    #     null=True,
+    #     blank=True,
+    #     help_text="Optional: Formula applies to this employee only."
+    # )
 
     company = models.ForeignKey(
         Company,

@@ -14,6 +14,13 @@
             <h2>Department — {{ department.name }}</h2>
         </div>
 
+        <!-- Buttons -->
+        <div class="button-group">
+            <button type="button" class="form-btn btn-submit" id="saveDraftBtn">Save Draft</button>
+        </div>
+
+        </br>
+
         <!-- Combined Table -->
         <div class="table-wrap">
             <table border="1" cellpadding="8" cellspacing="0">
@@ -29,7 +36,6 @@
                         <th colspan="10" class="group-header">Proposed Package</th>
                         <!-- Financial Impact -->
                         <th colspan="9" class="group-header">Financial Impact</th>
-                        <th rowspan="2">Actions</th>
                     </tr>
                     <tr>
                         <!-- Employee Details Subheaders -->
@@ -135,15 +141,6 @@
                 <td>{{ financial_impact.vehicle|default:"-" }}</td>
                 <td>{{ financial_impact.total|floatformat:2|default:"-" }}</td>
             {% endwith %}
-            <!-- Actions -->
-            <td>
-                {% if perms.user.change_employee %}
-                    <a href="{% url 'update_employee' department_id=department_id employee_id=employee.emp_id %}" class="action-btn edit-btn">Edit</a>
-                {% endif %}
-                {% if perms.user.delete_employee %}
-                    <button class="action-btn delete-btn delete-employee-btn" data-employee-id="{{ employee.emp_id }}">Delete</button>
-                {% endif %}
-            </td>
         </tr>
     {% empty %}
         <tr>
@@ -153,15 +150,6 @@
 </tbody>
 
             </table>
-        </div>
-
-        <!-- Buttons -->
-        <div class="button-group">
-            {% if perms.user.add_employee %}
-                <a href="{% url 'create_employee' department_id=department_id %}" class="form-btn btn-submit">Add New Employee</a>
-            {% endif %}
-            <button type="button" class="form-btn btn-submit" id="saveDraftBtn">Save Draft</button>
-            <button type="button" class="form-btn btn-submit" id="saveBtn">Save</button>
         </div>
     </div>
 
@@ -600,140 +588,6 @@
         }
     }
 
-    async function saveFinal() {
-        console.log('editedCells before saveFinal:', JSON.stringify(editedCells));
-        if (Object.keys(editedCells).length === 0) {
-            showSnackbar('No changes to save', '#dc3545');
-            return;
-        }
-        // Convert ID fields to integers
-        Object.keys(editedCells).forEach(empId => {
-            if (editedCells[empId].employee && editedCells[empId].employee.designation_id) {
-                editedCells[empId].employee.designation_id = parseInt(editedCells[empId].employee.designation_id, 10);
-            }
-            if (editedCells[empId].employee && editedCells[empId].employee.department_group_id) {
-                editedCells[empId].employee.department_group_id = parseInt(editedCells[empId].employee.department_group_id, 10);
-            }
-            if (editedCells[empId].employee && editedCells[empId].employee.section_id) {
-                editedCells[empId].employee.section_id = parseInt(editedCells[empId].employee.section_id, 10);
-            }
-            if (editedCells[empId].employee && editedCells[empId].employee.location_id) {
-                editedCells[empId].employee.location_id = parseInt(editedCells[empId].employee.location_id, 10);
-            }
-            if (editedCells[empId].current_package && editedCells[empId].current_package.vehicle_id) {
-                editedCells[empId].current_package.vehicle_id = parseInt(editedCells[empId].current_package.vehicle_id, 10);
-            }
-            if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_id) {
-                editedCells[empId].proposed_package.vehicle_id = parseInt(editedCells[empId].proposed_package.vehicle_id, 10);
-            }
-            if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
-                editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
-            }
-        });
-        showConfirmPopup('Are you sure you want to save changes to the original tables?', async () => {
-            try {
-                const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
-                if (!csrfInput || !csrfInput.value) {
-                    showSnackbar('CSRF token missing or invalid', '#dc3545');
-                    console.error('CSRF token not found or empty');
-                    throw new Error('CSRF token missing or invalid');
-                }
-                console.log('CSRF token:', csrfInput.value);
-                console.log('Saving final with payload:', JSON.stringify(editedCells));
-                const res = await fetch(`/payroll/save-final/{{ department_id }}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrfInput.value,
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(editedCells),
-                });
-                if (!res.ok) {
-                    const errorText = await res.text();
-                    throw new Error(`Failed to save changes: ${res.status}, Response: ${errorText}`);
-                }
-                const result = await res.json();
-                if (result.error) {
-                    showSnackbar(result.error, '#dc3545');
-                } else {
-                    showSpinner();
-                    showSnackbar('Changes saved successfully', '#28a745');
-                    // Update original values to reflect saved changes
-                    Object.keys(editedCells).forEach(empId => {
-                        Object.keys(editedCells[empId]).forEach(tab => {
-                            Object.keys(editedCells[empId][tab]).forEach(field => {
-                                const cell = document.querySelector(`tr[data-employee-id="${empId}"] [data-tab="${tab}"][data-field="${field}"]`);
-                                if (cell) {
-                                    if (cell.dataset.type === 'select') {
-                                        cell.dataset.originalId = editedCells[empId][tab][field];
-                                    } else {
-                                        cell.dataset.original = editedCells[empId][tab][field];
-                                    }
-                                    cell.classList.remove('edited');
-                                }
-                            });
-                        });
-                    });
-                    // Clear editedCells and row highlighting after saving
-                    document.querySelectorAll('tr.edited-row').forEach(row => row.classList.remove('edited-row'));
-                    Object.keys(editedCells).forEach(empId => delete editedCells[empId]);
-                    console.log('Cleared editedCells after final save:', JSON.stringify(editedCells));
-                    // window.location.reload();
-                }
-            } catch (e) {
-                showSnackbar(`Error saving changes: ${e.message}`, '#dc3545');
-                console.error('Save final error:', e);
-            }
-        });
-    }
-
-    function bindRowActions() {
-        document.querySelectorAll('.delete-employee-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const employeeId = this.dataset.employeeId;
-                if (!employeeId) {
-                    showSnackbar('Invalid employee ID', '#dc3545');
-                    return;
-                }
-                showConfirmPopup('Are you sure you want to delete this employee?', async () => {
-                    try {
-                        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
-                        if (!csrfInput || !csrfInput.value) {
-                            showSnackbar('CSRF token missing or invalid', '#dc3545');
-                            console.error('CSRF token not found or empty');
-                            throw new Error('CSRF token missing or invalid');
-                        }
-                        console.log('CSRF token:', csrfInput.value);
-                        const res = await fetch(`/payroll/department/{{ department_id }}/delete/${employeeId}/`, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRFToken': csrfInput.value,
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Accept': 'application/json',
-                            },
-                        });
-                        if (!res.ok) {
-                            const errorText = await res.text();
-                            throw new Error(`Failed to delete employee: ${res.status}, Response: ${errorText}`);
-                        }
-                        const out = await res.json();
-                        if (out.error) {
-                            showSnackbar(out.error, '#dc3545');
-                        } else {
-                            showSpinner();
-                            showSnackbar('Deleted successfully', '#28a745');
-                            window.location.reload();
-                        }
-                    } catch (e) {
-                        showSnackbar(`Error deleting employee: ${e.message}`, '#dc3545');
-                        console.error('Delete employee error:', e);
-                    }
-                });
-            });
-        });
-    }
-
     function showSnackbar(message, bgColor) {
         const snackbar = document.createElement('div');
         snackbar.textContent = message;
@@ -813,9 +667,7 @@
             console.error('CSRF token input not found on page load');
         }
 
-        bindRowActions();
         document.getElementById('saveDraftBtn').addEventListener('click', saveDraft);
-        document.getElementById('saveBtn').addEventListener('click', saveFinal);
         document.querySelectorAll('.editable').forEach(cell => {
             cell.dataset.original = cell.textContent;
 

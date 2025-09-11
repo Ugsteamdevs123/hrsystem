@@ -35,14 +35,20 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
         formulas = FieldFormula.objects.exclude(target_model__endswith='Draft').select_related('formula')
 
         # Prioritize employee-specific formulas
-        employee_formulas = formulas.filter(employee=instance, department_team=department_team)
-        print("employee_formulas: ", employee_formulas)
-        department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
-        print("department_formulas: ", department_formulas)
+        # employee_formulas = formulas.filter(employee=instance, department_team=department_team)
+        # print("employee_formulas: ", employee_formulas)
+        # department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
+        # print("department_formulas: ", department_formulas)
         # Combine, prioritizing employee formulas
-        formula_ids = list(employee_formulas.values_list('id', flat=True))
-        formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
-        print("formula_ids: ", formula_ids)
+        # formula_ids = list(employee_formulas.values_list('id', flat=True))
+        # formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+        # print("formula_ids: ", formula_ids)
+        # formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
+        
+        department_formulas = formulas.filter(department_team=department_team)
+        print("department_formulas: ", department_formulas)
+
+        formula_ids += list(department_formulas.values_list('id', flat=True))
         formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
         print("formulas: ", formulas)
 
@@ -646,7 +652,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
 
 
 @receiver(post_save,sender=DepartmentTeams)
-def add_new_increment_details_summary_record(sender, instance, created, **kwargs):
+def add_new_increment_details_summary_record_and_assign_initial_formulas_to_new_dept(sender, instance, created, **kwargs):
     """
     Signal to create incremental detail summary entry for the newly created department team.
     Also checks if a new summary status entry has to be created or not. 
@@ -661,6 +667,33 @@ def add_new_increment_details_summary_record(sender, instance, created, **kwargs
             else:
                 IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance, summaries_status = existing_summary_status.first())
                 print("existing_summary_status: ", existing_summary_status)
+            
+            return
+            # Identify the "initial" department as the earliest non-deleted one by ID (assuming the first created is the template)
+            initial_dept = DepartmentTeams.objects.filter(is_deleted=False).earliest('id')
+            
+            # Skip if this is the initial department itself (you'll handle its formulas manually)
+            if initial_dept.pk == instance.pk:
+                return
+            
+            # Fetch the initial department-level formulas (employee=None, to avoid copying employee-specific ones)
+            initial_formulas = FieldFormula.objects.filter(
+                department_team=initial_dept,
+                employee__isnull=True
+            )
+            
+            # Duplicate them for the new department, updating company and department_team
+            for ff in initial_formulas:
+                new_ff = FieldFormula(
+                    target_model=ff.target_model,
+                    target_field=ff.target_field,
+                    formula=ff.formula,
+                    description=ff.description,
+                    employee=None,  # Keep it department-level
+                    company=instance.company,  # Use the new department's company
+                    department_team=instance
+                )
+                new_ff.save()  # This will trigger audit logging via AuditlogHistoryField
 
     except Exception as e:
         print(f"Error in adding new increment details summary record: {e}")
