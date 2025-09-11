@@ -35,7 +35,7 @@ until postgres_ready; do
 done
 >&2 echo 'PostgreSQL is available'
 
-echo redis-cli -h 192.168.18.19 -p 6800 ping
-# echo redis-cli -h redis_docker -p 6379 ping
+# echo redis-cli -h 192.168.18.19 -p 6800 ping
+echo redis-cli -h redis_docker -p 6379 ping
 
 exec "$@"
