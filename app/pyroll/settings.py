@@ -72,6 +72,9 @@ MIDDLEWARE = [
 
     # For csrf middleware
     'django.middleware.csrf.CsrfViewMiddleware',
+
+    # For custom middleware
+    'user.middleware.ForcePasswordChangeMiddleware',
 ]
 
 ROOT_URLCONF = 'pyroll.urls'
