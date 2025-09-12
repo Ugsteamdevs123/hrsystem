@@ -634,53 +634,51 @@ class HrDashboardView(PermissionRequiredMixin, View):
         # Fetch companies assigned to the logged-in HR
 
         company_data = get_companies_and_department_teams(request.user)
-
-        # Handle AJAX request for employee data
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             
-            company_id = request.GET.get('company_id')
-            if not company_id:
-                return JsonResponse({'error': 'No company ID provided'}, status=400)
-            try:
-                # Get draft data
-                increment_details_summary_draft = IncrementDetailsSummaryDraft.objects.filter(company__id=company_id)
-                if increment_details_summary_draft.exists():
-                    data_draft = IncrementDetailsSummaryDraftSerializer(increment_details_summary_draft, many=True).data
-                else:
-                    data_draft = []
-                
-                print(data_draft)
-                # Get confirmed data (exclude ones already covered by draft)
-                draft_department_team_ids = increment_details_summary_draft.values_list("department_team_id", flat=True)
+        company_id = Company.objects.values_list('id', flat=True).first()
+        if not company_id:
+            return JsonResponse({'error': 'No company ID provided'}, status=400)
+        try:
+            # Get draft data
+            increment_details_summary_draft = IncrementDetailsSummaryDraft.objects.filter(company__id=company_id)
+            if increment_details_summary_draft.exists():
+                data_draft = IncrementDetailsSummaryDraftSerializer(increment_details_summary_draft, many=True).data
+            else:
+                data_draft = []
+            
+            print(data_draft)
+            # Get confirmed data (exclude ones already covered by draft)
+            draft_department_team_ids = increment_details_summary_draft.values_list("department_team_id", flat=True)
 
-                increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id).exclude(
-                    department_team__in=draft_department_team_ids
-                )
+            increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id).exclude(
+                department_team__in=draft_department_team_ids
+            )
 
-                if increment_details_summary.exists():
-                    data = IncrementDetailsSummarySerializer(increment_details_summary, many=True).data
-                else:
-                    # create a dict with all serializer fields set to None
-                    # fields = IncrementDetailsSummarySerializer().get_fields().keys()
-                    data = []
-                
-                # Fetch summary status (1 per company ideally)
-                summary_status = SummaryStatus.objects.filter(summary_submitted=False).first()
+            if increment_details_summary.exists():
+                data = IncrementDetailsSummarySerializer(increment_details_summary, many=True).data
+            else:
+                # create a dict with all serializer fields set to None
+                # fields = IncrementDetailsSummarySerializer().get_fields().keys()
+                data = []
+            
+            # Fetch summary status (1 per company ideally)
+            summary_status = SummaryStatus.objects.filter(summary_submitted=False).first()
 
-                print(summary_status)
-                return JsonResponse({
-                    'data': list(data_draft)+list(data),
-                    "summary_status": {
-                        "id": summary_status.id,
-                        "approved": summary_status.approved,
-                        "summary_submitted": summary_status.summary_submitted
-                    } if summary_status else None
-                })
-            except DepartmentTeams.DoesNotExist:
-                return JsonResponse({'data': []})
+            print(data[0])
+            return render(request, 'hr_dashboard.html',{
+                'data': list(data_draft)+list(data),
+                'company_data': company_data,
+                "summary_status": {
+                    "id": summary_status.id,
+                    "approved": summary_status.approved,
+                    "summary_submitted": summary_status.summary_submitted,
+                } if summary_status else None
+            })
+        except DepartmentTeams.DoesNotExist:
+            return JsonResponse({'data': []})
 
         # logger.info(f"User {request.user.username} accessed HR dashboard with {len(company_data)} companies")
-        return render(request, 'hr_dashboard.html', {'company_data': company_data})
+        # return render(request, 'hr_dashboard.html', {'company_data': company_data})
 
     def patch(self, request):
         # Handle AJAX PATCH request to update eligible_for_increment

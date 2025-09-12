@@ -96,11 +96,10 @@
         }
 
         /* Snackbar css */
-
         #snackbar {
-            visibility: hidden; /* Hidden by default */
+            visibility: hidden;
             min-width: 250px;
-            background-color: #28a745; /* Green for success */
+            background-color: #28a745;
             color: #fff;
             text-align: center;
             border-radius: 4px;
@@ -114,13 +113,11 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.3);
         }
 
-        /* Show the snackbar */
         #snackbar.show {
             visibility: visible;
             animation: fadein 0.5s, fadeout 0.5s 3s;
         }
 
-        /* Animations */
         @keyframes fadein {
             from { top: 0; opacity: 0; }
             to { top: 20px; opacity: 1; }
@@ -130,49 +127,90 @@
             to { top: 0; opacity: 0; }
         }
 
-
-        /* --- Custom accordion/tree styles (no Bootstrap) --- */
-        .company-tree { margin-top: 10px; }
-        .company-item + .company-item { margin-top: 8px; }
-
-        .tree-toggle {
-        all: unset;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        width: 100%;
-        cursor: pointer;
-        padding: 8px 10px;
-        border-radius: 5px;
-        transition: background-color .2s ease;
+        /* --- Custom accordion for departments --- */
+        .departments-dropdown { 
+            margin-top: 10px; 
         }
-        .tree-toggle:hover { background-color: #495057; }
 
-        .caret {
-        display: inline-block;
-        width: 0; height: 0;
-        border-top: 5px solid transparent;
-        border-bottom: 5px solid transparent;
-        border-left: 6px solid #ffffff;
-        transition: transform .2s ease;
+        .departments-toggle {
+            all: unset;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            cursor: pointer;
+            padding: 10px; /* Match sidebar menu links */
+            border-radius: 5px;
+            background-color: #343a40;
+            color: #fff;
+            font-size: 14px;
+            text-align: left;
+            transition: background-color .2s ease;
         }
-        .tree-toggle[aria-expanded="true"] .caret { transform: rotate(90deg); }
-
-        .tree-panel { margin: 6px 0 0 18px; }
-        .tree-list { list-style: none; padding-left: 0; margin: 0; }
-        .tree-list li { margin: 6px 0; }
-        .tree-list li.child { margin-left: 10px; }
-        .tree-list a {
-        display: inline-block;
-        color: #fff;
-        text-decoration: none;
-        padding: 6px 8px;
-        border-radius: 4px;
+        .departments-toggle:hover { 
+            background-color: #495057; 
         }
-        .tree-list a:hover { background-color: #495057; }
-        .muted { color: #b8b8b8; font-size: 13px; }
 
+        .departments-caret {
+            display: inline-block;
+            width: 0; height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 6px solid #ffffff;
+            transition: transform .2s ease;
+        }
+        .departments-toggle.expanded .departments-caret { 
+            transform: rotate(90deg); 
+        }
 
+        .departments-panel { 
+            margin: 6px 0 0 0; /* Remove left indent to align with menu */
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .departments-panel.expanded { 
+            max-height: 300px; /* Adjust for content height */
+        }
+        .departments-list { 
+            list-style: none; 
+            padding-left: 10px; /* Slight indent for hierarchy */
+            margin: 0; 
+        }
+        .departments-list li { 
+            margin: 6px 0; 
+        }
+        .departments-list li.child { 
+            margin-left: 0; /* No extra indent */
+        }
+        .departments-list a {
+            display: block; /* Match sidebar menu links */
+            color: #fff;
+            text-decoration: none;
+            padding: 10px; /* Match sidebar menu links */
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .departments-list a:hover { 
+            background-color: #495057; 
+        }
+        .muted { 
+            color: #b8b8b8; 
+            font-size: 13px; 
+            padding: 10px; 
+        }
+
+        /* Responsive adjustments for dropdown */
+        @media screen and (max-width: 768px) {
+            .departments-toggle { 
+                font-size: 12px; 
+                padding: 6px 8px; 
+            }
+            .departments-list a { 
+                font-size: 12px; 
+                padding: 6px 8px; 
+            }
+        }
     </style>
 </head>
 <body>
@@ -211,7 +249,6 @@
             <a href="{% url 'view_section' %}">Section</a>
             {% endif %}
 
-
             {% if perms.user.view_hr_assigned_companies %}
             <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
             {% endif %}
@@ -232,39 +269,29 @@
             <a href="{% url 'employees_view' %}">Manage Employees</a>
             {% endif %}
 
-            {# --- Dynamic Companies → Departments (RBAC on Employee) --- #}
+            {# --- Dynamic Departments (RBAC on Employee) --- #}
             {% if perms.user.view_employee and company_data %}
-            <div class="company-tree">
-                {% for company in company_data %}
-                <div class="company-item">
-                    <button class="tree-toggle" type="button"
-                            aria-expanded="false"
-                            aria-controls="panel-{{ company.company_id }}">
-                    <span class="caret"></span>
-                    <span class="label">{{ company.company_name }}</span>
-                    </button>
+            <div class="departments-dropdown">
+                <button class="departments-toggle" type="button">
+                    <span class="label">Departments</span>
+                    <span class="departments-caret"></span>
+                </button>
 
-                    <div id="panel-{{ company.company_id }}" class="tree-panel" hidden>
-                    <ul class="tree-list">
-
-                        {% comment %} <li>
-                        <a href="{% url 'company_summary' company.company_id %}">Summary</a>
-                        </li> {% endcomment %}
-                        
-                        {% for department in company.departments %}
-                        <li class="child">
-                            {# IMPORTANT: pass department.id to avoid NoReverseMatch #}
-                            <a href="{% url 'department_table' department.id %}">
-                            {{ department.name }}
-                            </a>
-                        </li>
-                        {% empty %}
-                        <li class="muted">No departments</li>
+                <div id="departments-panel" class="departments-panel">
+                    <ul class="departments-list">
+                        {% for company in company_data %}
+                            {% for department in company.departments %}
+                            <li class="child">
+                                <a href="{% url 'department_table' department.id %}">
+                                {{ department.name }}
+                                </a>
+                            </li>
+                            {% empty %}
+                            <li class="muted">No departments</li>
+                            {% endfor %}
                         {% endfor %}
                     </ul>
-                    </div>
                 </div>
-                {% endfor %}
             </div>
             {% endif %}
 
@@ -273,8 +300,7 @@
         <form method="get" action="{% url 'logout' %}">
             <button type="submit" class="logout-btn">Logout</button>
         </form>
-        </div> 
-
+    </div> 
 
     <!-- Main content -->
     <div class="content">
@@ -294,30 +320,28 @@
 <!-- Snackbar container -->
 <div id="snackbar"></div>
 
-
 <script>
 let popupCallback = null;
 
-function showConfirmPopup(message, callback){
+function showConfirmPopup(message, callback) {
     document.getElementById('confirmPopupMessage').innerText = message;
     popupCallback = callback;
     document.getElementById('confirmPopup').style.display = 'flex';
 }
 
-function closePopup(){
+function closePopup() {
     popupCallback = null;
     document.getElementById('confirmPopup').style.display = 'none';
 }
 
-document.getElementById('confirmYesBtn').addEventListener('click', function(){
-    if(popupCallback){
+document.getElementById('confirmYesBtn').addEventListener('click', function() {
+    if (popupCallback) {
         popupCallback();
     }
     closePopup();
 });
 
 // Snackbar js 
-
 function showSnackbar(message, bgColor = '#28a745') {
     const snackbar = document.getElementById('snackbar');
     snackbar.innerText = message;
@@ -335,40 +359,24 @@ function showSnackbar(message, bgColor = '#28a745') {
     {% endfor %}
 {% endif %}
 
+// --- Simple accordion for departments ---
+function toggleDepartments() {
+    const toggle = document.querySelector('.departments-toggle');
+    const panel = document.getElementById('departments-panel');
+    const expanded = toggle.classList.contains('expanded');
+    
+    toggle.classList.toggle('expanded');
+    panel.classList.toggle('expanded');
+}
 
-// --- Simple accordion for company tree (no Bootstrap) ---
-(function initCompanyTree(){
-  const toggles = document.querySelectorAll('.tree-toggle');
-  toggles.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const expanded = btn.getAttribute('aria-expanded') === 'true';
-      const panelId = btn.getAttribute('aria-controls');
-      const panel = document.getElementById(panelId);
-      // close others (optional, for "one open at a time")
-      document.querySelectorAll('.tree-toggle[aria-expanded="true"]').forEach(openBtn => {
-        if (openBtn !== btn) {
-          openBtn.setAttribute('aria-expanded', 'false');
-          const pid = openBtn.getAttribute('aria-controls');
-          const p = document.getElementById(pid);
-          if (p) p.hidden = true;
-        }
-      });
-      btn.setAttribute('aria-expanded', String(!expanded));
-      if (panel) panel.hidden = expanded;
-    });
-  });
-})();
-
-
+// Initialize departments toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.querySelector('.departments-toggle');
+    if (toggle) {
+        toggle.addEventListener('click', toggleDepartments);
+    }
+});
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
-
-

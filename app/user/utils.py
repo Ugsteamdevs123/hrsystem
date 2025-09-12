@@ -54,15 +54,8 @@ def update_draft_department_team_increment_summary(sender, instance, company, de
 def update_department_team_increment_summary(sender, instance, company, department_team):
     try:
         employee_count = Employee.objects.filter(company=company, department_team=department_team).count()
-        if sender is CurrentPackageDetails:
-            current_package = CurrentPackageDetails.objects.filter(employee__company=company, employee__department_team=department_team)
-            if current_package.exists():
-                IncrementDetailsSummary.objects.filter(company=company, department_team=department_team).update(total_employees = employee_count)
-                
-        if sender is ProposedPackageDetails:
-            proposed_package = ProposedPackageDetails.objects.filter(employee__company=company, employee__department_team=department_team)
-            if proposed_package.exists():
-
+        
+        if sender in [Employee, CurrentPackageDetails, ProposedPackageDetails]:
                 IncrementDetailsSummary.objects.filter(company=company, department_team=department_team).update(total_employees = employee_count,)
 
         if sender is FinancialImpactPerMonth:
