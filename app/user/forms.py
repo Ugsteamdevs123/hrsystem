@@ -27,8 +27,17 @@ class FormulaForm(forms.ModelForm):
 
     class Meta:
         model = Formula
-        fields = ['target_model', 'target_field', 'formula_name', 'formula_expression', 'formula_is_default']
+        fields = ['formula_name', 'formula_expression', 'target_model', 'target_field']
         widgets = {
+            'formula_expression': forms.Textarea(attrs={'rows': 4, 'id': 'formula-expression'}),
+            # 'formula_is_default': forms.Select(
+            #     choices=[
+            #         ('', 'Select a Choice'),
+            #         ('True', 'Yes'),
+            #         ('False', 'No'),
+            #     ],
+            #     attrs={'required': 'true'}
+            # ),
             'target_model': forms.Select(
                 choices=[
                     ('', 'Select a model'),
@@ -39,25 +48,16 @@ class FormulaForm(forms.ModelForm):
                 attrs={'required': 'true'}
             ),
             'target_field': forms.Select(attrs={'required': 'true'}),
-            'formula_expression': forms.Textarea(attrs={'rows': 4, 'id': 'formula-expression'}),
-            'formula_is_default': forms.Select(
-                choices=[
-                    ('', 'Select a Choice'),
-                    ('True', 'Yes'),
-                    ('False', 'No'),
-                ],
-                attrs={'required': 'true'}
-            ),
         }
 
 
 class FieldFormulaForm(forms.ModelForm):
-    company = forms.ModelChoiceField(
-        queryset=Company.objects.none(),  # Will be set dynamically
-        required=True,
-        empty_label="Select a company",
-        help_text="Choose the company for this formula."
-    )
+    # company = forms.ModelChoiceField(
+    #     queryset=Company.objects.none(),  # Will be set dynamically
+    #     required=True,
+    #     empty_label="Select a company",
+    #     help_text="Choose the company for this formula."
+    # )
     department_team = forms.ModelChoiceField(
         queryset=DepartmentTeams.objects.all(),
         required=False,
@@ -68,6 +68,7 @@ class FieldFormulaForm(forms.ModelForm):
     class Meta:
         model = FieldFormula
         fields = ['formula', 'company', 'department_team', 'description']
+        # fields = ['formula', 'department_team', 'description']
         widgets = {
             'formula': forms.Select(attrs={'required': 'true'}),
             'description': forms.Textarea(attrs={'rows': 3}),
@@ -83,19 +84,19 @@ class FieldFormulaForm(forms.ModelForm):
         self.user = user
 
         # Filter companies by hr_assigned_companies
-        if self.user:
-            assigned_companies = hr_assigned_companies.objects.filter(hr=self.user).values('company')
-            self.fields['company'].queryset = Company.objects.filter(id__in=assigned_companies)
+        # if self.user:
+        #     assigned_companies = hr_assigned_companies.objects.filter(hr=self.user).values('company')
+        #     self.fields['company'].queryset = Company.objects.filter(id__in=assigned_companies)
 
-        # Filter department_team and employee based on company
-        company_id = self.data.get('company') if 'company' in self.data else (self.instance.company_id if self.instance.pk else None)
-        if company_id:
-            self.fields['department_team'].queryset = DepartmentTeams.objects.filter(company_id=company_id)
-        else:
-            self.fields['department_team'].queryset = DepartmentTeams.objects.none()
+        # # Filter department_team and employee based on company
+        # company_id = self.data.get('company') if 'company' in self.data else (self.instance.company_id if self.instance.pk else None)
+        # if company_id:
+        #     self.fields['department_team'].queryset = DepartmentTeams.objects.filter(company_id=company_id)
+        # else:
+        #     self.fields['department_team'].queryset = DepartmentTeams.objects.none()
             
-        self.fields['formula'].required = True
-        self.fields['company'].required = True
+        # self.fields['formula'].required = True
+        # self.fields['company'].required = True
 
     def clean(self):
         cleaned_data = super().clean()
