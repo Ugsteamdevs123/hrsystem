@@ -1936,12 +1936,16 @@ class CreateFieldFormulaView(PermissionRequiredMixin, View):
         })
 
     def post(self, request):
-        form = FieldFormulaForm(user=request.user, data=request.POST)  # Pass user
+        # Make a mutable copy of POST data
+        post_data = request.POST.copy()
+
+        # Modify or add fields
+        post_data['company'] = Company.objects.values_list('id', flat=True).first()
+        # request.POST['company'] = Company.objects.values_list('id', flat=True).first()
+        form = FieldFormulaForm(user=request.user, data=post_data)  # Pass user
         field_references = FieldReference.objects.all()
         company_data = get_companies_and_department_teams(request.user)
-        print("here")
         if form.is_valid():
-            print("hi")
             form.save()
             messages.success(request, "Field Formula created successfully!")
             return redirect("view_field_formulas")
@@ -1971,8 +1975,16 @@ class EditFieldFormulaView(PermissionRequiredMixin, View):
         })
 
     def post(self, request, pk):
+        # Make a mutable copy of POST data
+        post_data = request.POST.copy()
+
+        print("pk: ", pk)
+
+        # Modify or add fields
+        post_data['company'] = Company.objects.values_list('id', flat=True).first()
+
         field_formula = get_object_or_404(FieldFormula, pk=pk)
-        form = FieldFormulaForm(request.POST, instance=field_formula ,  user=request.user)
+        form = FieldFormulaForm(post_data, instance=field_formula ,  user=request.user)
         field_references = FieldReference.objects.all()
         company_data = get_companies_and_department_teams(request.user)
         if form.is_valid():

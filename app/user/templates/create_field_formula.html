@@ -7,7 +7,7 @@
 
 <form id="createFieldFormulaForm" method="POST">
     {% csrf_token %}
-    <div class="form-field">{{ form.company.label_tag }} {{ form.company }}</div>
+    <!-- <div class="form-field">{{ form.company.label_tag }} {{ form.company }}</div> -->
     <div class="form-field">{{ form.department_team.label_tag }} {{ form.department_team }}</div>
     <div class="form-field">{{ form.formula.label_tag }} {{ form.formula }}</div>
     <div class="form-field">{{ form.aggregate_type.label_tag }} {{ form.aggregate_type }}</div>

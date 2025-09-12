@@ -19,7 +19,6 @@
             <th>SR.No</th>
             <th>Company</th>
             <th>Department Team</th>
-            <th>Employee</th>
             <th>Target Model</th>
             <th>Target Field</th>
             <th>Formula</th>
@@ -33,7 +32,6 @@
             <td>{{ forloop.counter }}</td>
             <td>{{ ff.company.name|default:"-" }}</td>
             <td>{{ ff.department_team.name|default:"-" }}</td>
-            <td>{{ ff.employee|default:"-" }}</td>
             <td>{{ ff.formula.target_model }}</td>
             <td>{{ ff.formula.target_field }}</td>
             <td>{{ ff.formula.formula_expression }}</td>
