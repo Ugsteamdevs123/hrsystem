@@ -663,8 +663,7 @@ class HrDashboardView(PermissionRequiredMixin, View):
             
             # Fetch summary status (1 per company ideally)
             summary_status = SummaryStatus.objects.filter(summary_submitted=False).first()
-
-            print(data[0])
+            
             return render(request, 'hr_dashboard.html',{
                 'data': list(data_draft)+list(data),
                 'company_data': company_data,
