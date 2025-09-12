@@ -9,38 +9,50 @@
 <button class="form-btn btn-add" onclick="openAddModal()">Add New Department</button>
 {% endif %}
 
-<!-- Company Dropdown -->
-<div style="margin-top: 15px; margin-bottom: 15px;">
-    <h3>Select Company To View Its Departments</h3>
-    <select id="company-select" style="width:50%; padding:8px; border-radius:4px; border:1px solid #ced4da; font-size: 14px;">
-        <option value="" selected>Select a company</option>
-    </select>
-</div>
-
 <!-- Departments Table -->
 <div id="departments-table">
+    {% if company_data and company_data.0.departments %}
+    <table border="1" cellpadding="8" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+                <th>SR.No</th>
+                <th>Department Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dept in company_data.0.departments %}
+            <tr data-id="{{ dept.id }}">
+                <td>{{ forloop.counter }}</td>
+                <td class="dept-name-cell">{{ dept.name }}</td>
+                <td>
+                    {% if perms.user.change_departmentteams %}
+                    <button class="action-btn edit-btn" onclick="startInlineEdit(this, '{{ dept.id }}', '{{ dept.name|escapejs }}')">Update</button>
+                    {% endif %}
+                    {% if perms.user.delete_departmentteams %}
+                    <button class="action-btn delete-btn" onclick="showConfirmPopup('Are you sure you want to delete this department?', function(){ deleteDepartment('{{ dept.id }}'); })">Delete</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No departments found.</p>
+    {% endif %}
 </div> 
 
-<!-- Add/Edit Department Popup -->
-<div id="departmentPopup" class="popup-overlay">
+<!-- Add Department Popup -->
+<div id="departmentPopup" class="popup-overlay" style="display:none;">
     <div class="popup-content" style="width: 350px; padding: 30px;">
         <h5 id="departmentPopupLabel" style="margin-bottom: 20px; font-size: 18px; color: #343a40; text-align: center;">Add Department</h5>
         <form id="departmentForm">
             {% csrf_token %}
-            <input type="hidden" id="department-id" name="id">
-
-            <div style="margin-bottom: 15px;">
-                <label for="modal-company-select" style="display: block; margin-bottom: 5px; font-weight: bold; color: #343a40;">Select Company</label>
-                <select id="modal-company-select" name="company_id" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ced4da; font-size: 14px;" required>
-                    <option value="" selected>Select a company</option>
-                </select>
-            </div>
-
+            <input type="hidden" name="company_id" value="{{ company_data.0.company_id }}">
             <div style="margin-bottom: 15px;">
                 <label for="department-name" style="display: block; margin-bottom: 5px; font-weight: bold; color: #343a40;">Department Name</label>
                 <input type="text" id="department-name" name="name" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ced4da; font-size: 14px;" required>
             </div>
-
             <div id="form-message" style="margin-bottom: 15px; text-align: center;"></div>
             <div style="display: flex; justify-content: center; gap: 10px;">
                 <button type="submit" class="popup-btn yes-btn">Save</button>
@@ -51,7 +63,7 @@
 </div>
 
 <style>
-/* Table styling (consistent with view_company.html) */
+/* Table styling */
 table {
     border-collapse: collapse;
     margin-top: 15px;
@@ -73,7 +85,16 @@ tr:nth-child(odd) {
     background-color: #ffffff;
 }
 
-/* Buttons (consistent with view_company.html) */
+/* Inline edit input */
+.dept-name-input {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    font-size: 14px;
+}
+
+/* Buttons */
 .form-btn {
     padding: 12px 20px;
     border: none;
@@ -89,17 +110,14 @@ tr:nth-child(odd) {
 .btn-add:hover {
     background-color: #218838;
 }
-
 .action-btn {
     padding: 8px 15px;
     border-radius: 6px;
     font-size: 14px;
     color: #fff;
-    text-decoration: none;
     cursor: pointer;
-    display: inline-block;
     margin-right: 5px;
-    border: none; /* Ensure no border on action buttons */
+    border: none;
 }
 .edit-btn {
     background-color: #007bff;
@@ -113,8 +131,20 @@ tr:nth-child(odd) {
 .delete-btn:hover {
     background-color: #c82333;
 }
+.save-btn {
+    background-color: #28a745;
+}
+.save-btn:hover {
+    background-color: #218838;
+}
+.cancel-btn {
+    background-color: #6c757d;
+}
+.cancel-btn:hover {
+    background-color: #5a6268;
+}
 
-/* Enhanced Popup Styling */
+/* Popup Styling */
 .popup-content {
     border-radius: 8px;
     background: #fff;
@@ -151,9 +181,6 @@ tr:nth-child(odd) {
         font-size: 12px;
         padding: 8px 12px;
     }
-    #company-select {
-        width: 100%;
-    }
     .popup-content {
         width: 90%;
         padding: 20px;
@@ -166,104 +193,10 @@ tr:nth-child(odd) {
 </style>
 
 <script>
-let companyData = [];
-let editingDepartmentId = null;
-
-// Fetch companies and populate dropdowns
-async function fetchCompanies() {
-    try {
-        const response = await fetch("{% url 'get_companies_and_department_teams' %}", {
-            method: 'GET',
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        });
-        if (!response.ok) throw new Error('Failed to fetch companies');
-        const data = await response.json();
-        companyData = data.data;
-
-        const mainSelect = document.getElementById('company-select');
-        const modalSelect = document.getElementById('modal-company-select');
-
-        mainSelect.innerHTML = '<option value="" selected>Select a company</option>';
-        modalSelect.innerHTML = '<option value="" selected>Select a company</option>';
-
-        companyData.forEach(c => {
-            mainSelect.innerHTML += `<option value="${c.company_id}">${c.company_name}</option>`;
-            modalSelect.innerHTML += `<option value="${c.company_id}">${c.company_name}</option>`;
-        });
-
-        // Refresh departments if a company is already selected
-        fetchDepartments();
-    } catch(err) {
-        console.error(err);
-        showSnackbar('Error fetching companies', '#dc3545');
-    }
-}
-
-// Fetch departments when company selected
-function fetchDepartments() {
-    const companySelect = document.getElementById('company-select');
-    const companyId = companySelect.value;
-    const tableDiv = document.getElementById('departments-table');
-
-    if (!companyId) {
-        tableDiv.innerHTML = '<p class="muted">Select a company to view departments.</p>';
-        return;
-    }
-
-    const company = companyData.find(c => c.company_id == companyId);
-    if (!company || !company.departments || company.departments.length === 0) {
-        tableDiv.innerHTML = '<p class="muted">No departments found for this company.</p>';
-        return;
-    }
-
-    let html = `
-        <table border="1" cellpadding="8" cellspacing="0" width="100%">
-            <thead>
-                <tr>
-                    <th>SR.No</th>
-                    <th>Department Name</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-    company.departments.forEach((dept, index) => {
-        html += `
-            <tr data-id="${dept.id}">
-                <td>${index + 1}</td>
-                <td>${dept.name}</td>
-                <td>
-                    {% if perms.user.change_departmentteams %}
-                    <button class="action-btn edit-btn" onclick="openEditModal(${dept.id}, '${dept.name}', ${company.company_id})">Update</button>
-                    {% endif %}
-                    {% if perms.user.delete_departmentteams %}
-                    <button class="action-btn delete-btn" onclick="showConfirmPopup('Are you sure you want to delete this department?', function(){ deleteDepartment(${dept.id}); })">Delete</button>
-                    {% endif %}
-                </td>
-            </tr>
-        `;
-    });
-    html += '</tbody></table>';
-    tableDiv.innerHTML = html;
-}
-
 // Open modal for adding
 function openAddModal() {
-    editingDepartmentId = null;
     document.getElementById('departmentPopupLabel').innerText = 'Add Department';
     document.getElementById('departmentForm').reset();
-    document.getElementById('form-message').innerHTML = '';
-    document.getElementById('modal-company-select').value = document.getElementById('company-select').value || '';
-    document.getElementById('departmentPopup').style.display = 'flex';
-}
-
-// Open modal for editing
-function openEditModal(id, name, companyId) {
-    editingDepartmentId = id;
-    document.getElementById('departmentPopupLabel').innerText = 'Edit Department';
-    document.getElementById('department-id').value = id;
-    document.getElementById('department-name').value = name;
-    document.getElementById('modal-company-select').value = companyId;
     document.getElementById('form-message').innerHTML = '';
     document.getElementById('departmentPopup').style.display = 'flex';
 }
@@ -273,62 +206,103 @@ function closeDepartmentPopup() {
     document.getElementById('departmentPopup').style.display = 'none';
 }
 
-// Add/Edit department with confirmation
-document.getElementById('departmentForm')?.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const companyId = document.getElementById('modal-company-select').value;
-    const departmentName = document.getElementById('department-name').value.trim();
-    const msg = document.getElementById('form-message');
-    const deptId = editingDepartmentId;
+// Inline editing
+function startInlineEdit(button, id, name) {
+    const row = button.closest('tr');
+    const nameCell = row.querySelector('.dept-name-cell');
+    const originalName = nameCell.textContent;
+    nameCell.innerHTML = `
+        <input type="text" class="dept-name-input" value="${name.replace(/"/g, '&quot;')}" style="width: 100%;">
+    `;
+    const actionsCell = row.querySelector('td:last-child');
+    actionsCell.innerHTML = `
+        <button class="action-btn save-btn" onclick="saveInlineEdit(this, '${id}')">Save</button>
+        <button class="action-btn cancel-btn" onclick="cancelInlineEdit(this, '${originalName.replace(/"/g, '&quot;')}')">Cancel</button>
+    `;
+}
 
-    if (!companyId) {
-        msg.innerHTML = '<p style="color:#dc3545;">Please select a company.</p>';
+// Save inline edit
+async function saveInlineEdit(button, id) {
+    const row = button.closest('tr');
+    const nameInput = row.querySelector('.dept-name-input');
+    const newName = nameInput.value.trim();
+    if (!newName) {
+        showSnackbar('Department name cannot be empty', '#dc3545');
         return;
     }
+
+    showConfirmPopup('Are you sure you want to update this department?', async function() {
+        try {
+            const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            const response = await fetch("{% url 'department_team' %}", {
+                method: 'PATCH',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfInput.value,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id, name: newName, company_id: '{{ company_data.0.company_id }}' })
+            });
+            if (!response.ok) throw new Error('Failed to update department');
+            const result = await response.json();
+            if (result.error) {
+                showSnackbar(result.error, '#dc3545');
+            } else {
+                showSnackbar('Department updated successfully!', '#28a745');
+                window.location.reload();
+            }
+        } catch (err) {
+            console.error(err);
+            showSnackbar('Error updating department', '#dc3545');
+        }
+    });
+}
+
+// Cancel inline edit
+function cancelInlineEdit(button, originalName) {
+    const row = button.closest('tr');
+    const nameCell = row.querySelector('.dept-name-cell');
+    nameCell.textContent = originalName;
+    const actionsCell = row.querySelector('td:last-child');
+    actionsCell.innerHTML = `
+        {% if perms.user.change_departmentteams %}
+        <button class="action-btn edit-btn" onclick="startInlineEdit(this, '${row.dataset.id}', '${originalName.replace(/"/g, '&quot;')}')">Update</button>
+        {% endif %}
+        {% if perms.user.delete_departmentteams %}
+        <button class="action-btn delete-btn" onclick="showConfirmPopup('Are you sure you want to delete this department?', function(){ deleteDepartment('${row.dataset.id}'); })">Delete</button>
+        {% endif %}
+    `;
+}
+
+// Add department
+document.getElementById('departmentForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const departmentName = document.getElementById('department-name').value.trim();
+    const msg = document.getElementById('form-message');
+
     if (!departmentName) {
         msg.innerHTML = '<p style="color:#dc3545;">Please enter a department name.</p>';
         return;
     }
 
-    showConfirmPopup(`Are you sure you want to ${deptId ? 'update' : 'add'} this department?`, async function() {
-        const formData = new FormData(document.getElementById('departmentForm'));
-        if (deptId) formData.append('id', deptId);
-
+    showConfirmPopup('Are you sure you want to add this department?', async function() {
         try {
-            let response;
-            if (deptId) {
-                const dataObject = Object.fromEntries(formData);
-                console.log(dataObject);
-                const payload = {
-                    id: dataObject['id'],
-                    company_id: dataObject['company_id'],
-                    name: dataObject['name']
-                };
-                const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
-                response = await fetch("{% url 'department_team' %}", {
-                    method: 'PATCH',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfInput.value, "Content-Type": 'application/json' },
-                    body: JSON.stringify(dataObject)
-                });
-            }
-            else {
-                response = await fetch("{% url 'department_team' %}", {
-                    method: deptId ? 'PATCH' : 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest'},
-                    body: formData
-                });
-            }
-            
+            const formData = new FormData(document.getElementById('departmentForm'));
+            const response = await fetch("{% url 'department_team' %}", {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            });
             if (!response.ok) throw new Error('Failed to save department');
             const result = await response.json();
             if (result.error) {
                 msg.innerHTML = `<p style="color:#dc3545;">${result.error}</p>`;
             } else {
-                showSnackbar(`Department ${deptId ? 'updated' : 'added'} successfully!`, '#28a745');
-                await fetchCompanies(); // Refresh data and table
+                showSnackbar('Department added successfully!', '#28a745');
                 closeDepartmentPopup();
+                window.location.reload();
             }
-        } catch(err) {
+        } catch (err) {
             console.error(err);
             msg.innerHTML = '<p style="color:#dc3545;">Error saving department.</p>';
         }
@@ -341,7 +315,11 @@ async function deleteDepartment(id) {
         const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
         const response = await fetch("{% url 'department_team' %}", {
             method: 'DELETE',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json', 'X-CSRFToken': csrfInput.value },
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfInput.value
+            },
             body: JSON.stringify({ id })
         });
         if (!response.ok) throw new Error('Failed to delete');
@@ -350,18 +328,12 @@ async function deleteDepartment(id) {
             showSnackbar(result.error, '#dc3545');
         } else {
             showSnackbar('Department deleted successfully!', '#28a745');
-            await fetchCompanies(); // Refresh data and table
+            window.location.reload();
         }
-    } catch(err) {
+    } catch (err) {
         console.error(err);
         showSnackbar('Error deleting department', '#dc3545');
     }
 }
-
-// Initialize
-window.onload = () => {
-    fetchCompanies();
-    document.getElementById('company-select').addEventListener('change', fetchDepartments);
-};
 </script>
 {% endblock %}
