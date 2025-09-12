@@ -71,7 +71,7 @@ urlpatterns = [
     # For employee crud
     path('employee/', views.EmployeesView.as_view(), name='employees_view'),
     path('department/create/', views.CreateEmployeeView.as_view(), name='create_employee'),
-    path('department/update/<int:employee_id>/', views.UpdateEmployeeView.as_view(), name='update_employee'),
+    path('employee/update/<int:employee_id>/', views.UpdateEmployeeView.as_view(), name='update_employee'),
     path('department/delete/<int:employee_id>/', views.DeleteEmployeeView.as_view(), name='delete_employee'),
 
     # For dept table crud

@@ -26,9 +26,15 @@
                     <input type="text" id="fullname" name="fullname" required>
                 </div>
                 <div class="form-field">
-                    <label for="department_group_id">Department Group <span class="req">*</span></label>
-                    <select id="department_group_id" name="department_group_id" required>
+                    <label for="department_team_id">Department Group <span class="req">*</span></label>
+                    <select id="department_team_id" name="department_team_id" required>
                         <option value="">Select Department Group</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="department_group_id">Department <span class="req">*</span></label>
+                    <select id="department_group_id" name="department_group_id" required>
+                        <option value="">Select Department</option>
                     </select>
                 </div>
                 <div class="form-field">
@@ -63,9 +69,9 @@
                     <label for="date_of_joining">Date of Joining <span class="req">*</span></label>
                     <input type="date" id="date_of_joining" name="date_of_joining">
                 </div>
-                <div class="form-field" id="resignation_date_container" style="display: none;">
+                <div class="form-field" id="resignation_date_container">
                     <label for="date_of_resignation">Date of Resignation</label>
-                    <input type="date" id="date_of_resignation" name="date_of_resignation" disabled>
+                    <input type="date" id="date_of_resignation" name="date_of_resignation">
                 </div>
                 <div class="form-field">
                     <label for="eligible_for_increment">Eligible for Increment <span class="req">*</span></label>
@@ -206,6 +212,7 @@
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
             try {
+                console.log("url: ", url);
                 const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, signal: controller.signal, ...opts });
                 clearTimeout(timeoutId);
                 if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
@@ -248,6 +255,8 @@
             const q = sel => form.querySelector(sel);
             q('#emp_id').value = data.employee.emp_id || '';
             q('#fullname').value = data.employee.fullname || '';
+            q('#department_team_id').value = data.employee.department_team_id || '';
+            console.log("department_team_id: ", data.employee.department_team_id);
             q('#department_group_id').value = data.employee.department_group_id || '';
             populateSections(data.employee.department_group_id);
             q('#section_id').value = data.employee.section_id || '';
@@ -255,6 +264,7 @@
             q('#location_id').value = data.employee.location_id || '';
             q('#date_of_joining').value = data.employee.date_of_joining || '';
             q('#date_of_resignation').value = data.employee.date_of_resignation || '';
+            console.log("date_of_resignation: ", data.employee.date_of_resignation);
             const eligibleValue = data.employee.eligible_for_increment ? 'true' : 'false';
             q(`input[name="eligible_for_increment"][value="${eligibleValue}"]`).checked = true;
             q('#remarks').value = data.employee.remarks || '';
@@ -270,7 +280,7 @@
             q('#fuel_allowance').value = data.current_package?.fuel_allowance || '';
             q('#fuel_litre').value = data.current_package?.fuel_litre || '';
             q('#emp_status_id').value = data.financial_impact?.emp_status_id || '';
-            formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, date_of_resignation: q('#date_of_resignation').value, eligible_for_increment: eligibleValue, remarks: q('#remarks').value };
+            formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_team_id: q('#department_team_id').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, date_of_resignation: q('#date_of_resignation').value, eligible_for_increment: eligibleValue, remarks: q('#remarks').value };
             formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, company_pickup_current: companyPickupCurrentValue, vehicle_id: q('#vehicle_id').value, fuel_allowance: q('#fuel_allowance').value, mobile_provided: mobileProvidedValue, fuel_litre: q('#fuel_litre').value };
             formDataStore[2] = { ...formDataStore[2], emp_status_id: q('#emp_status_id').value };
         }
@@ -278,7 +288,6 @@
         console.log(populateForm);
 
         async function fetchDropdownData() {
-            console.log('here');
             if (!companyId) {
                 showSnackbar('Company ID is missing', '#dc3545');
                 return;
@@ -298,6 +307,20 @@
             }
 
             try {
+                const raw = await fetchJSON(`/payroll/department-teams/?company_id=${companyId}`);
+                const list = asArray(raw);
+                if (!Array.isArray(list)) {
+                    showSnackbar('No department team available', '#dc3545');
+                    window.departmentTeams = [];
+                    return;
+                }
+                populateDepartmentTeams(list);
+            } catch (e) {
+                showSnackbar('Error loading department teams', '#dc3545');
+                window.departmentGroups = [];
+            }
+
+            try {
                 const [designationsRaw, locationsRaw, vehiclesRaw, statusRaw] = await Promise.all([
                     fetchJSON(`/payroll/designations/?company_id=${companyId}`),
                     fetchJSON('/payroll/locations/'),
@@ -312,25 +335,21 @@
                 if (designationsRaw.error || !designations) {
                     showSnackbar(designationsRaw.error || 'Invalid designations data', '#dc3545');
                 } else {
-                    console.log("populateDesignations");
                     populateDesignations(designations);
                 }
                 if (locationsRaw.error || !locations) {
                     showSnackbar(locationsRaw.error || 'Invalid locations data', '#dc3545');
                 } else {
-                    console.log("location");
                     populateLocations(locations);
                 }
                 if (vehiclesRaw.error || !vehicles) {
                     showSnackbar('No vehicles available', '#dc3545');
                 } else {
-                    console.log("vehicle");
                     populateVehicles(vehicles);
                 }
                 if (statusRaw.error || !statuses) {
                     showSnackbar(statusRaw.error || 'No employee status choices available', '#dc3545');
                 } else {
-                    console.log("populateEmployeeStatusDropdown");
                     populateEmployeeStatusDropdown(statuses);
                 }
             } catch (e) {
@@ -340,7 +359,7 @@
 
         function populateDepartmentGroups(data) {
             const select = document.getElementById('department_group_id');
-            select.innerHTML = '<option value="">Select Department Group</option>';
+            select.innerHTML = '<option value="">Select Department</option>';
             window.departmentGroups = [];
             data.forEach(dept => {
                 const opt = document.createElement('option');
@@ -348,6 +367,19 @@
                 opt.textContent = dept.name;
                 select.appendChild(opt);
                 window.departmentGroups.push({ id: dept.id, name: dept.name, sections: dept.sections || [] });
+            });
+        }
+
+        function populateDepartmentTeams(data) {
+            const select = document.getElementById('department_team_id');
+            select.innerHTML = '<option value="">Select Department Group</option>';
+            window.departmentTeams = [];
+            data.forEach(dept => {
+                const opt = document.createElement('option');
+                opt.value = dept.id;
+                opt.textContent = dept.name;
+                select.appendChild(opt);
+                window.departmentTeams.push({ id: dept.id, name: dept.name });
             });
         }
 
@@ -374,13 +406,9 @@
         }
 
         function populateVehicles(data) {
-            console.log('1');
             const currentSelect = document.getElementById('vehicle_id');
-            console.log('1');
             const proposedSelect = document.getElementById('vehicle_proposed_id');
-            console.log('1');
             currentSelect.innerHTML = '<option value="">Select Vehicle</option>';
-            console.log('1');
             data.forEach(v => {
                 const label = `${v.brand_name} ${v.model_name} - ${v.engine_cc}`;
                 const opt1 = document.createElement('option');
@@ -568,7 +596,7 @@
             if (!formData) return;
 
             try {
-                const res = await fetch(`/payroll/department/update/${employeeId}/`, {
+                const res = await fetch(`/payroll/employee/update/${employeeId}/`, {
                     method: 'POST',
                     headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                     body: formData
@@ -610,7 +638,7 @@
                 if (!formData) return;
 
                 try {
-                    const res = await fetch(`/payroll/department/update/${employeeId}/`, {
+                    const res = await fetch(`/payroll/employee/update/${employeeId}/`, {
                         method: 'POST',
                         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                         body: formData
@@ -687,7 +715,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log("hi");
             await fetchDropdownData();
             const employeeData = await fetchEmployeeData();
             if (employeeData) populateForm(employeeData);

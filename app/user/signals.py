@@ -666,27 +666,18 @@ def add_new_increment_details_summary_record_and_assign_initial_formulas_to_new_
             else:
                 IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance, summaries_status = existing_summary_status.first())
                 print("existing_summary_status: ", existing_summary_status)
-
-            # Find the "default" department: the earliest non-deleted one by ID
-            default_dept = DepartmentTeams.objects.filter(is_deleted=False).order_by('id').first()
-            
-            if default_dept and instance != default_dept:
-                # Get all FieldFormula assignments from the default department
-                default_formulas = FieldFormula.objects.filter(
-                    department_team=default_dept,
-                    # Optionally add filters like formula__is_deleted=False if needed
-                )
                 
-                for default_ff in default_formulas:
-                    # Copy to the new department (same formula FK, description, etc.)
-                    FieldFormula.objects.create(
-                        formula=default_ff.formula,
-                        description=default_ff.description,
-                        company=instance.company,  # Use the new department's company
-                        department_team=instance,
-                        # If your model has an 'employee' field (as implied by the constraint comments),
-                        # set it explicitly if needed, e.g., employee=None
-                    )
+            # Get all FieldFormula assignments from the default department
+            default_formulas = FieldFormula.objects.filter(formula__formula_is_default=True)
+                
+            for default_ff in default_formulas:
+                # Copy to the new department (same formula FK, description, etc.)
+                FieldFormula.objects.create(
+                    formula=default_ff.formula,
+                    description=default_ff.description,
+                    company=instance.company,  # Use the new department's company
+                    department_team=instance
+                )
         print("sucesss")
 
     except Exception as e:

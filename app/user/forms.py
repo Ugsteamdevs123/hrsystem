@@ -27,7 +27,7 @@ class FormulaForm(forms.ModelForm):
 
     class Meta:
         model = Formula
-        fields = ['target_model', 'target_field', 'formula_name', 'formula_expression']
+        fields = ['target_model', 'target_field', 'formula_name', 'formula_expression', 'formula_is_default']
         widgets = {
             'target_model': forms.Select(
                 choices=[
@@ -40,6 +40,14 @@ class FormulaForm(forms.ModelForm):
             ),
             'target_field': forms.Select(attrs={'required': 'true'}),
             'formula_expression': forms.Textarea(attrs={'rows': 4, 'id': 'formula-expression'}),
+            'formula_is_default': forms.Select(
+                choices=[
+                    ('', 'Select a Choice'),
+                    ('True', 'Yes'),
+                    ('False', 'No'),
+                ],
+                attrs={'required': 'true'}
+            ),
         }
 
 
@@ -78,16 +86,6 @@ class FieldFormulaForm(forms.ModelForm):
         if self.user:
             assigned_companies = hr_assigned_companies.objects.filter(hr=self.user).values('company')
             self.fields['company'].queryset = Company.objects.filter(id__in=assigned_companies)
-
-        # Filter target_field based on target_model
-        model_name = self.data.get('target_model') if 'target_model' in self.data else (self.instance.target_model if self.instance.pk else None)
-        if model_name:
-            try:
-                model = apps.get_model("user", model_name)
-                fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
-                self.fields['target_field'].choices = [(f, f.replace('_', ' ').title()) for f in fields]
-            except LookupError:
-                self.fields['target_field'].choices = []
 
         # Filter department_team and employee based on company
         company_id = self.data.get('company') if 'company' in self.data else (self.instance.company_id if self.instance.pk else None)

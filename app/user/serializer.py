@@ -7,7 +7,7 @@ from .models import (
     Designation, 
     Location,
     EmployeeStatus,
-    IncrementDetailsSummaryDraft
+    IncrementDetailsSummaryDraft,
 )
 
 class IncrementDetailsSummarySerializer(serializers.ModelSerializer):

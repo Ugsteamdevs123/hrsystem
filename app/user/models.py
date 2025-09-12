@@ -152,9 +152,9 @@ class EmployeeStatus(models.Model):
 class Formula(models.Model):
     formula_name = models.CharField(max_length=255)
     formula_expression = models.CharField(max_length=255)
-
     target_model = models.CharField(max_length=255, null=True, blank=True)  # e.g., 'ProposedPackageDetails'
     target_field = models.CharField(max_length=255, null=True, blank=True)  # e.g., 'revised_salary'
+    formula_is_default = models.BooleanField(default=False)
 
     is_deleted = models.BooleanField(default=False)
 
@@ -162,7 +162,7 @@ class Formula(models.Model):
 
 
     def __str__(self):
-        return f"{self.target_model}.{self.target_field}: self.formula_name"
+        return f"{self.target_model}.{self.target_field}: {self.formula_name}"
     
 
 class Location(models.Model):

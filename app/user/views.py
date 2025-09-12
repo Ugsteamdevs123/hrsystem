@@ -39,7 +39,6 @@ from .forms import (
     DepartmentGroupsForm,
     HrAssignedCompaniesForm,
     VehicleModelForm
-
 )
 from venv import logger
 from django.contrib.auth.decorators import login_required , permission_required
@@ -66,7 +65,6 @@ from .serializer import (
     DesignationCreateSerializer,
     LocationsSerializer,
     EmployeeStatusSerializer
-
 )
 
 import json
@@ -1543,13 +1541,19 @@ class UpdateEmployeeView(View):
                 if step == 'employee':
                     employee.emp_id = request.POST.get('emp_id') or employee.emp_id
                     employee.fullname = request.POST.get('fullname') or employee.fullname
+                    employee.department_team_id = request.POST.get('department_team_id') or None
                     employee.department_group_id = request.POST.get('department_group_id') or None
                     employee.section_id = request.POST.get('section_id') or None
                     employee.designation_id = request.POST.get('designation_id') or None
                     employee.location_id = request.POST.get('location_id') or None
                     employee.date_of_joining = request.POST.get('date_of_joining') or None
-                    employee.resign = request.POST.get('resign') == 'true'
                     employee.date_of_resignation = request.POST.get('date_of_resignation') or None
+
+                    if request.POST.get('date_of_resignation'):
+                        employee.resign = True
+                    else:
+                        employee.resign = False
+
                     employee.remarks = request.POST.get('remarks') or ''
                     employee.eligible_for_increment = request.POST.get('eligible_for_increment') == 'true'
                     if 'image' in request.FILES:
@@ -1665,6 +1669,7 @@ class GetDataView(View):
                     'employee': {
                         "emp_id" : employee.emp_id,
                         'fullname': employee.fullname,
+                        'department_team_id': employee.department_team_id,
                         'department_group_id': employee.department_group_id,
                         'section_id': employee.section_id,
                         'designation_id': employee.designation_id,
@@ -1712,14 +1717,6 @@ class GetDataView(View):
         except Exception as e:
             logger.error(f"Error in GetDataView: {str(e)}")
             return JsonResponse({'error': f'Invalid data: {str(e)}'}, status=400)
-
-
-
-
-
-
-
-
 
 
 class DepartmentGroupsSectionsView(View):
