@@ -9,9 +9,6 @@
     {% csrf_token %}
     <div class="form-field">{{ form.company.label_tag }} {{ form.company }}</div>
     <div class="form-field">{{ form.department_team.label_tag }} {{ form.department_team }}</div>
-    <div class="form-field">{{ form.employee.label_tag }} {{ form.employee }}</div>
-    <div class="form-field">{{ form.target_model.label_tag }} {{ form.target_model }}</div>
-    <div class="form-field">{{ form.target_field.label_tag }} {{ form.target_field }}</div>
     <div class="form-field">{{ form.formula.label_tag }} {{ form.formula }}</div>
     <div class="form-field">{{ form.aggregate_type.label_tag }} {{ form.aggregate_type }}</div>
 
@@ -48,33 +45,11 @@
 document.addEventListener('DOMContentLoaded', function() {
     const companySelect = document.getElementById('id_company');
     const departmentSelect = document.getElementById('id_department_team');
-    const employeeSelect = document.getElementById('id_employee');
-    const modelSelect = document.getElementById('id_target_model');
-    const fieldSelect = document.getElementById('id_target_field');
-
-    // Fetch fields based on model
-    modelSelect.addEventListener('change', function() {
-        const modelName = this.value;
-        fieldSelect.innerHTML = '<option value="">Select a field</option>';
-        if (modelName) {
-            fetch(`/payroll/get-model-fields/?model_name=${encodeURIComponent(modelName)}`)
-                .then(res => res.json())
-                .then(data => {
-                    data.fields.forEach(field => {
-                        const opt = document.createElement('option');
-                        opt.value = field;
-                        opt.textContent = field;
-                        fieldSelect.appendChild(opt);
-                    });
-                });
-        }
-    });
 
     // Fetch departments & employees based on company
     companySelect.addEventListener('change', function() {
         const companyId = this.value;
         departmentSelect.innerHTML = '<option value="">Select a department team</option>';
-        employeeSelect.innerHTML = '<option value="">Select an employee (optional)</option>';
         if (companyId) {
             fetch(`/payroll/get-company-departments-employees/?company_id=${encodeURIComponent(companyId)}`)
                 .then(res => res.json())
@@ -93,7 +68,6 @@ document.addEventListener('DOMContentLoaded', function() {
     departmentSelect.addEventListener('change', function() {
         const deptId = this.value;
         const companyId = companySelect.value;
-        employeeSelect.innerHTML = '<option value="">Select an employee (optional)</option>';
         if (deptId && companyId) {
             fetch(`/payroll/get-department-employees/?company_id=${encodeURIComponent(companyId)}&department_team_id=${encodeURIComponent(deptId)}`)
                 .then(res => res.json())
@@ -102,7 +76,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         const opt = document.createElement('option');
                         opt.value = emp.id;
                         opt.textContent = emp.name;
-                        employeeSelect.appendChild(opt);
                     });
                 });
         }

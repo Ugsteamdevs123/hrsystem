@@ -34,8 +34,8 @@
             <td>{{ ff.company.name|default:"-" }}</td>
             <td>{{ ff.department_team.name|default:"-" }}</td>
             <td>{{ ff.employee|default:"-" }}</td>
-            <td>{{ ff.target_model }}</td>
-            <td>{{ ff.target_field }}</td>
+            <td>{{ ff.formula.target_model }}</td>
+            <td>{{ ff.formula.target_field }}</td>
             <td>{{ ff.formula.formula_expression }}</td>
             {% comment %} <td>{{ ff.get_aggregate_type_display|default:"None" }}</td> {% endcomment %}
             <td>

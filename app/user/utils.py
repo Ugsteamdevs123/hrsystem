@@ -659,8 +659,6 @@ def build_dependency_graph(formulas, company=None, employee=None, department_tea
         target = (formula.formula.target_model.strip(), formula.formula.target_field.strip().lower())
         if company and formula.company != company:
             continue
-        if employee and formula.employee and formula.employee != employee:
-            continue
         if department_team and formula.department_team and formula.department_team != department_team:
             continue
         formula_targets.add(target)

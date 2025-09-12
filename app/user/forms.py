@@ -27,25 +27,28 @@ class FormulaForm(forms.ModelForm):
 
     class Meta:
         model = Formula
-        fields = ['formula_name', 'formula_expression']
+        fields = ['target_model', 'target_field', 'formula_name', 'formula_expression']
         widgets = {
+            'target_model': forms.Select(
+                choices=[
+                    ('', 'Select a model'),
+                    ('ProposedPackageDetails', 'Proposed Package Details'),
+                    ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
+                    ('IncrementDetailsSummary', 'Increment Details Summary'),
+                ],
+                attrs={'required': 'true'}
+            ),
+            'target_field': forms.Select(attrs={'required': 'true'}),
             'formula_expression': forms.Textarea(attrs={'rows': 4, 'id': 'formula-expression'}),
         }
 
 
 class FieldFormulaForm(forms.ModelForm):
-    target_field = forms.ChoiceField(choices=[], required=True)
     company = forms.ModelChoiceField(
         queryset=Company.objects.none(),  # Will be set dynamically
         required=True,
         empty_label="Select a company",
         help_text="Choose the company for this formula."
-    )
-    employee = forms.ModelChoiceField(
-        queryset=Employee.objects.all(),
-        required=False,
-        empty_label="Select an employee (optional)",
-        help_text="Choose an employee for a specific formula, or leave blank for department-wide."
     )
     department_team = forms.ModelChoiceField(
         queryset=DepartmentTeams.objects.all(),
@@ -56,21 +59,8 @@ class FieldFormulaForm(forms.ModelForm):
 
     class Meta:
         model = FieldFormula
-        fields = ['target_model', 'target_field', 'formula', 'company', 'department_team', 'employee', 'description']
+        fields = ['formula', 'company', 'department_team', 'description']
         widgets = {
-            'target_model': forms.Select(
-                choices=[
-                    ('', 'Select a model'),
-                    ('ProposedPackageDetails', 'Proposed Package Details'),
-                    ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
-                    ('IncrementDetailsSummary', 'Increment Details Summary'),
-                    ('ProposedPackageDetailsDraft', 'Proposed Package Details Draft'),
-                    ('FinancialImpactPerMonthDraft', 'Financial Impact Per Month Draft'),
-                    ('IncrementDetailsSummaryDraft', 'Increment Details Summary Draft'),
-                ],
-                attrs={'required': 'true'}
-            ),
-            'target_field': forms.Select(attrs={'required': 'true'}),
             'formula': forms.Select(attrs={'required': 'true'}),
             'description': forms.Textarea(attrs={'rows': 3}),
         }
@@ -103,38 +93,26 @@ class FieldFormulaForm(forms.ModelForm):
         company_id = self.data.get('company') if 'company' in self.data else (self.instance.company_id if self.instance.pk else None)
         if company_id:
             self.fields['department_team'].queryset = DepartmentTeams.objects.filter(company_id=company_id)
-            self.fields['employee'].queryset = Employee.objects.filter(company_id=company_id)
         else:
             self.fields['department_team'].queryset = DepartmentTeams.objects.none()
-            self.fields['employee'].queryset = Employee.objects.none()
-
-        # Filter employee based on department_team
-        department_team_id = self.data.get('department_team') if 'department_team' in self.data else (self.instance.department_team_id if self.instance.pk else None)
-        if department_team_id and company_id:
-            self.fields['employee'].queryset = Employee.objects.filter(
-                company_id=company_id,
-                department_team_id=department_team_id
-            )
-
-        self.fields['target_model'].required = True
+            
         self.fields['formula'].required = True
         self.fields['company'].required = True
 
     def clean(self):
         cleaned_data = super().clean()
-        employee = cleaned_data.get('employee')
         department_team = cleaned_data.get('department_team')
         company = cleaned_data.get('company')
+        print("checking: ", department_team, company, cleaned_data)
         if not company:
+            print("1")
             raise forms.ValidationError("A company must be selected.")
-        if not employee and not department_team:
-            raise forms.ValidationError("Either an employee or a department team must be selected.")
-        if employee and employee.company != company:
-            raise forms.ValidationError("Selected employee must belong to the selected company.")
+        if not department_team:
+            print("2")
+            raise forms.ValidationError("A department must be selected.")
         if department_team and department_team.company != company:
+            print("4")
             raise forms.ValidationError("Selected department team must belong to the selected company.")
-        if employee and department_team and employee.department_team != department_team:
-            raise forms.ValidationError("Selected employee must belong to the selected department team.")
         return cleaned_data
     
     # def save(self, commit=True):

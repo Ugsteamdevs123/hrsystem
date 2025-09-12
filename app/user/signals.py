@@ -32,8 +32,7 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
 
         # Get all formulas for the company
         # formulas = FieldFormula.objects.filter(company=company).select_related('formula')
-        formulas = FieldFormula.objects.exclude(target_model__endswith='Draft').select_related('formula')
-
+        formulas = FieldFormula.objects.exclude(formula__target_model__endswith='Draft').select_related('formula')
         # Prioritize employee-specific formulas
         # employee_formulas = formulas.filter(employee=instance, department_team=department_team)
         # print("employee_formulas: ", employee_formulas)
@@ -44,11 +43,10 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
         # formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
         # print("formula_ids: ", formula_ids)
         # formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
-        
         department_formulas = formulas.filter(department_team=department_team)
         print("department_formulas: ", department_formulas)
 
-        formula_ids += list(department_formulas.values_list('id', flat=True))
+        formula_ids = list(department_formulas.values_list('id', flat=True))
         formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
         print("formulas: ", formulas)
 
@@ -66,8 +64,10 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
                 continue
             print("model_name", model_name, " ::: field: ", field)
             # Prefer employee-specific formula, else department-specific
-            field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
-                           department_formulas.filter(target_model=model_name, target_field=field).first()
+            # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
+            #                department_formulas.filter(target_model=model_name, target_field=field).first()
+            
+            field_formula = department_formulas.filter(formula__target_model=model_name, formula__target_field=field).first()
             if not field_formula:
                 print(f"No formula found for {model_name}.{field}")
                 continue
@@ -134,16 +134,19 @@ def update_increment_summary(sender, instance, created, **kwargs):
 
         # Get all formulas for the company
         # formulas = FieldFormula.objects.filter(company=company).select_related('formula')
-        formulas = FieldFormula.objects.exclude(target_model__endswith='Draft').select_related('formula')
+        # formulas = FieldFormula.objects.exclude(target_model__endswith='Draft').select_related('formula')
+        formulas = FieldFormula.objects.exclude(formula__target_model__endswith='Draft').select_related('formula')
 
         # Prioritize employee-specific formulas
-        employee_formulas = formulas.filter(employee=employee, department_team=department_team) if employee else formulas.none()
-        print("employee_formulas: ", employee_formulas)
-        department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
+        # employee_formulas = formulas.filter(employee=employee, department_team=department_team) if employee else formulas.none()
+        # print("employee_formulas: ", employee_formulas)
+        # department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
+        department_formulas = formulas.filter(department_team=department_team)
         print("department_formulas: ", department_formulas)
         # Combine, prioritizing employee formulas
-        formula_ids = list(employee_formulas.values_list('id', flat=True))
-        formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+        # formula_ids = list(employee_formulas.values_list('id', flat=True))
+        # formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+        formula_ids = list(department_formulas.values_list('id', flat=True))
         print("formula_ids: ", formula_ids)
         formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
         print("formulas: ", formulas)
@@ -162,8 +165,9 @@ def update_increment_summary(sender, instance, created, **kwargs):
                 continue
             print("model_name", model_name, " ::: field: ", field)
             # Prefer employee-specific formula, else department-specific
-            field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
-                           department_formulas.filter(target_model=model_name, target_field=field).first()
+            # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
+            #                department_formulas.filter(target_model=model_name, target_field=field).first()
+            field_formula = department_formulas.filter(formula__target_model=model_name, formula__target_field=field).first()
             if not field_formula:
                 print(f"No formula found for {model_name}.{field}")
                 continue
@@ -261,8 +265,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
             CurrentPackageDetailsDraft.objects.get_or_create(
                 employee_draft=instance, 
                 gross_salary=currentpackagedetails.gross_salary, 
-                vehicle=currentpackagedetails.vehicle, 
-                # fuel_limit=currentpackagedetails.fuel_limit, 
+                vehicle=currentpackagedetails.vehicle,
                 mobile_provided=currentpackagedetails.mobile_provided, 
                 fuel_litre=currentpackagedetails.fuel_litre, 
                 fuel_allowance=currentpackagedetails.fuel_allowance, 
@@ -281,15 +284,13 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                 employee_draft=instance,
                 increment_percentage=proposedpackagedetails.increment_percentage, 
                 # increased_amount=proposedpackagedetails.increased_amount, 
-                # revised_salary=proposedpackagedetails.revised_salary, 
-                # increased_fuel_amount=proposedpackagedetails.increased_fuel_amount, 
+                # revised_salary=proposedpackagedetails.revised_salary,
                 increased_fuel_litre=proposedpackagedetails.increased_fuel_litre, 
                 increased_fuel_allowance=proposedpackagedetails.increased_fuel_allowance,
                 # revised_fuel_allowance=proposedpackagedetails.revised_fuel_allowance, 
                 vehicle=proposedpackagedetails.vehicle, 
                 mobile_provided=proposedpackagedetails.mobile_provided, 
-                # fuel_litre=proposedpackagedetails.fuel_litre, 
-                # vehicle_allowance=proposedpackagedetails.vehicle_allowance, 
+                # fuel_litre=proposedpackagedetails.fuel_litre,
                 # total=proposedpackagedetails.total,
                 company_pickup=proposedpackagedetails.company_pickup, 
                 is_deleted=proposedpackagedetails.is_deleted
@@ -307,15 +308,6 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
         company = getattr(instance, 'company', None) or (employee.company if employee else None)
         department_team = getattr(instance, 'department_team', None) or (employee.department_team if employee else None)
 
-        # Create IncrementDetailsSummary if it doesn't exist
-        # increment_details_summary = IncrementDetailsSummary.objects.filter(
-        #     company=company, department_team=department_team
-        # )
-        # if not increment_details_summary.exists():
-        #     IncrementDetailsSummary.objects.create(
-        #         company=company, department_team=department_team
-        #     )
-
         # Map sender to corresponding non-draft model for reference
         model_mapping = {
             'CurrentPackageDetailsDraft': 'CurrentPackageDetails',
@@ -330,10 +322,12 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
         formulas = FieldFormula.objects.filter(company=company).select_related('formula')
 
         # Prioritize employee-specific formulas
-        employee_formulas = formulas.filter(employee=employee, department_team=department_team) if employee else formulas.none()
-        department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
-        formula_ids = list(employee_formulas.values_list('id', flat=True))
-        formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+        # employee_formulas = formulas.filter(employee=employee, department_team=department_team) if employee else formulas.none()
+        # department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
+        department_formulas = formulas.filter(department_team=department_team)
+        # formula_ids = list(employee_formulas.values_list('id', flat=True))
+        # formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+        formula_ids = list(department_formulas.values_list('id', flat=True))
         formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
 
         if not formulas:
@@ -354,8 +348,9 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
 
             print("target_model_name: ", target_model_name)
             # Prefer employee-specific formula, else department-specific
-            field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
-                           department_formulas.filter(target_model=model_name, target_field=field).first()
+            # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
+            #                department_formulas.filter(target_model=model_name, target_field=field).first()
+            field_formula = department_formulas.filter(formula__target_model=model_name, formula__target_field=field).first()
             if not field_formula:
                 print(f"No formula found for {model_name}.{field}")
                 continue
@@ -481,11 +476,11 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
                 employee_draft=employee_draft, 
                 emp_status=financialimpactpermonth.emp_status, 
                 serving_years=financialimpactpermonth.serving_years
-            )    
+            )
 
         company = getattr(instance, 'company', None) or (employee.company if employee else None)
         department_team = getattr(instance, 'department_team', None) or (employee.department_team if employee else None)
-
+        
         # Create IncrementDetailsSummary if it doesn't exist
         # increment_details_summary = IncrementDetailsSummary.objects.filter(
         #     company=company, department_team=department_team
@@ -509,10 +504,13 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
         formulas = FieldFormula.objects.filter(company=company).select_related('formula')
 
         # Prioritize employee-specific formulas
-        employee_formulas = formulas.filter(employee=employee, department_team=department_team) if employee else formulas.none()
-        department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
-        formula_ids = list(employee_formulas.values_list('id', flat=True))
-        formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+        # employee_formulas = formulas.filter(employee=employee, department_team=department_team) if employee else formulas.none()
+        # department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
+        # formula_ids = list(employee_formulas.values_list('id', flat=True))
+        # formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+
+        department_formulas = formulas.filter(department_team=department_team)
+        formula_ids = list(department_formulas.values_list('id', flat=True))
         formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
 
         if not formulas:
@@ -531,8 +529,9 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
                 continue  # Skip non-draft models when processing drafts
 
             # Prefer employee-specific formula, else department-specific
-            field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
-                           department_formulas.filter(target_model=model_name, target_field=field).first()
+            # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
+            #                department_formulas.filter(target_model=model_name, target_field=field).first()
+            field_formula = department_formulas.filter(formula__target_model=model_name, formula__target_field=field).first()
             if not field_formula:
                 print(f"No formula found for {model_name}.{field}")
                 continue
@@ -667,34 +666,35 @@ def add_new_increment_details_summary_record_and_assign_initial_formulas_to_new_
             else:
                 IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance, summaries_status = existing_summary_status.first())
                 print("existing_summary_status: ", existing_summary_status)
+
+            # Find the "default" department: the earliest non-deleted one by ID
+            default_dept = DepartmentTeams.objects.filter(is_deleted=False).order_by('id').first()
             
-            return
-            # Identify the "initial" department as the earliest non-deleted one by ID (assuming the first created is the template)
-            initial_dept = DepartmentTeams.objects.filter(is_deleted=False).earliest('id')
-            
-            # Skip if this is the initial department itself (you'll handle its formulas manually)
-            if initial_dept.pk == instance.pk:
-                return
-            
-            # Fetch the initial department-level formulas (employee=None, to avoid copying employee-specific ones)
-            initial_formulas = FieldFormula.objects.filter(
-                department_team=initial_dept,
-                employee__isnull=True
-            )
-            
-            # Duplicate them for the new department, updating company and department_team
-            for ff in initial_formulas:
-                new_ff = FieldFormula(
-                    target_model=ff.target_model,
-                    target_field=ff.target_field,
-                    formula=ff.formula,
-                    description=ff.description,
-                    employee=None,  # Keep it department-level
-                    company=instance.company,  # Use the new department's company
-                    department_team=instance
+            if default_dept and instance != default_dept:
+                # Get all FieldFormula assignments from the default department
+                default_formulas = FieldFormula.objects.filter(
+                    department_team=default_dept,
+                    # Optionally add filters like formula__is_deleted=False if needed
                 )
-                new_ff.save()  # This will trigger audit logging via AuditlogHistoryField
+                
+                for default_ff in default_formulas:
+                    # Copy to the new department (same formula FK, description, etc.)
+                    FieldFormula.objects.create(
+                        formula=default_ff.formula,
+                        description=default_ff.description,
+                        company=instance.company,  # Use the new department's company
+                        department_team=instance,
+                        # If your model has an 'employee' field (as implied by the constraint comments),
+                        # set it explicitly if needed, e.g., employee=None
+                    )
+        print("sucesss")
 
     except Exception as e:
         print(f"Error in adding new increment details summary record: {e}")
         # logger.error(f"Error in checking driver wallet balance: {e}", extra={'id': instance.id})
+
+
+# @receiver(post_save, sender=DepartmentTeams)
+# def copy_default_formulas(sender, instance, created, **kwargs):
+#     if created and not instance.is_deleted:
+        

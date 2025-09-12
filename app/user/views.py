@@ -1100,8 +1100,7 @@ class DepartmentTableView(View):
             company=department.company
         ).filter(
             Q(department_team=department) |
-            Q(department_team__isnull=True) |
-            Q(employee__in=employees)  # where employees = list of dept employees
+            Q(department_team__isnull=True)
         )
 
         print(formulas_qs , 'mmmmmmmmm')
@@ -1888,7 +1887,7 @@ class FieldFormulaListView(PermissionRequiredMixin, View):
 
     def get(self, request):
         company_data = get_companies_and_department_teams(request.user)
-        field_formulas = FieldFormula.objects.all().order_by('company', 'department_team', 'target_model')
+        field_formulas = FieldFormula.objects.all().order_by('company', 'department_team')
         field_references = FieldReference.objects.all()
         return render(request, self.template_name, {
             'field_formulas': field_formulas,
@@ -1945,10 +1944,14 @@ class CreateFieldFormulaView(PermissionRequiredMixin, View):
         form = FieldFormulaForm(user=request.user, data=request.POST)  # Pass user
         field_references = FieldReference.objects.all()
         company_data = get_companies_and_department_teams(request.user)
+        print("here")
         if form.is_valid():
+            print("hi")
             form.save()
             messages.success(request, "Field Formula created successfully!")
             return redirect("view_field_formulas")
+        else:
+            print(form.errors)
         return render(request, self.template_name, {
             'form': form,
             'field_references': field_references,

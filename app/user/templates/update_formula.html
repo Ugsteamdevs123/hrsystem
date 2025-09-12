@@ -5,8 +5,28 @@
 {% if perms.user.change_formula %}
 <h2>Edit Formula</h2>
 
+<!-- Debugging: Display form errors -->
+{% if form.errors %}
+    <div style="color: red;">
+        <p>Form errors: {{ form.errors }}</p>
+        <p>Non-field errors: {{ form.non_field_errors }}</p>
+    </div>
+{% endif %}
+
 <form id="editFormulaForm" method="POST" action="{% url 'edit_formula' formula.id %}">
     {% csrf_token %}
+
+    <!-- Formula Model -->
+    <div class="form-field">
+        {{ form.target_model.label_tag }}
+        {{ form.target_model }}
+    </div>
+
+    <!-- Formula Field -->
+    <div class="form-field">
+        {{ form.target_field.label_tag }}
+        {{ form.target_field }}
+    </div>
 
     <!-- Formula Name -->
     <div class="form-field">
@@ -56,6 +76,10 @@
         </button>
     </div>
 </form>
+
+<style>
+/* Existing styles unchanged */
+</style>
 
 <style>
 /* Form styling (matches create_formula.html) */
@@ -132,11 +156,45 @@ document.addEventListener('DOMContentLoaded', function() {
     const formulaTextarea = document.querySelector('[name="formula_expression"]');
     const fieldSelector = document.getElementById('field-selector');
     const aggregateSelector = document.getElementById('aggregate-selector');
+    const modelSelect = document.getElementById('id_target_model');
+    const fieldSelect = document.getElementById('id_target_field');
 
     if (!formulaTextarea) {
         console.error('Formula textarea not found!');
         return;
     }
+
+    // Function to fetch fields for a given model
+    function fetchFields(modelName) {
+        fieldSelect.innerHTML = '<option value="">Select a field</option>';
+        if (modelName) {
+            fetch(`/payroll/get-model-fields/?model_name=${encodeURIComponent(modelName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    data.fields.forEach(field => {
+                        const opt = document.createElement('option');
+                        opt.value = field;
+                        opt.textContent = field;
+                        if (field === "{{ form.target_field.value|default:'' }}") {
+                            opt.selected = true;
+                        }
+                        fieldSelect.appendChild(opt);
+                    });
+                })
+                .catch(err => console.error('Error fetching fields:', err));
+        }
+    }
+
+    // Fetch fields for the initial model value
+    const initialModel = modelSelect.value;
+    if (initialModel) {
+        fetchFields(initialModel);
+    }
+
+    // Handle model selection change
+    modelSelect.addEventListener('change', function() {
+        fetchFields(this.value);
+    });
 
     // Handle field selection
     fieldSelector.addEventListener('change', function(e) {
