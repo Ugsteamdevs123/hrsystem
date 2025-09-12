@@ -27,25 +27,36 @@ class FormulaForm(forms.ModelForm):
 
     class Meta:
         model = Formula
-        fields = ['formula_name', 'formula_expression']
+        fields = ['target_model', 'target_field', 'formula_name', 'formula_expression', 'formula_is_default']
         widgets = {
+            'target_model': forms.Select(
+                choices=[
+                    ('', 'Select a model'),
+                    ('ProposedPackageDetails', 'Proposed Package Details'),
+                    ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
+                    ('IncrementDetailsSummary', 'Increment Details Summary'),
+                ],
+                attrs={'required': 'true'}
+            ),
+            'target_field': forms.Select(attrs={'required': 'true'}),
             'formula_expression': forms.Textarea(attrs={'rows': 4, 'id': 'formula-expression'}),
+            'formula_is_default': forms.Select(
+                choices=[
+                    ('', 'Select a Choice'),
+                    ('True', 'Yes'),
+                    ('False', 'No'),
+                ],
+                attrs={'required': 'true'}
+            ),
         }
 
 
 class FieldFormulaForm(forms.ModelForm):
-    target_field = forms.ChoiceField(choices=[], required=True)
     company = forms.ModelChoiceField(
         queryset=Company.objects.none(),  # Will be set dynamically
         required=True,
         empty_label="Select a company",
         help_text="Choose the company for this formula."
-    )
-    employee = forms.ModelChoiceField(
-        queryset=Employee.objects.all(),
-        required=False,
-        empty_label="Select an employee (optional)",
-        help_text="Choose an employee for a specific formula, or leave blank for department-wide."
     )
     department_team = forms.ModelChoiceField(
         queryset=DepartmentTeams.objects.all(),
@@ -56,21 +67,8 @@ class FieldFormulaForm(forms.ModelForm):
 
     class Meta:
         model = FieldFormula
-        fields = ['target_model', 'target_field', 'formula', 'company', 'department_team', 'employee', 'description']
+        fields = ['formula', 'company', 'department_team', 'description']
         widgets = {
-            'target_model': forms.Select(
-                choices=[
-                    ('', 'Select a model'),
-                    ('ProposedPackageDetails', 'Proposed Package Details'),
-                    ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
-                    ('IncrementDetailsSummary', 'Increment Details Summary'),
-                    ('ProposedPackageDetailsDraft', 'Proposed Package Details Draft'),
-                    ('FinancialImpactPerMonthDraft', 'Financial Impact Per Month Draft'),
-                    ('IncrementDetailsSummaryDraft', 'Increment Details Summary Draft'),
-                ],
-                attrs={'required': 'true'}
-            ),
-            'target_field': forms.Select(attrs={'required': 'true'}),
             'formula': forms.Select(attrs={'required': 'true'}),
             'description': forms.Textarea(attrs={'rows': 3}),
         }
@@ -89,52 +87,30 @@ class FieldFormulaForm(forms.ModelForm):
             assigned_companies = hr_assigned_companies.objects.filter(hr=self.user).values('company')
             self.fields['company'].queryset = Company.objects.filter(id__in=assigned_companies)
 
-        # Filter target_field based on target_model
-        model_name = self.data.get('target_model') if 'target_model' in self.data else (self.instance.target_model if self.instance.pk else None)
-        if model_name:
-            try:
-                model = apps.get_model("user", model_name)
-                fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
-                self.fields['target_field'].choices = [(f, f.replace('_', ' ').title()) for f in fields]
-            except LookupError:
-                self.fields['target_field'].choices = []
-
         # Filter department_team and employee based on company
         company_id = self.data.get('company') if 'company' in self.data else (self.instance.company_id if self.instance.pk else None)
         if company_id:
             self.fields['department_team'].queryset = DepartmentTeams.objects.filter(company_id=company_id)
-            self.fields['employee'].queryset = Employee.objects.filter(company_id=company_id)
         else:
             self.fields['department_team'].queryset = DepartmentTeams.objects.none()
-            self.fields['employee'].queryset = Employee.objects.none()
-
-        # Filter employee based on department_team
-        department_team_id = self.data.get('department_team') if 'department_team' in self.data else (self.instance.department_team_id if self.instance.pk else None)
-        if department_team_id and company_id:
-            self.fields['employee'].queryset = Employee.objects.filter(
-                company_id=company_id,
-                department_team_id=department_team_id
-            )
-
-        self.fields['target_model'].required = True
+            
         self.fields['formula'].required = True
         self.fields['company'].required = True
 
     def clean(self):
         cleaned_data = super().clean()
-        employee = cleaned_data.get('employee')
         department_team = cleaned_data.get('department_team')
         company = cleaned_data.get('company')
+        print("checking: ", department_team, company, cleaned_data)
         if not company:
+            print("1")
             raise forms.ValidationError("A company must be selected.")
-        if not employee and not department_team:
-            raise forms.ValidationError("Either an employee or a department team must be selected.")
-        if employee and employee.company != company:
-            raise forms.ValidationError("Selected employee must belong to the selected company.")
+        if not department_team:
+            print("2")
+            raise forms.ValidationError("A department must be selected.")
         if department_team and department_team.company != company:
+            print("4")
             raise forms.ValidationError("Selected department team must belong to the selected company.")
-        if employee and department_team and employee.department_team != department_team:
-            raise forms.ValidationError("Selected employee must belong to the selected department team.")
         return cleaned_data
     
     # def save(self, commit=True):
@@ -248,7 +224,7 @@ class FieldReferenceAdminForm(forms.ModelForm):
 
 
 class CustomUserForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput)
+    # password = forms.CharField(widget=forms.PasswordInput)
     groups = forms.ModelChoiceField(
         queryset=Group.objects.exclude(name='Admin'),
         required=False,
@@ -258,24 +234,51 @@ class CustomUserForm(forms.ModelForm):
 
     class Meta:
         model = CustomUser
-        fields = ["full_name", "email", "password", "gender", "contact", "groups"]
+        fields = [
+            "full_name", 
+            "email", 
+            # "password", 
+            "gender", 
+            "contact", 
+            "groups"
+        ]
 
     def save(self, commit=True):
-        user = super().save(commit=False)
-        user.set_password(self.cleaned_data["password"])  # Hash password properly
-        if commit:
-            user.save()
-            if self.cleaned_data["groups"]:
-                user.groups.add(self.cleaned_data["groups"])  # Assign group
+        full_name = self.cleaned_data["full_name"]
+        email = self.cleaned_data["email"]
+        gender = self.cleaned_data["gender"]
+        contact = self.cleaned_data["contact"]
+        group = self.cleaned_data.get("groups")
+
+        # ✅ Call manager method instead of model.save()
+        user = CustomUser.objects.create_user(
+            full_name=full_name,
+            email=email,
+            gender=gender,
+            contact=contact,
+        )
+
+        if group:
+            user.groups.add(group)
+
         return user
+
+    # def save(self, commit=True):
+    #     user = super().save(commit=False)
+    #     # user.set_password(self.cleaned_data["password"])  # Hash password properly
+    #     if commit:
+    #         user.save()
+    #         if self.cleaned_data["groups"]:
+    #             user.groups.add(self.cleaned_data["groups"])  # Assign group
+    #     return user
 
 
 class CustomUserUpdateForm(forms.ModelForm):
-    password = forms.CharField(
-        widget=forms.PasswordInput,
-        label="Password",
-        required=False  # ✅ optional here
-    )
+    # password = forms.CharField(
+    #     widget=forms.PasswordInput,
+    #     label="Password",
+    #     required=False  # ✅ optional here
+    # )
 
     groups = forms.ModelChoiceField(
         queryset=Group.objects.all(),
@@ -286,7 +289,14 @@ class CustomUserUpdateForm(forms.ModelForm):
 
     class Meta:
         model = CustomUser
-        fields = ['full_name', 'email', 'password', 'gender', 'contact' , 'groups']
+        fields = [
+            'full_name', 
+            'email', 
+            # 'password', 
+            'gender', 
+            'contact' , 
+            'groups'
+        ]
         widgets = {
             'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}),
@@ -308,8 +318,8 @@ class CustomUserUpdateForm(forms.ModelForm):
         print("DEBUG: Entered save() for user:", user.email)
         print("Selected group:", self.cleaned_data.get("groups"))
 
-        if self.cleaned_data.get("password"):
-            user.set_password(self.cleaned_data["password"])
+        # if self.cleaned_data.get("password"):
+        #     user.set_password(self.cleaned_data["password"])
 
         if commit:
             user.save()  # ensure user is in DB
@@ -320,6 +330,45 @@ class CustomUserUpdateForm(forms.ModelForm):
 
         return user
 
+'''
+For pass reset when user login first time
+'''
+import re
+from django import forms
+from django.contrib.auth.forms import PasswordChangeForm
+
+class CustomPasswordChangeForm(PasswordChangeForm):
+    """
+    Extends Django's PasswordChangeForm to enforce:
+      - exactly 8 characters,
+      - at least 1 uppercase letter,
+      - at least 1 digit,
+      - at least 1 special character from the chosen set.
+    """
+
+    def clean_new_password2(self):
+        new_password1 = self.cleaned_data.get("new_password1")
+        new_password2 = self.cleaned_data.get("new_password2")
+
+        if new_password1 and new_password2 and new_password1 != new_password2:
+            raise forms.ValidationError("Passwords do not match.")
+
+        # optionally, you can also validate password strength here
+
+        return new_password2
+
+    # def clean_new_password2(self):
+    #     new_password2 = super().clean_new_password2()
+
+    #     # Exactly 8 chars, at least one uppercase, one digit, one special char.
+    #     pattern = re.compile(r'^(?=.{8}$)(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\<>?]).*$')
+
+    #     if not pattern.match(new_password2):
+    #         raise forms.ValidationError(
+    #             "Password must be exactly 8 characters long and include at least 1 uppercase letter, "
+    #             "1 number and 1 special character."
+    #         )
+    #     return new_password2
 
 class CompanyForm(forms.ModelForm):
     class Meta:

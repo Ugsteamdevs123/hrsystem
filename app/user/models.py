@@ -43,6 +43,7 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
         null=True,
         unique=True
     )
+    first_time_login_to_reset_pass = models.BooleanField(default=True)
 
     # for admin check
     is_staff = models.BooleanField(default=False)
@@ -62,7 +63,8 @@ class CustomUser(AbstractBaseUser , PermissionsMixin):
     
     class Meta:
         permissions = [
-            ('can_admin_access', 'Can Admin Access')
+            ('can_admin_access', 'Can Admin Access'),
+            ('can_hr_level_access', 'Can HR Level Access')
         ]
 
 
@@ -150,6 +152,9 @@ class EmployeeStatus(models.Model):
 class Formula(models.Model):
     formula_name = models.CharField(max_length=255)
     formula_expression = models.CharField(max_length=255)
+    target_model = models.CharField(max_length=255, null=True, blank=True)  # e.g., 'ProposedPackageDetails'
+    target_field = models.CharField(max_length=255, null=True, blank=True)  # e.g., 'revised_salary'
+    formula_is_default = models.BooleanField(default=False)
 
     is_deleted = models.BooleanField(default=False)
 
@@ -157,7 +162,7 @@ class Formula(models.Model):
 
 
     def __str__(self):
-        return self.formula_name
+        return f"{self.target_model}.{self.target_field}: {self.formula_name}"
     
 
 class Location(models.Model):
@@ -564,27 +569,18 @@ class Configurations(models.Model):
 
     def __str__(self):
         return f"{self.fuel_rate} - {self.as_of_date} - {self.bonus_constant_multiplier}"
-    
-
-
-
-
-
-
 
 
 class FieldFormula(models.Model):
-    target_model = models.CharField(max_length=255)  # e.g., 'ProposedPackageDetails'
-    target_field = models.CharField(max_length=255)  # e.g., 'revised_salary'
     formula = models.ForeignKey(Formula, on_delete=models.CASCADE, null=True, blank=True, default=None)
     description = models.TextField(blank=True)  # Optional help text
-    employee = models.ForeignKey(
-        Employee,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        help_text="Optional: Formula applies to this employee only."
-    )
+    # employee = models.ForeignKey(
+    #     Employee,
+    #     on_delete=models.CASCADE,
+    #     null=True,
+    #     blank=True,
+    #     help_text="Optional: Formula applies to this employee only."
+    # )
 
     company = models.ForeignKey(
         Company,
@@ -603,15 +599,14 @@ class FieldFormula(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                check=(models.Q(employee__isnull=True, department_team__isnull=False) |
-                       models.Q(employee__isnull=False)),
-                name='employee_or_department_required'
+                check=(models.Q(department_team__isnull=False)),
+                name='department_required'
             )
         ]
 
     def __str__(self):
-        scope = self.employee or self.department_team or "Global"
-        return f"{self.target_model}.{self.target_field}: {self.formula} ({scope})"
+        scope = self.department_team or "Global"
+        return f"{self.formula} ({scope})"
 
 
 class FieldReference(models.Model):

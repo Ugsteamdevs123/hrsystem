@@ -39,7 +39,6 @@ from .forms import (
     DepartmentGroupsForm,
     HrAssignedCompaniesForm,
     VehicleModelForm
-
 )
 from venv import logger
 from django.contrib.auth.decorators import login_required , permission_required
@@ -66,7 +65,6 @@ from .serializer import (
     DesignationCreateSerializer,
     LocationsSerializer,
     EmployeeStatusSerializer
-
 )
 
 import json
@@ -88,6 +86,11 @@ class LoginView(View):
         if user is not None:
             if user.is_active:
                 login(request, user)
+
+                # 👇 Check if first login → redirect to password change
+                if user.first_time_login_to_reset_pass == True:
+                    return redirect("password_change")
+
                 if user.is_superuser:
                     # Redirect superuser to view users page
                     return redirect("view_users")
@@ -103,6 +106,41 @@ class LoginView(View):
             messages.error(request, "Invalid email or password.")
 
         return render(request, self.template_name)
+
+
+'''
+When user login he redirect to pass reset
+'''
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import update_session_auth_hash
+from .forms import CustomPasswordChangeForm
+
+
+class CustomPasswordChangeView(LoginRequiredMixin, View):
+    template_name = "reset_password.html"   # will add below
+
+    def get(self, request):
+        form = CustomPasswordChangeForm(user=request.user)
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = CustomPasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            # keep user logged in after password change
+            update_session_auth_hash(request, user)
+
+            # clear first-time flag
+            request.user.first_time_login_to_reset_pass = False
+            request.user.save(update_fields=["first_time_login_to_reset_pass"])
+
+            messages.success(request, "Password changed successfully.")
+            # redirect where you want after reset (dashboard or login)
+            return redirect("login")  # or "dashboard" / "view_users" etc.
+        else:
+            messages.error(request, "Please correct the errors below.")
+        return render(request, self.template_name, {"form": form})
 
 
 
@@ -813,6 +851,27 @@ class HrFinalApproveSummaryView(PermissionRequiredMixin, View):
         return JsonResponse({"error": "Invalid request"}, status=405)
 
 
+from django.utils.decorators import method_decorator
+
+@method_decorator(login_required, name='dispatch')
+class CompanyDepartmentTeamView(View):
+    def get(self, request):
+        company_id = request.GET.get('company_id')
+        if not company_id:
+            return JsonResponse({'error': 'Company ID is required'}, status=400)
+
+        # Ensure the user has access to the company
+        if not hr_assigned_companies.objects.filter(hr=request.user, company=company_id).exists():
+            return JsonResponse({'error': 'Unauthorized access to this company'}, status=403)
+
+        # Fetch DepartmentTeams for the given company_id
+        try:
+            departments = DepartmentTeams.objects.filter(company=company_id, is_deleted=False).values('id', 'name')
+            return JsonResponse({'data': list(departments)}, status=200)
+        except Exception as e:
+            return JsonResponse({'error': 'Failed to fetch department teams'}, status=500)
+
+
 # For dept team crud
 class DepartmentTeamView(View):
     @classmethod
@@ -1008,6 +1067,18 @@ class DepartmentTableView(View):
         ).first()
         if not department:
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
+        
+        print(department , 'depts')
+
+        print(department.company.name , department.company)
+        
+        # formula = FieldFormula.objects.filter(
+        #     department_team = department.pk,
+        #     company = department.company.pk
+        # )
+        # print(formula , 'mmmmmmmmm')
+
+        
 
         company_data = get_companies_and_department_teams(request.user)
         employees = Employee.objects.filter(department_team=department).select_related(
@@ -1018,6 +1089,37 @@ class DepartmentTableView(View):
 
         employee_data = []
         draft_data = {}
+
+        '''
+        Passing formula to frontend
+        '''
+
+        formulas_qs = FieldFormula.objects.filter(
+            company=department.company
+        ).filter(
+            Q(department_team=department) |
+            Q(department_team__isnull=True)
+        )
+
+        print(formulas_qs , 'mmmmmmmmm')
+
+        formulas_data = []
+
+        for f in formulas_qs:
+            try:
+                formulas_data.append({
+                    "target_model": f.target_model or "",   # fallback empty string
+                    "target_field": f.target_field or "",
+                    "formula": str(f.formula) if f.formula else "",  # safe check for None
+                    "employee_id": f.employee_id if f.employee_id is not None else None,
+                    "department_id": f.department_team_id if f.department_team_id is not None else None,
+                    "company_id": f.company_id if f.company_id is not None else None,
+                })
+            except Exception as e:
+                # Log or skip the problematic formula
+                print(f"Error serializing formula {f.id if f.id else 'unknown'}: {e}")
+
+            print(formulas_data,'data')
 
         for emp in employees:
             emp_draft = emp.drafts.first()
@@ -1106,13 +1208,73 @@ class DepartmentTableView(View):
             'employees': employee_data,
             'department_id': department_id,
             'company_data': company_data,
-            'draft_data': draft_data
+            'draft_data': draft_data,
+            "formulas": json.dumps(formulas_data),   # 👉 pass as JSON
         })
 
 
+class EmployeesView(View):
+    template_name = 'employee_table_list.html'
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
+        return view
+
+    def get(self, request):
+        department = DepartmentTeams.objects.filter(
+            company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+        ).first()
+        if not department:
+            return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
+        
+        print(department , 'depts')
+
+        print(department.company.name , department.company)
+
+        company_data = get_companies_and_department_teams(request.user)
+        employees = Employee.objects.all().select_related(
+            'company', 'department_team', 'department_group', 'section', 'designation', 'location'
+        ).prefetch_related(
+            'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts'
+        )
+
+        employee_data = []
+        draft_data = {}
+
+        for emp in employees:
+
+            data = {
+                'emp_id': emp.emp_id,
+                'fullname': emp.fullname,
+                'eligible_for_increment': emp.eligible_for_increment,
+                'company': emp.company.name,
+                'department_team': emp.department_team,
+                'department_group': emp.department_group,
+                'section': emp.section,
+                'designation': emp.designation,
+                'location': emp.location,
+                'date_of_joining': emp.date_of_joining,
+                'resign': emp.resign,
+                'date_of_resignation': emp.date_of_resignation,
+                'remarks': emp.remarks,
+                'currentpackagedetails': None,
+                'proposedpackagedetails': None,
+                'financialimpactpermonth': None,
+            }
+
+            employee_data.append(data)
+
+        return render(request, self.template_name, {
+            'department': department,
+            'employees': employee_data,
+            'company_data': company_data,
+        })
 
 
-from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_control
 from django.views.decorators.csrf import ensure_csrf_cookie
 
@@ -1211,8 +1373,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class CreateEmployeeView(View):
-    template_name = 'create_dept_table.html'
+    template_name = 'create_employee.html'
 
     @classmethod
     def as_view(cls, **initkwargs):
@@ -1223,162 +1386,123 @@ class CreateEmployeeView(View):
         view = ensure_csrf_cookie(view)
         return view
 
-    def get(self, request, department_id):
-        department = get_object_or_404(
-            DepartmentTeams,
-            id=department_id,
-            company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-        )
+    def get(self, request):
+        # Get the first company the user is assigned to
+        company_id = hr_assigned_companies.objects.filter(hr=request.user).values_list('company', flat=True).first()
+        
+        if not company_id:
+            raise PermissionDenied("No company assigned to this user.")
+
         return render(request, self.template_name, {
-            'department': department,
-            'department_id': department_id
+            'company_id': company_id,
         })
 
-    def post(self, request, department_id):
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            try:
-                with transaction.atomic():
-                    step = request.POST.get('step')
+    def post(self, request):
+        if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+            return JsonResponse({'error': 'Invalid request'}, status=400)
 
-                    # Validate department
+        try:
+            with transaction.atomic():
+                step = request.POST.get('step')
+                company_id = hr_assigned_companies.objects.filter(hr=request.user).values_list('company', flat=True).first()
+                if not company_id:
+                    return JsonResponse({'error': 'No company assigned to this user'}, status=403)
+
+                # STEP 1: Create Employee
+                if step == 'employee':
+                    # Validate department_team_id
+                    department_team_id = request.POST.get('department_team_id')
                     department = get_object_or_404(
                         DepartmentTeams,
-                        id=department_id,
-                        company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+                        id=department_team_id,
+                        company=company_id,
+                        is_deleted=False
                     )
 
-                    # STEP 1: Create Employee
-                    if step == 'employee':
-                        # Step 2: Disconnect signal
-                        post_save.disconnect(update_increment_summary_employee, sender=Employee)
-                        post_save.disconnect(update_increment_summary, sender=CurrentPackageDetails)
-                        post_save.disconnect(update_increment_summary, sender=ProposedPackageDetails)
-                        post_save.disconnect(update_increment_summary, sender=FinancialImpactPerMonth)
+                    # Disconnect signals
+                    post_save.disconnect(update_increment_summary_employee, sender=Employee)
+                    post_save.disconnect(update_increment_summary, sender=CurrentPackageDetails)
+                    post_save.disconnect(update_increment_summary, sender=ProposedPackageDetails)
+                    post_save.disconnect(update_increment_summary, sender=FinancialImpactPerMonth)
 
-                        employee = Employee.objects.create(
-                            emp_id=request.POST.get('emp_id'),
-                            fullname=request.POST.get('fullname'),
-                            company=department.company,
-                            department_team=department,
-                            department_group_id=request.POST.get('department_group_id') or None,
-                            section_id=request.POST.get('section_id') or None,
-                            designation_id=request.POST.get('designation_id') or None,
-                            location_id=request.POST.get('location_id') or None,
-                            date_of_joining=request.POST.get('date_of_joining') or None,
-                            resign=request.POST.get('resign') == 'true',
-                            date_of_resignation=request.POST.get('date_of_resignation') or None,
-                            remarks=request.POST.get('remarks') or '',
-                            image=request.FILES.get('image') if 'image' in request.FILES else None,
-                            eligible_for_increment=request.POST.get('eligible_for_increment') == 'true'
-                        )
-                        print("employee created")
-                        CurrentPackageDetails.objects.create(employee=employee)
-                        print("current package created")
-                        ProposedPackageDetails.objects.create(employee=employee)
-                        print("proposed package created")
-                        FinancialImpactPerMonth.objects.create(employee=employee)
-                        print("financial impact created")
+                    # Create Employee
+                    employee = Employee.objects.create(
+                        emp_id=request.POST.get('emp_id'),
+                        fullname=request.POST.get('fullname'),
+                        company_id=company_id,
+                        department_team=department,
+                        department_group_id=request.POST.get('department_group_id') or None,
+                        section_id=request.POST.get('section_id') or None,
+                        designation_id=request.POST.get('designation_id') or None,
+                        location_id=request.POST.get('location_id') or None,
+                        date_of_joining=request.POST.get('date_of_joining') or None,
+                        resign=request.POST.get('resign') == 'true',
+                        date_of_resignation=request.POST.get('date_of_resignation') or None,
+                        remarks=request.POST.get('remarks') or '',
+                        image=request.FILES.get('image') if 'image' in request.FILES else None,
+                        eligible_for_increment=request.POST.get('eligible_for_increment') == 'true'
+                    )
 
-                        # Step 3: Reconnect signal
-                        post_save.connect(update_increment_summary_employee, sender=Employee)
-                        post_save.connect(update_increment_summary, sender=CurrentPackageDetails)
-                        post_save.connect(update_increment_summary, sender=ProposedPackageDetails)
-                        post_save.connect(update_increment_summary, sender=FinancialImpactPerMonth)
+                    # Create related models
+                    CurrentPackageDetails.objects.create(employee=employee)
+                    ProposedPackageDetails.objects.create(employee=employee)
+                    FinancialImpactPerMonth.objects.create(employee=employee)
 
-                        # Step 4: Manually run the signal function
-                        update_increment_summary_employee(sender=Employee, instance=employee, created=True)
-                        
-                        logger.debug(f"Employee created: {employee.emp_id}")
-                        return JsonResponse({'message': 'Employee created', 'employee_id': employee.emp_id})
+                    # Reconnect signals
+                    post_save.connect(update_increment_summary_employee, sender=Employee)
+                    post_save.connect(update_increment_summary, sender=CurrentPackageDetails)
+                    post_save.connect(update_increment_summary, sender=ProposedPackageDetails)
+                    post_save.connect(update_increment_summary, sender=FinancialImpactPerMonth)
 
-                    # STEP 2: Create Current Package
-                    elif step == 'current_package':
-                        employee_id = request.POST.get('employee_id')
-                        employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
+                    # Manually trigger signal
+                    update_increment_summary_employee(sender=Employee, instance=employee, created=True)
 
-                        current_package_details = CurrentPackageDetails.objects.filter(employee=employee).first()
+                    logger.debug(f"Employee created: {employee.emp_id}")
+                    return JsonResponse({'message': 'Employee created', 'employee_id': employee.id})  # Return ID, not emp_id
 
-                        current_package_details.gross_salary = request.POST.get('gross_salary') or None
-                        current_package_details.vehicle_id = request.POST.get('vehicle_id') or None
-                        # current_package_details.fuel_limit = request.POST.get('fuel_limit') or None
-                        current_package_details.mobile_provided = request.POST.get('mobile_provided') == 'true'
-                        if not request.POST.get('fuel_litre'):
-                            current_package_details.fuel_allowance = request.POST.get('fuel_allowance') or None
-                        else:
-                            fuel_rate = Configurations.objects.values_list('fuel_rate', flat=True).first()
-                            # current_package_details.fuel_allowance = (float(request.POST.get('fuel_litre')) + fuel_rate) or None
-                            try:
-                                fuel_litre = float(request.POST.get('fuel_litre'))
-                                current_package_details.fuel_allowance = fuel_litre * fuel_rate
-                            except (TypeError, ValueError):
-                                current_package_details.fuel_allowance = None
-                        current_package_details.fuel_litre = request.POST.get('fuel_litre') or None
-                        current_package_details.company_pickup = request.POST.get('company_pickup') == 'true'
+                # STEP 2: Update Current Package
+                elif step == 'current_package':
+                    employee_id = request.POST.get('employee_id')
+                    employee = get_object_or_404(Employee, id=employee_id, company_id=company_id)
+                    current_package = get_object_or_404(CurrentPackageDetails, employee=employee)
 
-                        print(current_package_details.__dict__)
-                        current_package_details.save()
+                    current_package.gross_salary = request.POST.get('gross_salary') or None
+                    current_package.vehicle_id = request.POST.get('vehicle_id') or None
+                    current_package.mobile_provided = request.POST.get('mobile_provided') == 'true'
+                    current_package.company_pickup = request.POST.get('company_pickup') == 'true'
+                    current_package.fuel_litre = request.POST.get('fuel_litre') or None
+                    try:
+                        fuel_litre = float(request.POST.get('fuel_litre')) if request.POST.get('fuel_litre') else None
+                        fuel_rate = Configurations.objects.values_list('fuel_rate', flat=True).first()
+                        current_package.fuel_allowance = fuel_litre * fuel_rate if fuel_litre and fuel_rate else None
+                    except (TypeError, ValueError):
+                        current_package.fuel_allowance = None
 
-                        logger.debug(f"CurrentPackageDetails created for employee: {employee_id}")
-                        return JsonResponse({'message': 'Current Package created'})
+                    current_package.save()
+                    logger.debug(f"CurrentPackageDetails updated for employee: {employee_id}")
+                    return JsonResponse({'message': 'Current Package updated', 'employee_id': employee.id})
 
-                    # STEP 3: Create Proposed Package
-                    elif step == 'proposed_package':
-                        employee_id = request.POST.get('employee_id')
-                        employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
+                # STEP 4: Update Financial Impact
+                elif step == 'financial_impact':
+                    employee_id = request.POST.get('employee_id')
+                    employee = get_object_or_404(Employee, id=employee_id, company_id=company_id)
+                    financial_impact = get_object_or_404(FinancialImpactPerMonth, employee=employee)
 
-                        proposed_package_details = ProposedPackageDetails.objects.filter(employee=employee).first()
-                        
-                        proposed_package_details.increment_percentage = request.POST.get('increment_percentage') or None
-                        # proposed_package_details.increased_fuel_amount = request.POST.get('increased_fuel_amount') or None
+                    financial_impact.emp_status_id = request.POST.get('emp_status_id') or None
+                    financial_impact.save()
 
-                        if not request.POST.get('increased_fuel_litre'):
-                            proposed_package_details.increased_fuel_allowance = request.POST.get('increased_fuel_allowance') or None
-                        else:
-                            fuel_rate = Configurations.objects.values_list('fuel_rate', flat=True).first()
-                            # proposed_package_details.fuel_allowance = (float(request.POST.get('fuel_litre')) + fuel_rate) or None
-                            try:
-                                fuel_litre = float(request.POST.get('increased_fuel_litre'))
-                                proposed_package_details.increased_fuel_allowance = fuel_litre * fuel_rate
-                            except (TypeError, ValueError):
-                                proposed_package_details.increased_fuel_allowance = None
+                    logger.debug(f"FinancialImpactPerMonth updated for employee: {employee_id}")
+                    return JsonResponse({'message': 'Employee created successfully', 'employee_id': employee.id})
 
-                        proposed_package_details.increased_fuel_litre = request.POST.get('increased_fuel_litre') or None
-                        proposed_package_details.mobile_provided = request.POST.get('mobile_provided_proposed') == 'true'
-                        proposed_package_details.vehicle_id = request.POST.get('vehicle_proposed_id') or None
-                        # proposed_package_details.fuel_litre = request.POST.get('fuel_litre') or None
-                        # proposed_package_details.vehicle_allowance = request.POST.get('vehicle_allowance') or None
-                        proposed_package_details.company_pickup = request.POST.get('company_pickup') == 'true'
-                        proposed_package_details.save()
+                return JsonResponse({'error': 'Invalid step'}, status=400)
 
-                        logger.debug(f"ProposedPackageDetails created for employee: {employee_id}")
-                        return JsonResponse({'message': 'Proposed Package created'})
-
-                    # STEP 4: Create Financial Impact
-                    elif step == 'financial_impact':
-                        employee_id = request.POST.get('employee_id')
-                        employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
-                        financial_impact_per_month = FinancialImpactPerMonth.objects.filter(employee=employee).first()
-                        
-                        financial_impact_per_month.emp_status_id = request.POST.get('emp_status_id') or None
-                        financial_impact_per_month.serving_years = request.POST.get('serving_years') or None
-                        financial_impact_per_month.salary = request.POST.get('salary') or None
-                        financial_impact_per_month.gratuity = request.POST.get('gratuity') or None
-                        financial_impact_per_month.save()
-
-                        logger.debug(f"FinancialImpactPerMonth created for employee: {employee_id}")
-                        return JsonResponse({'message': 'Financial Impact created'})
-
-                    return JsonResponse({'error': 'Invalid step'}, status=400)
-
-            except Exception as e:
-                logger.error(f"Error in CreateEmployeeView: {str(e)}")
-                return JsonResponse({'error': 'Invalid data'}, status=400)
-
-        return JsonResponse({'error': 'Invalid request'}, status=400)
+        except Exception as e:
+            logger.error(f"Error in CreateEmployeeView: {str(e)}")
+            return JsonResponse({'error': 'Invalid data'}, status=400)
 
 
 class UpdateEmployeeView(View):
-    template_name = 'update_dept_table.html'
+    template_name = 'update_employee.html'
 
     @classmethod
     def as_view(cls, **initkwargs):
@@ -1389,13 +1513,9 @@ class UpdateEmployeeView(View):
         view = ensure_csrf_cookie(view)
         return view
 
-    def get(self, request, department_id, employee_id):
-        department = get_object_or_404(
-            DepartmentTeams,
-            id=department_id,
-            company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-        )
-        employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
+    def get(self, request, employee_id):
+        company = Company.objects.all().first()
+        employee = get_object_or_404(Employee, emp_id=employee_id)
 
         # Get related records if exist
         current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
@@ -1403,37 +1523,37 @@ class UpdateEmployeeView(View):
         financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
 
         return render(request, self.template_name, {
-            'department': department,
-            'department_id': department_id,
             'employee_id': employee_id,
             'employee': employee,
+            'company': company,
             'current_package': current_package,
             'proposed_package': proposed_package,
             'financial_impact': financial_impact,
         })
 
-    def post(self, request, department_id, employee_id):
+    def post(self, request, employee_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
-                department = get_object_or_404(
-                    DepartmentTeams,
-                    id=department_id,
-                    company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-                )
-                employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
+                employee = get_object_or_404(Employee, emp_id=employee_id)
                 step = request.POST.get('step')
 
                 # --- Update Employee Info ---
                 if step == 'employee':
                     employee.emp_id = request.POST.get('emp_id') or employee.emp_id
                     employee.fullname = request.POST.get('fullname') or employee.fullname
+                    employee.department_team_id = request.POST.get('department_team_id') or None
                     employee.department_group_id = request.POST.get('department_group_id') or None
                     employee.section_id = request.POST.get('section_id') or None
                     employee.designation_id = request.POST.get('designation_id') or None
                     employee.location_id = request.POST.get('location_id') or None
                     employee.date_of_joining = request.POST.get('date_of_joining') or None
-                    employee.resign = request.POST.get('resign') == 'true'
                     employee.date_of_resignation = request.POST.get('date_of_resignation') or None
+
+                    if request.POST.get('date_of_resignation'):
+                        employee.resign = True
+                    else:
+                        employee.resign = False
+
                     employee.remarks = request.POST.get('remarks') or ''
                     employee.eligible_for_increment = request.POST.get('eligible_for_increment') == 'true'
                     if 'image' in request.FILES:
@@ -1467,34 +1587,6 @@ class UpdateEmployeeView(View):
                     logger.debug(f"CurrentPackageDetails updated for employee: {employee_id}")
                     return JsonResponse({'message': 'Current Package updated'})
 
-                # --- Update Proposed Package ---
-                elif step == 'proposed_package':
-                    print(request.POST)
-                    proposed_package, _ = ProposedPackageDetails.objects.get_or_create(employee=employee)
-                    proposed_package.increment_percentage = request.POST.get('increment_percentage') or None
-                    proposed_package.increased_fuel_amount = request.POST.get('increased_fuel_amount') or None
-                    proposed_package.mobile_provided = request.POST.get('mobile_provided_proposed') == 'true'
-                    proposed_package.company_pickup = request.POST.get('company_pickup_proposed') == 'true'
-                    proposed_package.vehicle_id = request.POST.get('vehicle_proposed_id') or None
-                    
-                    if not request.POST.get('increased_fuel_litre'):
-                            proposed_package.increased_fuel_allowance = request.POST.get('increased_fuel_allowance') or None
-                    else:
-                        fuel_rate = Configurations.objects.values_list('fuel_rate', flat=True).first()
-                        # proposed_package.fuel_allowance = (float(request.POST.get('fuel_litre')) + fuel_rate) or None
-                        try:
-                            fuel_litre = float(request.POST.get('increased_fuel_litre'))
-                            proposed_package.increased_fuel_allowance = fuel_litre * fuel_rate
-                        except (TypeError, ValueError):
-                            proposed_package.increased_fuel_allowance = None
-
-                    # proposed_package.fuel_litre = request.POST.get('proposed_package_fuel_litre') or None
-                    proposed_package.increased_fuel_litre = request.POST.get('increased_fuel_litre') or None
-                    # proposed_package.vehicle_allowance = request.POST.get('vehicle_allowance') or None
-                    proposed_package.save()
-                    logger.debug(f"ProposedPackageDetails updated for employee: {employee_id}")
-                    return JsonResponse({'message': 'Proposed Package updated'})
-
                 # --- Update Financial Impact ---
                 elif step == 'financial_impact':
                     financial_impact, _ = FinancialImpactPerMonth.objects.get_or_create(employee=employee)
@@ -1505,8 +1597,6 @@ class UpdateEmployeeView(View):
                     financial_impact.save()
                     logger.debug(f"FinancialImpactPerMonth updated for employee: {employee_id}")
                     return JsonResponse({'message': 'Financial Impact updated'})
-                
-                    
 
                 return JsonResponse({'error': 'Invalid step'}, status=400)
 
@@ -1518,7 +1608,6 @@ class UpdateEmployeeView(View):
 
 
 class DeleteEmployeeView(View):
-    template_name = 'delete_employee.html'
 
     @classmethod
     def as_view(cls, **initkwargs):
@@ -1529,37 +1618,15 @@ class DeleteEmployeeView(View):
         view = ensure_csrf_cookie(view)
         return view
 
-    def get(self, request, department_id, employee_id):
-        """Render the delete confirmation page."""
-        department = get_object_or_404(
-            DepartmentTeams,
-            id=department_id,
-            company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-        )
-        employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
-
-        context = {
-            'department': department,
-            'department_id': department_id,
-            'employee': employee,
-            'employee_id': employee_id,
-        }
-        return render(request, self.template_name, context)
-
-    def post(self, request, department_id, employee_id):
+    def post(self, request, employee_id):
         """Handle employee deletion via AJAX."""
         if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
             return JsonResponse({'error': 'Invalid request'}, status=400)
 
         try:
-            department = get_object_or_404(
-                DepartmentTeams,
-                id=department_id,
-                company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-            )
-            employee = get_object_or_404(Employee, emp_id=employee_id, department_team=department)
-
+            employee = get_object_or_404(Employee, emp_id=employee_id)
             employee.delete()
+            
             logger.debug(f"Employee deleted: {employee_id}")
             return JsonResponse({'message': 'Employee deleted successfully'})
 
@@ -1602,6 +1669,7 @@ class GetDataView(View):
                     'employee': {
                         "emp_id" : employee.emp_id,
                         'fullname': employee.fullname,
+                        'department_team_id': employee.department_team_id,
                         'department_group_id': employee.department_group_id,
                         'section_id': employee.section_id,
                         'designation_id': employee.designation_id,
@@ -1816,7 +1884,7 @@ class FieldFormulaListView(PermissionRequiredMixin, View):
 
     def get(self, request):
         company_data = get_companies_and_department_teams(request.user)
-        field_formulas = FieldFormula.objects.all().order_by('company', 'department_team', 'target_model')
+        field_formulas = FieldFormula.objects.all().order_by('company', 'department_team')
         field_references = FieldReference.objects.all()
         return render(request, self.template_name, {
             'field_formulas': field_formulas,
@@ -1873,10 +1941,14 @@ class CreateFieldFormulaView(PermissionRequiredMixin, View):
         form = FieldFormulaForm(user=request.user, data=request.POST)  # Pass user
         field_references = FieldReference.objects.all()
         company_data = get_companies_and_department_teams(request.user)
+        print("here")
         if form.is_valid():
+            print("hi")
             form.save()
             messages.success(request, "Field Formula created successfully!")
             return redirect("view_field_formulas")
+        else:
+            print(form.errors)
         return render(request, self.template_name, {
             'form': form,
             'field_references': field_references,

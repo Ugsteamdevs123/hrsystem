@@ -8,6 +8,18 @@
 <form id="createFormulaForm" method="POST" action="{% url 'create_formula' %}">
     {% csrf_token %}
 
+    <!-- Formula Model -->
+    <div class="form-field">
+        {{ form.target_model.label_tag }}
+        {{ form.target_model }}
+    </div>
+
+    <!-- Formula Field -->
+    <div class="form-field">
+        {{ form.target_field.label_tag }}
+        {{ form.target_field }}
+    </div>
+
     <!-- Formula Name -->
     <div class="form-field">
         {{ form.formula_name.label_tag }}
@@ -18,6 +30,12 @@
     <div class="form-field">
         {{ form.formula_expression.label_tag }}
         {{ form.formula_expression }}
+    </div>
+    
+    <!-- Formula Is Default -->
+    <div class="form-field">
+        {{ form.formula_is_default.label_tag }}
+        {{ form.formula_is_default }}
     </div>
 
     <!-- Combine Values (Aggregate Selector) -->
@@ -169,7 +187,30 @@ document.addEventListener('DOMContentLoaded', function() {
         lastInsertedField = newText;
         formulaTextarea.focus();
     });
+
+
+    const modelSelect = document.getElementById('id_target_model');
+    const fieldSelect = document.getElementById('id_target_field');
+
+    // Fetch fields based on model
+    modelSelect.addEventListener('change', function() {
+        const modelName = this.value;
+        fieldSelect.innerHTML = '<option value="">Select a field</option>';
+        if (modelName) {
+            fetch(`/payroll/get-model-fields/?model_name=${encodeURIComponent(modelName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    data.fields.forEach(field => {
+                        const opt = document.createElement('option');
+                        opt.value = field;
+                        opt.textContent = field;
+                        fieldSelect.appendChild(opt);
+                    });
+                });
+        }
+    });
 });
+
 </script>
 {% else %}
 <p>You do not have permission to create a formula.</p>
