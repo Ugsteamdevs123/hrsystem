@@ -74,17 +74,6 @@
                     <input type="date" id="date_of_resignation" name="date_of_resignation">
                 </div>
                 <div class="form-field">
-                    <label for="eligible_for_increment">Eligible for Increment <span class="req">*</span></label>
-                    <div class="inline-group">
-                        <label class="inline-check">
-                            <input type="radio" name="eligible_for_increment" value="true" id="eligible_for_increment_true"> Yes
-                        </label>
-                        <label class="inline-check">
-                            <input type="radio" name="eligible_for_increment" value="false" id="eligible_for_increment_false"> No
-                        </label>
-                    </div>
-                </div>
-                <div class="form-field">
                     <label for="remarks">Remarks</label>
                     <textarea id="remarks" name="remarks"></textarea>
                 </div>
@@ -263,8 +252,8 @@
             q('#location_id').value = data.employee.location_id || '';
             q('#date_of_joining').value = data.employee.date_of_joining || '';
             q('#date_of_resignation').value = data.employee.date_of_resignation || '';
-            const eligibleValue = data.employee.eligible_for_increment ? 'true' : 'false';
-            q(`input[name="eligible_for_increment"][value="${eligibleValue}"]`).checked = true;
+            // const eligibleValue = data.employee.eligible_for_increment ? 'true' : 'false';
+            // q(`input[name="eligible_for_increment"][value="${eligibleValue}"]`).checked = true;
             q('#remarks').value = data.employee.remarks || '';
             q('#gross_salary').value = data.current_package?.gross_salary || '';
             
@@ -278,7 +267,7 @@
             q('#fuel_allowance').value = data.current_package?.fuel_allowance || '';
             q('#fuel_litre').value = data.current_package?.fuel_litre || '';
             q('#emp_status_id').value = data.financial_impact?.emp_status_id || '';
-            formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_team_id: q('#department_team_id').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, date_of_resignation: q('#date_of_resignation').value, eligible_for_increment: eligibleValue, remarks: q('#remarks').value };
+            formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_team_id: q('#department_team_id').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, date_of_resignation: q('#date_of_resignation').value, remarks: q('#remarks').value };
             formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, company_pickup_current: companyPickupCurrentValue, vehicle_id: q('#vehicle_id').value, fuel_allowance: q('#fuel_allowance').value, mobile_provided: mobileProvidedValue, fuel_litre: q('#fuel_litre').value };
             formDataStore[2] = { ...formDataStore[2], emp_status_id: q('#emp_status_id').value };
         }
@@ -511,7 +500,7 @@
             if (!q('#date_of_joining').value) errors.push('Date of Joining is required');
             if (addNewDesignationCheckbox.checked && !newDesignationInput.value.trim()) errors.push('New Designation Title is required');
             if (!addNewDesignationCheckbox.checked && !designationSelect.value) errors.push('Designation is required');
-            if (!q('input[name="eligible_for_increment"]:checked')) errors.push('Eligible for Increment is required');
+            // if (!q('input[name="eligible_for_increment"]:checked')) errors.push('Eligible for Increment is required');
             return errors;
         }
 

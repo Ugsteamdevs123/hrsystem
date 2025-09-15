@@ -1243,7 +1243,6 @@ class EmployeesView(View):
         draft_data = {}
 
         for emp in employees:
-
             data = {
                 'emp_id': emp.emp_id,
                 'fullname': emp.fullname,
@@ -1257,10 +1256,9 @@ class EmployeesView(View):
                 'date_of_joining': emp.date_of_joining,
                 'resign': emp.resign,
                 'date_of_resignation': emp.date_of_resignation,
-                'remarks': emp.remarks,
                 'currentpackagedetails': None,
                 'proposedpackagedetails': None,
-                'financialimpactpermonth': None,
+                'employee_status': emp.financialimpactpermonth.emp_status,
             }
 
             employee_data.append(data)
@@ -1576,7 +1574,7 @@ class UpdateEmployeeView(View):
                         employee.resign = False
 
                     employee.remarks = request.POST.get('remarks') or ''
-                    employee.eligible_for_increment = request.POST.get('eligible_for_increment') == 'true'
+                    # employee.eligible_for_increment = request.POST.get('eligible_for_increment') == 'true'
                     if 'image' in request.FILES:
                         employee.image = request.FILES['image']
                     employee.save()

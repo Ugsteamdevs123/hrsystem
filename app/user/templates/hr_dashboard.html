@@ -25,65 +25,81 @@
 <div id="increment-data" class="mt-20">
     {% if data %}
     <h4>Increment Details</h4>
-    <table class="custom-table">
-        <thead>
-            <tr>
-                <th rowspan="3" class="status-col"></th> <!-- Nameless thin header for draft indicator -->
-                <th rowspan="3">Department</th>
-                <th rowspan="2" colspan="2" class="group-header">No. of Employees</th>
-                <th rowspan="3">Current Salary</th>
-                <th rowspan="3">Effective increment rate HOD</th>
-                <th rowspan="3">Effective Fuel % HOD</th>
-                <th rowspan="1" colspan="2" class="group-header">Increment</th>
-                <th rowspan="3">Other costs in P&L</th>
-                <th rowspan="3">Total Cost on P&L per month</th>
-                <th rowspan="3">Revised Department Salary</th>
-                <th rowspan="3">Staff Revised Cost</th>
-                <th rowspan="3">Approved</th>
-            </tr>
-            <tr>
-                <th>Salary</th>
-                <th>Fuel</th>
-            </tr>
-            <tr>
-                <!-- Employee Details Subheaders -->
-                <th>Total</th>
-                <th>Eligible for Increment</th>
-                <th>Impact HOD</th>
-                <th>Impact HOD</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in data %}
-            <tr data-id="{{ row.id }}" data-eligible="{{ row.eligible_for_increment|default:'' }}">
-                <!-- Draft indicator cell -->
-                <td class="status-cell {% if row.is_draft %}draft{% endif %}"></td>
-                {% for key, value in row.items %}
-                    {% if key != 'id' and key != 'is_draft' %}
-                        {% if key == 'approved' and row.is_draft %}
-                            <td>
-                                <select class="approved-select" data-id="{{ row.id }}" onchange="updateApproved(this)">
-                                    <option value="true" {% if value %}selected{% endif %}>True</option>
-                                    <option value="false" {% if not value %}selected{% endif %}>False</option>
-                                </select>
-                            </td>
-                        {% elif key == 'approved' %}
-                            <td></td>
-                        {% else %}
-                            <td>{{ value|default_if_none:'' }}</td>
+    <div class="table-scroll-container">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th rowspan="3" class="status-col"></th> <!-- Nameless thin header for draft indicator -->
+                    <th rowspan="3">Department</th>
+                    <th rowspan="2" colspan="2" class="group-header">No. of Employees</th>
+                    <th rowspan="3">Current Salary</th>
+                    <th rowspan="3">Effective increment rate HOD</th>
+                    <th rowspan="3">Effective Fuel % HOD</th>
+                    <th rowspan="1" colspan="2" class="group-header">Increment</th>
+                    <th rowspan="3">Other costs in P&L</th>
+                    <th rowspan="3">Total Cost on P&L per month</th>
+                    <th rowspan="3">Revised Department Salary</th>
+                    <th rowspan="3">Staff Revised Cost</th>
+                    <th rowspan="3">Approved</th>
+                </tr>
+                <tr>
+                    <th>Salary</th>
+                    <th>Fuel</th>
+                </tr>
+                <tr>
+                    <!-- Employee Details Subheaders -->
+                    <th>Total</th>
+                    <th>Eligible for Increment</th>
+                    <th>Impact HOD</th>
+                    <th>Impact HOD</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                <tr data-id="{{ row.id }}" data-eligible="{{ row.eligible_for_increment|default:'' }}">
+                    <!-- Draft indicator cell -->
+                    <td class="status-cell {% if row.is_draft %}draft{% endif %}"></td>
+                    {% for key, value in row.items %}
+                        {% if key != 'id' and key != 'is_draft' %}
+                            {% if key == 'approved' and row.is_draft %}
+                                <td>
+                                    <select class="approved-select" data-id="{{ row.id }}" onchange="updateApproved(this)">
+                                        <option value="true" {% if value %}selected{% endif %}>True</option>
+                                        <option value="false" {% if not value %}selected{% endif %}>False</option>
+                                    </select>
+                                </td>
+                            {% elif key == 'approved' %}
+                                <td></td>
+                            {% else %}
+                                <td>{{ value|default_if_none:'' }}</td>
+                            {% endif %}
                         {% endif %}
-                    {% endif %}
+                    {% endfor %}
+                </tr>
                 {% endfor %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </div>
     {% else %}
     <p class="muted">No increment details found.</p>
     {% endif %}
 </div>
 
 <style>
+.increment-data {
+    overflow: hidden !important;
+    padding: 20px;
+}
+.content {
+    overflow: hidden !important;
+}
+.table-scroll-container {
+    max-height: 500px; /* or adjust as needed */
+    overflow-x: auto;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
 /* Card container */
 .card-like {
     background: #fff;
