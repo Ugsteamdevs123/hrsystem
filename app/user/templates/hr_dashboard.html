@@ -28,12 +28,29 @@
     <table class="custom-table">
         <thead>
             <tr>
-                <th class="status-col"></th> <!-- Nameless thin header for draft indicator -->
-                {% for header in data.0 %}
-                    {% if header != 'id' and header != 'is_draft' %}
-                        <th>{{ header }}</th>
-                    {% endif %}
-                {% endfor %}
+                <th rowspan="3" class="status-col"></th> <!-- Nameless thin header for draft indicator -->
+                <th rowspan="3">Department</th>
+                <th rowspan="2" colspan="2" class="group-header">No. of Employees</th>
+                <th rowspan="3">Current Salary</th>
+                <th rowspan="3">Effective increment rate HOD</th>
+                <th rowspan="3">Effective Fuel % HOD</th>
+                <th rowspan="1" colspan="2" class="group-header">Increment</th>
+                <th rowspan="3">Other costs in P&L</th>
+                <th rowspan="3">Total Cost on P&L per month</th>
+                <th rowspan="3">Revised Department Salary</th>
+                <th rowspan="3">Staff Revised Cost</th>
+                <th rowspan="3">Approved</th>
+            </tr>
+            <tr>
+                <th>Salary</th>
+                <th>Fuel</th>
+            </tr>
+            <tr>
+                <!-- Employee Details Subheaders -->
+                <th>Total</th>
+                <th>Eligible for Increment</th>
+                <th>Impact HOD</th>
+                <th>Impact HOD</th>
             </tr>
         </thead>
         <tbody>
@@ -121,6 +138,10 @@
 @media screen and (max-width: 768px) {
     .custom-table, th, td { font-size: 14px; }
     .action-btn { font-size: 12px; padding: 6px 12px; }
+}
+
+th.group-header {
+    text-align: center;
 }
 </style>
 
