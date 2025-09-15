@@ -256,7 +256,6 @@
             q('#emp_id').value = data.employee.emp_id || '';
             q('#fullname').value = data.employee.fullname || '';
             q('#department_team_id').value = data.employee.department_team_id || '';
-            console.log("department_team_id: ", data.employee.department_team_id);
             q('#department_group_id').value = data.employee.department_group_id || '';
             populateSections(data.employee.department_group_id);
             q('#section_id').value = data.employee.section_id || '';
@@ -264,7 +263,6 @@
             q('#location_id').value = data.employee.location_id || '';
             q('#date_of_joining').value = data.employee.date_of_joining || '';
             q('#date_of_resignation').value = data.employee.date_of_resignation || '';
-            console.log("date_of_resignation: ", data.employee.date_of_resignation);
             const eligibleValue = data.employee.eligible_for_increment ? 'true' : 'false';
             q(`input[name="eligible_for_increment"][value="${eligibleValue}"]`).checked = true;
             q('#remarks').value = data.employee.remarks || '';
@@ -407,7 +405,6 @@
 
         function populateVehicles(data) {
             const currentSelect = document.getElementById('vehicle_id');
-            const proposedSelect = document.getElementById('vehicle_proposed_id');
             currentSelect.innerHTML = '<option value="">Select Vehicle</option>';
             data.forEach(v => {
                 const label = `${v.brand_name} ${v.model_name} - ${v.engine_cc}`;
@@ -415,8 +412,6 @@
                 opt1.value = v.id;
                 opt1.textContent = label;
                 currentSelect.appendChild(opt1);
-                const opt2 = opt1.cloneNode(true);
-                proposedSelect.appendChild(opt2);
             });
         }
 

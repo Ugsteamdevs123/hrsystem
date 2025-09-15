@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% block title %}Employee Details{% endblock %}
+
+{% block content %}
+{% if perms.user.view_employee %}
+    <div class="container">
+        <!-- Page Heading -->
+        <div class="section-head">
+            <h2>Employee Details</h2>
+            <a href="{% url 'employees_view' %}" class="form-btn btn-back">Back to Employees List</a>
+        </div>
+
+        <!-- Employee Details Card -->
+        <div class="card">
+            <h4 class="card-title">{{ employee.fullname|default:'-' }}</h4>
+            <div class="card-content">
+                <div class="form-field image-field">
+                    <div class="image-container">
+                        {% if employee.image %}
+                            <img src="{{ employee.image.url }}" alt="Employee Image">
+                        {% else %}
+                            <svg class="image-placeholder" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6c757d">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label>Department Group </label>
+                    <input type="text" value="{{ employee.department_team.name|default:'-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Department </label>
+                    <input type="text" value="{{ employee.department_group.name|default:'-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Section </label>
+                    <input type="text" value="{{ employee.section.name|default:'-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Designation </label>
+                    <input type="text" value="{{ employee.designation.title|default:'-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Location </label>
+                    <input type="text" value="{{ employee.location.location|default:'-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Date of Joining </label>
+                    <input type="text" value="{{ employee.date_of_joining|date:'Y-m-d'|default:'-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Resign Status</label>
+                    <input type="text" value="{{ employee.resign|yesno:'Yes,No,-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Date of Resignation</label>
+                    <input type="text" value="{{ employee.date_of_resignation|date:'Y-m-d'|default:'-' }}" readonly>
+                </div>
+                <div class="form-field remarks-field">
+                    <label>Remarks</label>
+                    <textarea readonly>{{ employee.remarks|default:'-' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Package Details Card -->
+        {% if current_package %}
+        <div class="card">
+            <h4 class="card-title">Current Package Details</h4>
+            <div class="card-content">
+                <div class="form-field">
+                    <label>Gross Salary</label>
+                    <input type="text" value="{{ current_package.gross_salary|floatformat:2|default:'-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Vehicle</label>
+                    <input type="text" value="{{ current_package.vehicle|default:'-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Mobile Provided</label>
+                    <input type="text" value="{{ current_package.mobile_provided|yesno:'Yes,No,-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Fuel Allowance</label>
+                    <input type="text" value="{{ current_package.fuel_allowance|floatformat:2|default:'-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Fuel Litre</label>
+                    <input type="text" value="{{ current_package.fuel_litre|floatformat:2|default:'-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Company Pickup</label>
+                    <input type="text" value="{{ current_package.company_pickup|yesno:'Yes,No,-' }}" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Total</label>
+                    <input type="text" value="{{ current_package.total|default:'-' }}" readonly>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <h4 class="card-title">Current Package Details</h4>
+            <div class="card-content">
+                <p>No package details available for this employee.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <style>
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .section-head h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #343a40;
+        }
+        .card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 22px;
+            margin-bottom: 16px;
+            color: #343a40;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+            font-weight: 600;
+        }
+        .card-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .form-field {
+            text-align: left;
+        }
+        .form-field label {
+            font-weight: 500;
+            margin-bottom: 6px;
+            display: block;
+            color: #343a40;
+        }
+        .form-field input, .form-field textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: #fff;
+            font-size: 14px;
+            box-sizing: border-box;
+            color: #495057;
+        }
+        .form-field textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+        .form-field input[readonly], .form-field textarea[readonly] {
+            background: #e9ecef;
+            cursor: not-allowed;
+        }
+        .form-field.image-field {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-field.remarks-field {
+            grid-column: 1 / -1;
+        }
+        .image-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .image-container img, .image-placeholder {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 1px solid #ccc;
+            object-fit: cover;
+        }
+        .image-placeholder {
+            fill: #6c757d;
+            background: #e9ecef;
+            padding: 20px;
+        }
+        .form-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .btn-back {
+            background-color: #6c757d;
+            color: #fff;
+        }
+        .btn-back:hover {
+            background-color: #5a6268;
+        }
+        @media screen and (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            .card-content {
+                grid-template-columns: 1fr;
+            }
+            .form-field.image-field, .form-field.remarks-field {
+                grid-column: 1 / -1;
+            }
+            .card-title {
+                font-size: 20px;
+            }
+        }
+        @media screen and (max-width: 500px) {
+            .form-btn {
+                font-size: 12px;
+                padding: 8px;
+            }
+            .image-container img, .image-placeholder {
+                width: 150px;
+                height: 150px;
+            }
+        }
+    </style>
+{% else %}
+    <p>You do not have permission to view this page.</p>
+{% endif %}
+{% endblock %}

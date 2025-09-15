@@ -107,6 +107,11 @@ def populate_default_formulas(sender, **kwargs):
             "formula_expression": "[ProposedPackageDetails: Increased Fuel Allowance] + [CurrentPackageDetails: Fuel Allowance]",
             "target_model": "ProposedPackageDetails", "target_field": "revised_fuel_allowance", "formula_is_default": True, "is_deleted": False
         },
+        {
+            "id": 21, "formula_name": "current package total",
+            "formula_expression": "[CurrentPackageDetails: Gross Salary]+[CurrentPackageDetails: Fuel Allowance]",
+            "target_model": "CurrentPackageDetails", "target_field": "total", "formula_is_default": True, "is_deleted": False
+        }
     ]
 
     with transaction.atomic():

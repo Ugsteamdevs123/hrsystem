@@ -153,6 +153,10 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]  # Ensure this points to your static folder
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+MEDIA_URL = '/images/'
+MEDIA_ROOT = BASE_DIR / 'images'
+# IMAGE_URL = os.environ.get('IMAGE_URL')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
