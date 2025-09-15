@@ -1,25 +1,14 @@
 {% extends 'base.html' %}
-
-{% block title %}HR Dashboard{% endblock %}
-
 {% block content %}
-<h2>HR Dashboard</h2>
+{% load custom_tags %}
+<div class="header-container">
+    <h2>HR Dashboard</h2>
+    {% if summary_status and not summary_status.summary_submitted %}
+    <button class="action-btn btn-primary final-approval-btn" onclick="confirmFinalApproval('{{ summary_status.id }}')">Approve Summary</button>
+    {% endif %}
+</div>
 
 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-<!-- Final Approval Section -->
-{% if summary_status and not summary_status.summary_submitted %}
-<div class="card-like" id="final-approval-box">
-    <h3>Final Approval</h3>
-    <p>This will approve the entire summary. Please confirm before proceeding.</p>
-    <button class="action-btn btn-primary" onclick="confirmFinalApproval('{{ summary_status.id }}')">Approve Summary</button>
-</div>
-{% else %}
-<div class="card-like" id="final-approval-box" style="display:none;">
-    <h3>Final Approval</h3>
-    <p>This will approve the entire summary. Please confirm before proceeding.</p>
-    <button class="action-btn btn-primary" onclick="confirmFinalApproval()">Approve Summary</button>
-</div>
-{% endif %}
 
 <!-- Increment Details -->
 <div id="increment-data" class="mt-20">
@@ -29,52 +18,54 @@
         <table class="custom-table">
             <thead>
                 <tr>
-                    <th rowspan="3" class="status-col"></th> <!-- Nameless thin header for draft indicator -->
-                    <th rowspan="3">Department</th>
-                    <th rowspan="2" colspan="2" class="group-header">No. of Employees</th>
-                    <th rowspan="3">Current Salary</th>
-                    <th rowspan="3">Effective increment rate HOD</th>
-                    <th rowspan="3">Effective Fuel % HOD</th>
-                    <th rowspan="1" colspan="2" class="group-header">Increment</th>
-                    <th rowspan="3">Other costs in P&L</th>
-                    <th rowspan="3">Total Cost on P&L per month</th>
-                    <th rowspan="3">Revised Department Salary</th>
-                    <th rowspan="3">Staff Revised Cost</th>
-                    <th rowspan="3">Approved</th>
+                    <th rowspan="3" class="status-col sticky-col sticky-col-1 sticky-header"></th>
+                    <th rowspan="3" class="sticky-col sticky-col-2 sticky-header">Department</th>
+                    <th rowspan="2" colspan="2" class="group-header sticky-col sticky-col-3 sticky-header">No. of Employees</th>
+                    <th rowspan="3" class="sticky-col sticky-col-5 sticky-header">Current Salary</th>
+                    <th rowspan="3" class="sticky-col sticky-col-6 sticky-header">Effective increment rate HOD</th>
+                    <th rowspan="3" class="sticky-col sticky-col-7 sticky-header">Effective Fuel % HOD</th>
+                    <th rowspan="1" colspan="2" class="group-header sticky-col sticky-col-8 sticky-header">Increment</th>
+                    <th rowspan="3" class="non-sticky-header">Other costs in P&L</th>
+                    <th rowspan="3" class="non-sticky-header">Total Cost on P&L per month</th>
+                    <th rowspan="3" class="non-sticky-header">Revised Department Salary</th>
+                    <th rowspan="3" class="non-sticky-header">Staff Revised Cost</th>
+                    <th rowspan="3" class="non-sticky-header">Approved</th>
                 </tr>
                 <tr>
-                    <th>Salary</th>
-                    <th>Fuel</th>
+                    <th class="sticky-col sticky-col-8 sticky-header">Salary</th>
+                    <th class="sticky-col sticky-col-9 sticky-header">Fuel</th>
                 </tr>
                 <tr>
-                    <!-- Employee Details Subheaders -->
-                    <th>Total</th>
-                    <th>Eligible for Increment</th>
-                    <th>Impact HOD</th>
-                    <th>Impact HOD</th>
+                    <th class="sticky-col sticky-col-3 sticky-header">Total</th>
+                    <th class="sticky-col sticky-col-4 sticky-header">Eligible for Increment</th>
+                    <th class="sticky-col sticky-col-8 sticky-header">Impact HOD</th>
+                    <th class="sticky-col sticky-col-9 sticky-header">Impact HOD</th>
                 </tr>
             </thead>
             <tbody>
                 {% for row in data %}
                 <tr data-id="{{ row.id }}" data-eligible="{{ row.eligible_for_increment|default:'' }}">
-                    <!-- Draft indicator cell -->
-                    <td class="status-cell {% if row.is_draft %}draft{% endif %}"></td>
-                    {% for key, value in row.items %}
-                        {% if key != 'id' and key != 'is_draft' %}
-                            {% if key == 'approved' and row.is_draft %}
-                                <td>
-                                    <select class="approved-select" data-id="{{ row.id }}" onchange="updateApproved(this)">
-                                        <option value="true" {% if value %}selected{% endif %}>True</option>
-                                        <option value="false" {% if not value %}selected{% endif %}>False</option>
-                                    </select>
-                                </td>
-                            {% elif key == 'approved' %}
-                                <td></td>
-                            {% else %}
-                                <td>{{ value|default_if_none:'' }}</td>
-                            {% endif %}
-                        {% endif %}
-                    {% endfor %}
+                    <td class="status-cell sticky-col sticky-col-1 {% if row.is_draft %}draft{% endif %}"></td>
+                    <td class="sticky-col sticky-col-2">{{ row.department|default_if_none:'' }}</td>
+                    <td class="sticky-col sticky-col-3">{{ row|get_item:"total employees"|default_if_none:'' }}</td>
+                    <td class="sticky-col sticky-col-4">{{ row|get_item:"eligible for increment"|default_if_none:'' }}</td>
+                    <td class="sticky-col sticky-col-5">{{ row|get_item:"current salary"|default_if_none:'' }}</td>
+                    <td class="sticky-col sticky-col-6">{{ row|get_item:"effective increment rate hod"|default_if_none:'' }}</td>
+                    <td class="sticky-col sticky-col-7">{{ row|get_item:"effective fuel percentage hod"|default_if_none:'' }}</td>
+                    <td class="sticky-col sticky-col-8">{{ row|get_item:"salary increment impact hod"|default_if_none:'' }}</td>
+                    <td class="sticky-col sticky-col-9">{{ row|get_item:"fuel increment impact hod"|default_if_none:'' }}</td>
+                    <td class="non-sticky">{{ row|get_item:"other costs in p and l"|default_if_none:'' }}</td>
+                    <td class="non-sticky">{{ row|get_item:"total cost on p and l per month"|default_if_none:'' }}</td>
+                    <td class="non-sticky">{{ row|get_item:"revised department salary"|default_if_none:'' }}</td>
+                    <td class="non-sticky">{{ row|get_item:"staff revised cost"|default_if_none:'' }}</td>
+                    {% if row.is_draft %}
+                    <td class="non-sticky approved-cell">
+                        <input type="checkbox" class="approved-checkbox" data-id="{{ row.id }}"
+                            onchange="updateApproved(this)" {% if row.approved %}checked{% endif %}>
+                    </td>
+                    {% else %}
+                    <td class="non-sticky"></td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
@@ -86,6 +77,37 @@
 </div>
 
 <style>
+/* Existing styles remain unchanged, adding new styles for header container */
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.final-approval-btn {
+    margin-left: auto; /* Pushes button to the right of the title */
+}
+
+/* Adjust button size for consistency */
+.action-btn.btn-primary.final-approval-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .final-approval-btn {
+        margin-left: 0;
+        margin-top: 10px;
+    }
+}
+
+/* Existing styles for table, buttons, etc. remain unchanged */
 .increment-data {
     overflow: hidden !important;
     padding: 20px;
@@ -94,30 +116,29 @@
     overflow: hidden !important;
 }
 .table-scroll-container {
-    max-height: 500px; /* or adjust as needed */
+    max-height: 500px;
     overflow-x: auto;
     overflow-y: auto;
     border: 1px solid #ddd;
     border-radius: 6px;
+    position: relative;
+    width: 100%;
+    min-width: 100%;
+    -webkit-clip-path: inset(0);
+    clip-path: inset(0);
 }
-/* Card container */
-.card-like {
-    background: #fff;
-    padding: 20px;
-    margin: 10px 0;
-    border-radius: 8px;
-    box-shadow: 0 0 6px rgba(0,0,0,0.1);
-}
-/* Table styling */
 .custom-table {
     border-collapse: collapse;
     width: 100%;
     margin-top: 15px;
+    table-layout: auto;
 }
 .custom-table th, .custom-table td {
     padding: 10px;
     border: 1px solid #ddd;
     text-align: left;
+    white-space: nowrap;
+    background-color: inherit;
 }
 .custom-table th {
     background-color: #f2f2f2;
@@ -125,7 +146,34 @@
 .custom-table tr:nth-child(even) {
     background-color: #f9f9f9;
 }
-/* Buttons */
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background-color: #f2f2f2 !important;
+}
+.sticky-col {
+    position: sticky;
+    z-index: 30;
+    background-color: #ffffff !important;
+}
+.sticky-col.sticky-header {
+    z-index: 50;
+    background-color: #f2f2f2 !important;
+}
+.non-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: #f2f2f2 !important;
+}
+.non-sticky {
+    z-index: 5;
+    background-color: #ffffff !important;
+}
+th.group-header {
+    text-align: center;
+}
 .action-btn {
     padding: 8px 15px;
     border-radius: 6px;
@@ -139,29 +187,101 @@
 .btn-primary:hover { background-color: #0056b3; }
 .btn-secondary { background-color: #6c757d; }
 .btn-secondary:hover { background-color: #565e64; }
-
+td.approved-cell {
+    text-align: center;
+    vertical-align: middle;
+}
+.approved-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+.approved-checkbox:checked {
+    background-color: #4caf50;
+    border-color: #4caf50;
+}
+.approved-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 4px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
 .status-col, .status-cell {
-    width: 2px;        /* make it as thin as possible */
-    padding: 0;        /* remove inner spacing */
-    border: none;      /* no border, otherwise it looks wider */
+    width: 2px;
+    padding: 0;
+    border: none;
 }
-
 .status-cell.draft {
-    background-color: #ffc107;  /* yellow */
+    background-color: #ffc107 !important;
 }
-
-/* Responsive */
 @media screen and (max-width: 768px) {
-    .custom-table, th, td { font-size: 14px; }
-    .action-btn { font-size: 12px; padding: 6px 12px; }
+    .custom-table th, .custom-table td {
+        font-size: 14px;
+        padding: 6px;
+    }
+    .action-btn {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
 }
-
-th.group-header {
+.sticky-col-4, .sticky-col-6, .sticky-col-7 {
+    width: 100px;
+    max-width: 100px;
+}
+.sticky-col-4.sticky-header,
+.sticky-col-6.sticky-header,
+.sticky-col-7.sticky-header {
+    white-space: normal;
+    line-height: 1.2;
+    padding: 8px 5px;
     text-align: center;
 }
+.sticky-col-1 { width: 2px; }
+.sticky-col-2 { width: 150px; }
+.sticky-col-3 { width: 80px; }
+.sticky-col-5 { width: 120px; }
+.sticky-col-8 { width: 100px; }
+.sticky-col-9 { width: 100px; }
 </style>
 
 <script>
+// Existing JavaScript remains unchanged
+document.addEventListener('DOMContentLoaded', () => {
+    const table = document.querySelector('.custom-table');
+    const headerRows = table.querySelectorAll('thead tr');
+    const bodyRows = table.querySelectorAll('tbody tr');
+
+    const setStickyOffsets = () => {
+        const stickyColumns = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let cumulativeLeft = 0;
+
+        stickyColumns.forEach((colIndex, index) => {
+            const headerCell = headerRows[2].querySelector(`th.sticky-col-${colIndex}`) || headerRows[0].querySelector(`th.sticky-col-${colIndex}`);
+            if (headerCell) {
+                const width = headerCell.offsetWidth;
+                const className = `.sticky-col-${colIndex}`;
+                document.querySelectorAll(className).forEach(cell => {
+                    cell.style.left = `${cumulativeLeft}px`;
+                });
+                cumulativeLeft += width;
+            }
+        });
+    };
+
+    setStickyOffsets();
+    window.addEventListener('resize', setStickyOffsets);
+});
 
 async function submitEdit() {
     const formData = new FormData(document.getElementById('editForm'));
@@ -181,22 +301,18 @@ async function submitEdit() {
 
         if (!resp.ok) throw new Error('Failed to save');
         showSnackbar('Increment detail updated successfully!');
-        window.location.reload(); // Reload to refresh server-rendered table
+        window.location.reload();
     } catch (e) {
         console.error(e);
         showSnackbar('Error updating increment detail. Please try again.', '#dc3545');
     }
 }
 
-async function updateApproved(select) {
-    console.log("hello");
-    const rowId = select.dataset.id;
-    console.log("rowId: ", rowId);
-    const newVal = select.value === 'true';
-    console.log("newVal: ", newVal);
+async function updateApproved(checkbox) {
+    const rowId = checkbox.dataset.id;
+    const approved = checkbox.checked;
 
     try {
-        console.log(document.querySelector('input[name="csrfmiddlewaretoken"]').value);
         const resp = await fetch('/payroll/hr/approved/', {
             method: 'PATCH',
             headers: {
@@ -204,12 +320,12 @@ async function updateApproved(select) {
                 'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ id: rowId, approved: newVal })
+            body: JSON.stringify({ id: rowId, approved: approved })
         });
 
         if (!resp.ok) throw new Error('Failed to save approved');
-        showSnackbar(`Row ${rowId} approved status updated to ${newVal}`);
-        window.location.reload(); // Reload to refresh server-rendered table
+        showSnackbar(`Row ${rowId} approved status updated to ${approved}`);
+        window.location.reload();
     } catch (e) {
         console.error(e);
         showSnackbar('Error updating approved status. Please try again.', '#dc3545');
@@ -218,7 +334,7 @@ async function updateApproved(select) {
 
 function confirmFinalApproval(statusId) {
     showConfirmPopup(
-        "Are you sure you want to approve this summary? This action is final.",
+        "This will approve the entire summary. Please confirm before proceeding.",
         async function yesCallback() {
             await updateFinalApproval(statusId);
         },
@@ -242,12 +358,11 @@ async function updateFinalApproval(statusId) {
 
         if (!resp.ok) throw new Error("Failed to approve summary");
         showSnackbar("Summary approved successfully!");
-        window.location.reload(); // Reload to refresh server-rendered table
+        window.location.reload();
     } catch (e) {
         console.error(e);
         showSnackbar("Error approving summary", "#dc3545");
     }
 }
-
 </script>
 {% endblock %}

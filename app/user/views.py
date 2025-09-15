@@ -1222,8 +1222,11 @@ class EmployeesView(View):
         return view
 
     def get(self, request):
+        # department = DepartmentTeams.objects.filter(
+        #     company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+        # ).first()
         department = DepartmentTeams.objects.filter(
-            company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
+            company=Company.objects.first()
         ).first()
         if not department:
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
