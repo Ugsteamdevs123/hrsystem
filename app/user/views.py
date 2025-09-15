@@ -1498,6 +1498,30 @@ class CreateEmployeeView(View):
             return JsonResponse({'error': 'Invalid data'}, status=400)
 
 
+class EmployeeDetailView(View):
+    template_name = 'employee_detail.html'
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = permission_required('user.view_employee', raise_exception=True)(view)
+        view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
+        return view
+
+    def get(self, request, employee_id):
+        employee = get_object_or_404(Employee, emp_id=employee_id)
+        company = Company.objects.all().first()
+        current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
+
+        return render(request, self.template_name, {
+            'employee': employee,
+            'company': company,
+            'current_package': current_package,
+        })
+
+
 class UpdateEmployeeView(View):
     template_name = 'update_employee.html'
 
@@ -1809,6 +1833,7 @@ class FormulaListView(PermissionRequiredMixin, View):
 
     def get(self, request):
         formulas = Formula.objects.all().order_by('-id')  # latest first
+        print([formula.__dict__ for formula in formulas])
         return render(request, self.template_name, {
             'formulas': formulas,
             'company_data': get_companies_and_department_teams(request.user)

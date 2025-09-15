@@ -11,7 +11,7 @@
 
         <!-- Page Heading -->
         <div class="section-head">
-            <h2>EMployees</h2>
+            <h2>Employees</h2>
         </div>
 
         <!-- Combined Table -->
@@ -22,13 +22,12 @@
                         <th rowspan="2">SR.No</th>
                         <th rowspan="2">Full Name</th>
                         <!-- Employee Details -->
-                        <th colspan="11" class="group-header">Employee Details</th>
-                        <th rowspan="2">Actions</th>
+                        <th colspan="9" class="group-header">Employee Details</th>
+                        <th rowspan="3">Actions</th>
                     </tr>
                     <tr>
                         <!-- Employee Details Subheaders -->
                         <th>Employee ID</th>
-                        <th>Eligible For Increment</th>
                         <th>Department Group</th>
                         <th>Department</th>
                         <th>Section</th>
@@ -36,7 +35,6 @@
                         <th>Location</th>
                         <th>Date of Joining</th>
                         <th>Resign</th>
-                        <th>Date of Resignation</th>
                         <th>Remarks</th>
                     </tr>
                 </thead>
@@ -53,10 +51,11 @@
                             <td>{{ employee.location.location|default:"-" }}</td>
                             <td>{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
                             <td>{{ employee.resign|yesno:"Yes,No,-" }}</td>
-                            <td>{{ employee.date_of_resignation|date:"Y-m-d"|default:"-" }}</td>
-                            <td>{{ employee.eligible_for_increment|yesno:"Yes,No,-" }}</td>
                             <!-- Actions -->
                             <td>
+                                {% if perms.user.view_employee %}
+                                    <a href="{% url 'employee_detail' employee_id=employee.emp_id %}" class="action-btn view-btn">View</a>
+                                {% endif %}
                                 {% if perms.user.change_employee %}
                                     <a href="{% url 'update_employee' employee_id=employee.emp_id %}" class="action-btn edit-btn">Edit</a>
                                 {% endif %}
@@ -80,7 +79,6 @@
             <td>{{ employee.fullname|default:"-" }}</td>
             <!-- Employee Details -->
             <td>{{ employee.emp_id|default:"-" }}</td>
-            <td>{{ employee.eligible_for_increment|default:"-" }}</td>
             <td>{{ employee.department_team.name|default:"-" }}</td>
             <td>{{ employee.department_group.name|default:"-" }}</td>
             <td>{{ employee.section.name|default:"-" }}</td>
@@ -88,10 +86,12 @@
             <td>{{ employee.location.location|default:"-" }}</td>
             <td>{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
             <td>{{ employee.resign|yesno:"Yes,No,-" }}</td>
-            <td>{{ employee.date_of_resignation|date:"Y-m-d"|default:"-" }}</td>
             <td>{{ employee.remarks|default:"-" }}</td>
             <!-- Actions -->
             <td>
+                {% if perms.user.view_employee %}
+                    <a href="{% url 'employee_detail' employee_id=employee.emp_id %}" class="action-btn view-btn">View</a>
+                {% endif %}
                 {% if perms.user.change_employee %}
                     <a href="{% url 'update_employee' employee_id=employee.emp_id %}" class="action-btn edit-btn">Edit</a>
                 {% endif %}
@@ -211,6 +211,12 @@
             cursor: pointer;
             display: inline-block;
             margin-right: 5px;
+        }
+        .view-btn {
+            background-color: #ffc107;
+        }
+        .view-btn:hover {
+            background-color: #e0a800;
         }
         .edit-btn {
             background-color: #007bff;
