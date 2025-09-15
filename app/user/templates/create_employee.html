@@ -80,23 +80,6 @@
                 </div>
 
                 <div class="form-field">
-                    <label for="eligible_for_increment">Eligible for Increment <span class="req">*</span></label>
-                    <div class="inline-group">
-                        <label class="inline-check">
-                            <input type="radio" name="eligible_for_increment" value="true"> Yes
-                        </label>
-                        <label class="inline-check">
-                            <input type="radio" name="eligible_for_increment" value="false" checked> No
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-field">
-                    <label for="remarks">Remarks</label>
-                    <textarea id="remarks" name="remarks"></textarea>
-                </div>
-
-                <div class="form-field">
                     <label for="image">Image</label>
                     <input type="file" id="image" name="image" accept="image/*">
                 </div>
@@ -307,7 +290,7 @@
 
         function populateDepartmentTeams(data) {
             const select = document.getElementById('department_team_id');
-            select.innerHTML = '<option value="">Select Department Team</option>';
+            select.innerHTML = '<option value="">Select Department Group</option>';
             data.forEach(team => {
                 const opt = document.createElement('option');
                 opt.value = team.id;
@@ -318,7 +301,7 @@
 
         function populateDepartmentGroups(data) {
             const select = document.getElementById('department_group_id');
-            select.innerHTML = '<option value="">Select Department Group</option>';
+            select.innerHTML = '<option value="">Select Department</option>';
             window.departmentGroups = [];
             data.forEach(dept => {
                 const opt = document.createElement('option');
@@ -462,7 +445,7 @@
             if (!q('#date_of_joining').value) errors.push('Date of Joining is required');
             if (addNewDesignationCheckbox.checked && !newDesignationInput.value.trim()) errors.push('New Designation Title is required');
             if (!addNewDesignationCheckbox.checked && !designationSelect.value) errors.push('Designation is required');
-            if (!q('input[name="eligible_for_increment"]:checked')) errors.push('Eligible for Increment is required');
+            // if (!q('input[name="eligible_for_increment"]:checked')) errors.push('Eligible for Increment is required');
             return errors;
         }
 

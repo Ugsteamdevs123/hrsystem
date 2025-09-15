@@ -14,6 +14,13 @@
             <h2>Employees</h2>
         </div>
 
+        <!-- Buttons -->
+        <div class="button-group">
+            {% if perms.user.add_employee %}
+                <a href="{% url 'create_employee' %}" class="form-btn btn-submit">Add New Employee</a>
+            {% endif %}
+        </div>
+
         <!-- Combined Table -->
         <div class="table-wrap">
             <table border="1" cellpadding="8" cellspacing="0">
@@ -35,88 +42,66 @@
                         <th>Location</th>
                         <th>Date of Joining</th>
                         <th>Resign</th>
-                        <th>Remarks</th>
+                        <th>Employee Status</th>
                     </tr>
                 </thead>
 
-                {% comment %} <tbody>
-                    {% for employee in employees %}
-                        <tr data-employee-id="{{ employee.emp_id }}">
-                            <td>{{ forloop.counter }}</td>
-                            <td>{{ employee.fullname|default:"-" }}</td>
-                            <!-- Employee Details -->
-                            <td>{{ employee.department_group.name|default:"-" }}</td>
-                            <td>{{ employee.section.name|default:"-" }}</td>
-                            <td>{{ employee.designation.title|default:"-" }}</td>
-                            <td>{{ employee.location.location|default:"-" }}</td>
-                            <td>{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
-                            <td>{{ employee.resign|yesno:"Yes,No,-" }}</td>
-                            <!-- Actions -->
-                            <td>
-                                {% if perms.user.view_employee %}
-                                    <a href="{% url 'employee_detail' employee_id=employee.emp_id %}" class="action-btn view-btn">View</a>
-                                {% endif %}
-                                {% if perms.user.change_employee %}
-                                    <a href="{% url 'update_employee' employee_id=employee.emp_id %}" class="action-btn edit-btn">Edit</a>
-                                {% endif %}
-                                {% if perms.user.delete_employee %}
-                                    <button class="action-btn delete-btn delete-employee-btn" data-employee-id="{{ employee.emp_id }}">Delete</button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="27" style="text-align: center;">No employees found.</td>
-                        </tr>
-                    {% endfor %}
-                </tbody> {% endcomment %}
-
-
                 <tbody>
-    {% for employee in employees %}
-        <tr data-employee-id="{{ employee.emp_id }}">
-            <td>{{ forloop.counter }}</td>
-            <td>{{ employee.fullname|default:"-" }}</td>
-            <!-- Employee Details -->
-            <td>{{ employee.emp_id|default:"-" }}</td>
-            <td>{{ employee.department_team.name|default:"-" }}</td>
-            <td>{{ employee.department_group.name|default:"-" }}</td>
-            <td>{{ employee.section.name|default:"-" }}</td>
-            <td>{{ employee.designation.title|default:"-" }}</td>
-            <td>{{ employee.location.location|default:"-" }}</td>
-            <td>{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
-            <td>{{ employee.resign|yesno:"Yes,No,-" }}</td>
-            <td>{{ employee.remarks|default:"-" }}</td>
-            <!-- Actions -->
-            <td>
-                {% if perms.user.view_employee %}
-                    <a href="{% url 'employee_detail' employee_id=employee.emp_id %}" class="action-btn view-btn">View</a>
-                {% endif %}
-                {% if perms.user.change_employee %}
-                    <a href="{% url 'update_employee' employee_id=employee.emp_id %}" class="action-btn edit-btn">Edit</a>
-                {% endif %}
-                {% if perms.user.delete_employee %}
-                    <button class="action-btn delete-btn delete-employee-btn" data-employee-id="{{ employee.emp_id }}">Delete</button>
-                {% endif %}
-            </td>
-        </tr>
-    {% empty %}
-        <tr>
-            <td colspan="42" style="text-align: center;">No employees found.</td>
-        </tr>
-    {% endfor %}
-</tbody>
-
+                {% for employee in employees %}
+                    <tr data-employee-id="{{ employee.emp_id }}">
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ employee.fullname|default:"-" }}</td>
+                        <!-- Employee Details -->
+                        <td>{{ employee.emp_id|default:"-" }}</td>
+                        <td>{{ employee.department_team.name|default:"-" }}</td>
+                        <td>{{ employee.department_group.name|default:"-" }}</td>
+                        <td>{{ employee.section.name|default:"-" }}</td>
+                        <td>{{ employee.designation.title|default:"-" }}</td>
+                        <td>{{ employee.location.location|default:"-" }}</td>
+                        <td>{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
+                        <td>{{ employee.resign|yesno:"Yes,No,-" }}</td>
+                        <td>{{ employee.employee_status|default:"-" }}</td>
+                        <!-- Actions -->
+                        <td>
+                        {% if perms.user.view_employee %}
+                            <a href="{% url 'employee_detail' employee_id=employee.emp_id %}" class="action-btn view-btn" title="View">
+                                <!-- Eye Icon -->
+                                <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 4.5C7 4.5 2.73 7.97 1 12c1.73 4.03 6 7.5 11 7.5s9.27-3.47 11-7.5C21.27 7.97 17 4.5 12 4.5zm0 12.5c-2.76 0-5-2.24-5-5
+                                        s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8a3 3 0 100 6 3 3 0 000-6z" fill="currentColor"/>
+                                </svg>
+                            </a>
+                        {% endif %}
+                        {% if perms.user.change_employee %}
+                            <a href="{% url 'update_employee' employee_id=employee.emp_id %}" class="action-btn edit-btn" title="Edit">
+                                <!-- Pencil Icon -->
+                                <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04c.39-.39.39-1.02 
+                                            0-1.41l-2.34-2.34a1 1 0 00-1.41 
+                                            0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+                                </svg>
+                            </a>
+                        {% endif %}
+                        {% if perms.user.delete_employee %}
+                            <button class="action-btn delete-btn delete-employee-btn" data-employee-id="{{ employee.emp_id }}" title="Delete">
+                                <!-- Improved Trash Can Icon -->
+                                <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 7h12l-1 12.5a1 1 0 01-1 .5H8a1 1 0 01-1-.5L6 7zm3 2v8h2V9H9zm4 0v8h2V9h-2z" fill="currentColor"/>
+                                    <path d="M9 4h6l.75 1.5H21V7H3V5.5h5.25L9 4z" fill="currentColor"/>
+                                </svg>
+                            </button>
+                        {% endif %}
+                    </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="42" style="text-align: center;">No employees found.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
             </table>
         </div>
 
-        <!-- Buttons -->
-        <div class="button-group">
-            {% if perms.user.add_employee %}
-                <a href="{% url 'create_employee' %}" class="form-btn btn-submit">Add New Employee</a>
-            {% endif %}
-            <button type="button" class="form-btn btn-submit" id="saveBtn">Save</button>
-        </div>
     </div>
 
     <style>
@@ -140,6 +125,7 @@
         }
         .button-group {
             margin-top: 20px;
+            margin-bottom: 20px;
             display: flex;
             gap: 10px;
         }
@@ -203,15 +189,29 @@
             background-color: #218838;
         }
         .action-btn {
-            padding: 8px 15px;
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 16px;
             color: #fff;
             text-decoration: none;
             cursor: pointer;
-            display: inline-block;
             margin-right: 5px;
+            border: none;
+            line-height: 1;
         }
+
+        .action-btn svg {
+            display: block;
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
         .view-btn {
             background-color: #ffc107;
         }

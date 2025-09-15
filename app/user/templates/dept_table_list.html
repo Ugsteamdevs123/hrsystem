@@ -23,132 +23,123 @@
 
         <!-- Combined Table -->
         <div class="table-wrap">
-            <table border="1" cellpadding="8" cellspacing="0">
+            <table border="1" cellpadding="8" cellspacing="0" class="custom-table">
                 <thead>
                     <tr>
-                        <th rowspan="2">SR.No</th>
-                        <th rowspan="2">Full Name</th>
+                        <th rowspan="2" class="sticky-col sticky-col-1 sticky-header">SR.No</th>
+                        <th rowspan="2" class="sticky-col sticky-col-2 sticky-header">Employee ID</th>
+                        <th rowspan="2" class="sticky-col sticky-col-3 sticky-header">Full Name</th>
+                        <th rowspan="2" class="sticky-col sticky-col-4 sticky-header">Designation</th>
                         <!-- Employee Details -->
-                        <th colspan="11" class="group-header">Employee Details</th>
+                        <th colspan="9" class="group-header non-sticky-header">Employee Details</th>
                         <!-- Current Package -->
-                        <th colspan="8" class="group-header">Current Package</th>
+                        <th colspan="6" class="group-header non-sticky-header">Current Package</th>
                         <!-- Proposed Package -->
-                        <th colspan="10" class="group-header">Proposed Package</th>
+                        <th colspan="9" class="group-header non-sticky-header">Proposed Package</th>
                         <!-- Financial Impact -->
-                        <th colspan="9" class="group-header">Financial Impact</th>
+                        <th colspan="9" class="group-header non-sticky-header">Financial Impact</th>
                     </tr>
                     <tr>
                         <!-- Employee Details Subheaders -->
-                        <th>Employee ID</th>
-                        <th>Eligible For Increment</th>
-                        <th>Company</th>
-                        <th>Department Team</th>
-                        <th>Department Group</th>
-                        <th>Section</th>
-                        <th>Designation</th>
-                        <th>Location</th>
-                        <th>Date of Joining</th>
-                        <th>Resign</th>
-                        <th>Date of Resignation</th>
-                        <th>Remarks</th>
+                        <th class="non-sticky-header">Eligible For Increment</th>
+                        <th class="non-sticky-header">Department Group</th>
+                        <th class="non-sticky-header">Department</th>
+                        <th class="non-sticky-header">Section</th>
+                        <th class="non-sticky-header">Location</th>
+                        <th class="non-sticky-header">Date of Joining</th>
+                        <th class="non-sticky-header">Resign</th>
+                        <th class="non-sticky-header">Date of Resignation</th>
+                        <th class="non-sticky-header">Remarks</th>
                         <!-- Current Package Subheaders -->
-                        <th>Gross Salary</th>
-                        <th>Company Pickup</th>
-                        <th>Vehicle</th>
-                        <th>Fuel Allowance</th>
-                        <th>Fuel Litre</th>
-                        <th>Mobile Provided</th>
-                        <th>Total</th>
+                        <th class="non-sticky-header">Gross Salary</th>
+                        <th class="non-sticky-header">Company Pickup</th>
+                        <th class="non-sticky-header">Vehicle</th>
+                        <th class="non-sticky-header">Fuel Allowance</th>
+                        <th class="non-sticky-header">Fuel Litre</th>
+                        <th class="non-sticky-header">Mobile Provided</th>
+                        {# <th class="non-sticky-header">Total</th> #}
                         <!-- Proposed Package Subheaders -->
-                        <th>Increment Percentage</th>
-                        <th>Increased Amount</th>
-                        <th>Revised Salary</th>
-                        <th>Increased Fuel Allowance</th>
-                        <th>Increased Fuel Litre</th>
-                        <th>Revised Fuel Allowance</th>
-                        <th>Mobile Provided</th>
-                        <th>Company Pickup</th>
-                        <th>Vehicle</th>
-                        <th>Total</th>
+                        <th class="non-sticky-header">Increment Percentage</th>
+                        <th class="non-sticky-header">Increased Amount</th>
+                        <th class="non-sticky-header">Revised Salary</th>
+                        <th class="non-sticky-header">Increased Fuel Allowance</th>
+                        <th class="non-sticky-header">Increased Fuel Litre</th>
+                        <th class="non-sticky-header">Revised Fuel Allowance</th>
+                        <th class="non-sticky-header">Mobile Provided</th>
+                        <th class="non-sticky-header">Company Pickup</th>
+                        <th class="non-sticky-header">Vehicle</th>
+                        {# <th class="non-sticky-header">Total</th>  #}
                         <!-- Financial Impact Subheaders -->
-                        <th>Employee Status</th>
-                        <th>Serving Years</th>
-                        <th>Salary</th>
-                        <th>Gratuity</th>
-                        <th>Bonus</th>
-                        <th>Leave Encashment</th>
-                        <th>Fuel</th>
-                        <th>Vehicle</th>
-                        <th>Total</th>
+                        <th class="non-sticky-header">Employee Status</th>
+                        <th class="non-sticky-header">Serving Years</th>
+                        <th class="non-sticky-header">Salary</th>
+                        <th class="non-sticky-header">Gratuity</th>
+                        <th class="non-sticky-header">Bonus</th>
+                        <th class="non-sticky-header">Leave Encashment</th>
+                        <th class="non-sticky-header">Fuel</th>
+                        <th class="non-sticky-header">Vehicle</th>
+                        <th class="non-sticky-header">Total</th>
                     </tr>
                 </thead>
-
-                
-
                 <tbody>
-    {% for employee in employees %}
-        <tr data-employee-id="{{ employee.emp_id }}" class="{% if employee.is_draft %}draft-row{% endif %}">
-            <td>{{ forloop.counter }}</td>
-            <td>{{ employee.fullname|default:"-" }}</td>
-            <!-- Employee Details -->
-            <td>{{ employee.emp_id|default:"-" }}</td>
-            <td class="editable" data-tab="employee" data-field="eligible_for_increment" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ employee.eligible_for_increment|default:"-" }}</td>
-            <td>{{ employee.company|default:"-" }}</td>
-            <td>{{ employee.department_team.name|default:"-" }}</td>
-            <td>{{ employee.department_group.name|default:"-" }}</td>
-            <td>{{ employee.section.name|default:"-" }}</td>
-            <td class="editable" data-tab="employee" data-field="designation_id" data-type="select" data-endpoint="/payroll/designations/?company_id={{ department.company.id }}">{{ employee.designation.title|default:"-" }}</td>
-            <td>{{ employee.location.location|default:"-" }}</td>
-            <td>{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
-            <td>{{ employee.resign|yesno:"Yes,No,-" }}</td>
-            <td>{{ employee.date_of_resignation|date:"Y-m-d"|default:"-" }}</td>
-            <td>{{ employee.remarks|default:"-" }}</td>
-            <!-- Current Package -->
-            {% with current_package=employee.currentpackagedetails %}
-                <td>{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
-                <td>{{ current_package.company_pickup|yesno:"Yes,No,-" }}</td>
-                <td>{{ current_package.vehicle|default:"-" }}</td>
-                <td>{{ current_package.fuel_allowance|floatformat:2|default:"-" }}</td>
-                <td>{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
-                <td>{{ current_package.mobile_provided|yesno:"Yes,No,-" }}</td>
-                <td>{{ current_package.total|floatformat:2|default:"-" }}</td>
-            {% endwith %}
-            <!-- Proposed Package -->
-            {% with proposed_package=employee.proposedpackagedetails %}
-                <td class="editable" data-tab="proposed_package" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
-                <td>{{ proposed_package.increased_amount|floatformat:2|default:"-" }}</td>
-                <td>{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
-                <!-- <td class="editable" data-tab="proposed_package" data-field="increased_fuel_amount" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_amount|floatformat:2|default:"-" }}</td> -->
-                <td class="editable" data-tab="proposed_package" data-field="increased_fuel_allowance" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_allowance|floatformat:2|default:"-" }}</td>
-                <td class="editable" data-tab="proposed_package" data-field="increased_fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_litre|floatformat:2|default:"-" }}</td>
-                <td>{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
-                <!-- <td class="editable" data-tab="proposed_package" data-field="fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.fuel_litre|floatformat:2|default:"-" }}</td> -->
-                <!-- <td class="editable" data-tab="proposed_package" data-field="vehicle_allowance" data-type="number" data-step="0.01">{{ proposed_package.vehicle_allowance|floatformat:2|default:"-" }}</td> -->
-                <td class="editable" data-tab="proposed_package" data-field="mobile_provided" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.mobile_provided|yesno:"Yes,No,-" }}</td>
-                <td class="editable" data-tab="proposed_package" data-field="company_pickup" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.company_pickup|yesno:"Yes,No,-" }}</td>
-                <td>{{ proposed_package.vehicle|default:"-" }}</td>
-                <td>{{ proposed_package.total|floatformat:2|default:"-" }}</td>
-            {% endwith %}
-            <!-- Financial Impact -->
-            {% with financial_impact=employee.financialimpactpermonth %}
-                <td>{{ financial_impact.emp_status.status|default:"-" }}</td>
-                <td>{{ financial_impact.serving_years|floatformat:1|default:"-" }}</td>
-                <td>{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
-                <td>{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
-                <td>{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
-                <td>{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
-                <td>{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
-                <td>{{ financial_impact.vehicle|default:"-" }}</td>
-                <td>{{ financial_impact.total|floatformat:2|default:"-" }}</td>
-            {% endwith %}
-        </tr>
-    {% empty %}
-        <tr>
-            <td colspan="42" style="text-align: center;">No employees found.</td>
-        </tr>
-    {% endfor %}
-</tbody>
-
+                    {% for employee in employees %}
+                        <tr data-employee-id="{{ employee.emp_id }}" class="{% if employee.is_draft %}draft-row{% endif %}">
+                            <td class="sticky-col sticky-col-1">{{ forloop.counter }}</td>
+                            <td class="sticky-col sticky-col-2">{{ employee.emp_id|default:"-" }}</td>
+                            <td class="sticky-col sticky-col-3">{{ employee.fullname|default:"-" }}</td>
+                            <td class="sticky-col sticky-col-4 editable" data-tab="employee" data-field="designation_id" data-type="select" data-endpoint="/payroll/designations/?company_id={{ department.company.id }}">{{ employee.designation.title|default:"-" }}</td>
+                            <!-- Employee Details -->
+                            <td class="non-sticky editable" data-tab="employee" data-field="eligible_for_increment" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ employee.eligible_for_increment|default:"-" }}</td>
+                            <td class="non-sticky">{{ employee.department_team.name|default:"-" }}</td>
+                            <td class="non-sticky">{{ employee.department_group.name|default:"-" }}</td>
+                            <td class="non-sticky">{{ employee.section.name|default:"-" }}</td>
+                            <td class="non-sticky">{{ employee.location.location|default:"-" }}</td>
+                            <td class="non-sticky">{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
+                            <td class="non-sticky">{{ employee.resign|yesno:"Yes,No,-" }}</td>
+                            <td class="non-sticky">{{ employee.date_of_resignation|date:"Y-m-d"|default:"-" }}</td>
+                            <td class="non-sticky">{{ employee.remarks|default:"-" }}</td>
+                            <!-- Current Package -->
+                            {% with current_package=employee.currentpackagedetails %}
+                                <td class="non-sticky">{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ current_package.company_pickup|yesno:"Yes,No,-" }}</td>
+                                <td class="non-sticky">{{ current_package.vehicle|default:"-" }}</td>
+                                <td class="non-sticky">{{ current_package.fuel_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ current_package.mobile_provided|yesno:"Yes,No,-" }}</td>
+                                {% comment %} <td class="non-sticky">{{ current_package.total|floatformat:2|default:"-" }}</td> {% endcomment %}
+                            {% endwith %}
+                            <!-- Proposed Package -->
+                            {% with proposed_package=employee.proposedpackagedetails %}
+                                <td class="non-sticky editable" data-tab="proposed_package" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ proposed_package.increased_amount|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky editable" data-tab="proposed_package" data-field="increased_fuel_allowance" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky editable" data-tab="proposed_package" data-field="increased_fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_litre|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky editable" data-tab="proposed_package" data-field="mobile_provided" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.mobile_provided|yesno:"Yes,No,-" }}</td>
+                                <td class="non-sticky editable" data-tab="proposed_package" data-field="company_pickup" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.company_pickup|yesno:"Yes,No,-" }}</td>
+                                <td class="non-sticky editable" data-tab="proposed_package" data-field="vehicle_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ proposed_package.vehicle|default:"-" }}</td>
+                                {% comment %} <td class="non-sticky">{{ proposed_package.total|floatformat:2|default:"-" }}</td> {% endcomment %}
+                            {% endwith %}
+                            <!-- Financial Impact -->
+                            {% with financial_impact=employee.financialimpactpermonth %}
+                                <td class="non-sticky">{{ financial_impact.emp_status.status|default:"-" }}</td>
+                                <td class="non-sticky">{{ financial_impact.serving_years|floatformat:1|default:"-" }}</td>
+                                <td class="non-sticky">{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky">{{ financial_impact.vehicle|default:"-" }}</td>
+                                <td class="non-sticky">{{ financial_impact.total|floatformat:2|default:"-" }}</td>
+                            {% endwith %}
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="42" style="text-align: center;">No employees found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </div>
     </div>
@@ -180,30 +171,59 @@
         .table-wrap {
             width: 100%;
             overflow-x: auto;
-            max-height: 500px;
             overflow-y: auto;
+            max-height: 500px;
             border: 1px solid #dee2e6;
             border-radius: 8px;
+            -webkit-clip-path: inset(0);
+            clip-path: inset(0);
         }
-        table {
+        .custom-table {
             border-collapse: collapse;
             width: 100%;
+            min-width: 2000px; /* Ensure table is wide enough to trigger scrollbar */
+            table-layout: auto;
         }
         th, td {
             text-align: left;
             padding: 10px;
             border: 1px solid #dee2e6;
             white-space: nowrap;
+            background-color: inherit;
         }
         th {
             background-color: #f2f2f2;
             font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
         th[rowspan="2"] {
             vertical-align: middle;
+        }
+        /* Sticky headers and columns */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background-color: #f2f2f2 !important;
+        }
+        .sticky-col {
+            position: sticky;
+            z-index: 30;
+            background-color: #ffffff !important;
+        }
+        .sticky-col.sticky-header {
+            z-index: 50;
+            background-color: #f2f2f2 !important;
+        }
+        /* Non-sticky headers and cells */
+        .non-sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background-color: #f2f2f2 !important;
+        }
+        .non-sticky {
+            z-index: 5;
+            background-color: #ffffff !important;
         }
         th.group-header {
             text-align: center;
@@ -299,16 +319,30 @@
         .confirm-popup .form-btn {
             min-width: 100px;
         }
+        /* Specific column widths for sticky columns */
+        .sticky-col-1 { width: 60px; }
+        .sticky-col-2 { width: 100px; }
+        .sticky-col-3 { width: 150px; }
+        .sticky-col-4 { width: 120px; }
+        /* Non-sticky columns */
+        .non-sticky {
+            min-width: 100px; /* Ensure sufficient width for non-sticky columns */
+        }
         @media screen and (max-width: 768px) {
             .container {
                 padding: 10px;
             }
-            table, th, td {
+            th, td {
                 font-size: 14px;
+                padding: 6px;
             }
             .form-btn, .action-btn {
                 font-size: 12px;
                 padding: 8px 12px;
+            }
+            .sticky-col-3, .sticky-col-4 {
+                white-space: normal; /* Allow wrapping for readability */
+                width: 100px;
             }
         }
         @media screen and (max-width: 500px) {
@@ -324,6 +358,7 @@
     </style>
 
     <script>
+    // Existing JavaScript functions (unchanged)
     const editedCells = {};
     const draftData = {{ draft_data|safe }};
 
@@ -418,9 +453,7 @@
                         items.forEach(item => {
                             const opt = document.createElement('option');
                             opt.value = item.id;
-                            opt.textContent = field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle'
-                                ? `${item.brand_name} ${item.model_name} - (${item.engine_cc})`
-                                : (item.title || item.location || item.status || item.name);
+                            opt.textContent = field === 'vehicle_id' ? item.label : (item.title || item.location || item.status || item.name);
                             input.appendChild(opt);
                         });
                     }
@@ -483,11 +516,10 @@
             row.classList.toggle('edited-row', hasEdits);
             console.log('Updated editedCells:', JSON.stringify(editedCells));
 
-            // trigger recalculation if increment_percentage (or other triggers)
-            if (field === "increment_percentage" || field === "increased_fuel_allowance" || field === "increased_fuel_litre") {
+            // trigger recalculation if increment_percentage or fuel-related fields change
+            if (field === "increment_percentage" || field === "increased_fuel_allowance" || field === "increased_fuel_litre" || field === "vehicle_id") {
                 recalcProposedPackage(cell.closest("tr"));
             }
-            
         });
 
         input.addEventListener('keypress', (e) => {
@@ -524,15 +556,12 @@
             if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
                 editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
             }
-
-            // ... existing ID conversions ...
             if (editedCells[empId].current_package && editedCells[empId].current_package.company_pickup) {
                 editedCells[empId].current_package.company_pickup = editedCells[empId].current_package.company_pickup === 'true';
             }
             if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.company_pickup) {
                 editedCells[empId].proposed_package.company_pickup = editedCells[empId].proposed_package.company_pickup === 'true';
             }
-            
         });
         try {
             const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
@@ -634,32 +663,103 @@
         setTimeout(() => spinner.remove(), 1000);
     }
 
-    {% comment %} For RunTime Edit {% endcomment %}
-
     function recalcProposedPackage(row) {
-        const grossSalary = parseFloat(row.querySelector('td:nth-child(15)')?.textContent) || 0; // Current Gross Salary col
-        const totalCurrent = parseFloat(row.querySelector('td:nth-child(21)')?.textContent) || 0; // Current Package Total col
-
+        const grossSalary = parseFloat(row.querySelector('td:nth-child(14)')?.textContent) || 0;
+        // console.log("grossSalary: ", grossSalary);
+        // const totalCurrent = parseFloat(row.querySelector('td:nth-child(21)')?.textContent) || 0;
+        // console.log("totalCurrent: ", totalCurrent);
         const incrementCell = row.querySelector('[data-tab="proposed_package"][data-field="increment_percentage"]');
-        const increasedAmountCell = row.querySelector('td:nth-child(23)'); // Increased Amount col
-        const revisedSalaryCell = row.querySelector('td:nth-child(24)');   // Revised Salary col
-        const totalProposedCell = row.querySelector('td:nth-child(32)');   // Proposed Package Total col
+        // console.log("incrementCell: ", incrementCell.textContent);
+        const increasedAmountCell = row.querySelector('td:nth-child(21)');
+        // console.log("increasedAmountCell: ", increasedAmountCell.textContent);
+        const revisedSalaryCell = row.querySelector('td:nth-child(22)');
+        // console.log("revisedSalaryCell: ", revisedSalaryCell.textContent);
+        const CurrentFuelAllowance = row.querySelector('td:nth-child(17)');
+        // console.log("CurrentFuelAllowance: ", CurrentFuelAllowance.textContent);
+        const IncreasedFuelAllowance = row.querySelector('td:nth-child(23)');
+        // console.log("IncreasedFuelAllowance: ", IncreasedFuelAllowance.textContent);
+        const IncreasedFuelLitre = row.querySelector('td:nth-child(24)');
+        // console.log("IncreasedFuelLitre: ", IncreasedFuelLitre.textContent);
+        const RevisedFuelAllowance = row.querySelector('td:nth-child(25)');
+        // console.log("RevisedFuelAllowance: ", RevisedFuelAllowance.textContent);
+        const FinancialSalary = row.querySelector('td:nth-child(31)');
+        // console.log("FinancialSalary: ", FinancialSalary.textContent);
+        const FinancialGratuity = row.querySelector('td:nth-child(32)');
+        // console.log("FinancialGratuity: ", FinancialGratuity.textContent);
+        const FinancialBonus = row.querySelector('td:nth-child(33)');
+        // console.log("FinancialBonus: ", FinancialBonus.textContent);
+        const LeaveEncashment = row.querySelector('td:nth-child(34)');
+        // console.log("LeaveEncashment: ", LeaveEncashment.textContent);
+        const FinancialFuel = row.querySelector('td:nth-child(35)');
+        // console.log("FinancialFuel: ", FinancialFuel.textContent);
+        const FinancialTotal = row.querySelector('td:nth-child(37)');
+        // console.log("FinancialTotal: ", FinancialTotal.textContent);
+        // const totalProposedCell = row.querySelector('td:nth-child(32)');
+        // console.log("totalProposedCell: ", totalProposedCell);
 
-        if (!incrementCell || !increasedAmountCell || !revisedSalaryCell || !totalProposedCell) return;
+        if (!incrementCell || !increasedAmountCell || !revisedSalaryCell) return;
 
         const incPercent = parseFloat(incrementCell.textContent) || 0;
+        // console.log("incPercent: ", incPercent);
         const increasedAmount = (grossSalary * incPercent) / 100;
+        // console.log("increasedAmount: ", increasedAmount);
         const revisedSalary = grossSalary + increasedAmount;
-        const totalProposed = totalCurrent + increasedAmount; // simplified — adjust if more fields affect total
+        // console.log("revisedSalary: ", revisedSalary);
+        // const totalProposed = totalCurrent + increasedAmount;
+        // console.log("totalProposed: ", totalProposed);
 
         increasedAmountCell.textContent = increasedAmount.toFixed(2);
         revisedSalaryCell.textContent = revisedSalary.toFixed(2);
-        totalProposedCell.textContent = totalProposed.toFixed(2);
+
+        if (IncreasedFuelLitre.textContent > 0) {
+            IncreasedFuelAllowance.textContent = (154.7 * parseFloat(IncreasedFuelLitre.textContent)).toFixed(2);
+            // console.log("updated IncreasedFuelAllowance.textContent: ", IncreasedFuelAllowance.textContent);
+        }
+        
+        RevisedFuelAllowance.textContent = (parseFloat(IncreasedFuelAllowance.textContent) + parseFloat(CurrentFuelAllowance.textContent)).toFixed(2);
+        FinancialSalary.textContent = parseFloat(increasedAmountCell.textContent).toFixed(2);
+        FinancialGratuity.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
+        FinancialBonus.textContent = (1.7*parseFloat(FinancialSalary.textContent)/12).toFixed(2);
+        LeaveEncashment.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
+        FinancialFuel.textContent = parseFloat(IncreasedFuelAllowance.textContent).toFixed(2);
+        FinancialTotal.textContent = (parseFloat(FinancialFuel.textContent)+parseFloat(LeaveEncashment.textContent)+parseFloat(FinancialBonus.textContent)+parseFloat(FinancialSalary.textContent)+parseFloat(FinancialGratuity.textContent)).toFixed(2);
+        // totalProposedCell.textContent = totalProposed.toFixed(2);
+        // console.log("updated FinancialTotal.textContent: ", FinancialTotal.textContent);
+
+        // console.log("ehehehe");
     }
 
-
     document.addEventListener('DOMContentLoaded', () => {
-        // Log CSRF token on page load for debugging
+        // Calculate and set sticky column offsets
+        const table = document.querySelector('.custom-table');
+        const headerRows = table.querySelectorAll('thead tr');
+        const bodyRows = table.querySelectorAll('tbody tr');
+
+        const setStickyOffsets = () => {
+            const stickyColumns = [1, 2, 3, 4]; // Sticky column indices
+            let cumulativeLeft = 0;
+
+            stickyColumns.forEach((colIndex) => {
+                const headerCell = headerRows[0].querySelector(`th.sticky-col-${colIndex}`);
+                if (headerCell) {
+                    const width = headerCell.offsetWidth;
+                    const className = `.sticky-col-${colIndex}`;
+                    document.querySelectorAll(className).forEach(cell => {
+                        cell.style.left = `${cumulativeLeft}px`;
+                    });
+                    cumulativeLeft += width;
+                }
+            });
+
+            // Log table width for debugging
+            console.log('Table scrollWidth:', table.scrollWidth);
+        };
+
+        // Run initially and on window resize
+        setStickyOffsets();
+        window.addEventListener('resize', setStickyOffsets);
+
+        // Existing event listeners
         const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
         if (csrfInput) {
             console.log('CSRF token on load:', csrfInput.value);
@@ -678,18 +778,12 @@
                 const draftValue = draftData[employeeId]?.[tab]?.[field];
                 cell.dataset.originalId = draftValue || (field === 'designation_id' ? '{{ employee.designation.id|default:"" }}' : '');
 
-                if (draftValue) {
-                    // Fetch display text for draft values
+                if (draftValue && cell.dataset.endpoint) {
                     fetchJSON(cell.dataset.endpoint).then(data => {
                         const items = asArray(data);
                         const item = items.find(i => i.id == draftValue);
                         if (item) {
-                            if (field === 'vehicle_id' || field === 'vehicle_proposed_id' || field === 'vehicle') {
-                                cell.textContent = `${item.brand_name} ${item.model_name} (${item.engine_cc})cc`;
-                            } else {
-                                // fallback for other select fields
-                                cell.textContent = item.title || item.location || item.status || item.name;
-                            }
+                            cell.textContent = field === 'vehicle_id' ? item.label : (item.title || item.location || item.status || item.name);
                         }
                     });
                 }
@@ -711,14 +805,11 @@
                 });
             });
         });
-        // Initialize editedCells with draftData
         Object.keys(draftData).forEach(empId => {
             editedCells[empId] = JSON.parse(JSON.stringify(draftData[empId]));
         });
     });
-</script>
-
-
+    </script>
 {% else %}
     <p>You do not have permission to view this page.</p>
 {% endif %}
