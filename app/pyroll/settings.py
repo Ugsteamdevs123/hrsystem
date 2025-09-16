@@ -40,6 +40,9 @@ if ALLOWED_HOSTS_ENV:
     ALLOWED_HOSTS.extend(ALLOWED_HOSTS_ENV.split(','))
 
 
+TIME_ZONE = 'Asia/Karachi'  # Django timezone set to PKT
+USE_TZ = True  # Enable timezone support
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -58,8 +61,32 @@ INSTALLED_APPS = [
 
     # App name
     'user',
-
+    'django_celery_beat',
 ]
+
+# Celery Settings
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Karachi'  # Celery timezone set to PKT
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+CELERY_BEAT_SCHEDULE = {
+    # 'run-every-30-seconds': {
+    #     'task': 'user.tasks.task_seconds',
+    #     'schedule': 30.0,  # Every 30 seconds
+    # },
+    'run-every-1-day': {
+        'task': 'tasks.tasks.task_day',
+        'schedule': 24 * 60 * 60,  # Every 2 days
+    },
+    # 'run-first-day-of-month': {
+    #     'task': 'tasks.tasks.task_monthly',
+    #     'schedule': crontab(day_of_month=1, hour=0, minute=0),  # 1st of every month at midnight PKT
+    # },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

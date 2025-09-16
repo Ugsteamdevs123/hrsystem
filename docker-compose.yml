@@ -19,6 +19,40 @@ services:
     env_file:
       - .env
 
+  celery_worker_develop:
+    build: 
+      context: .
+      dockerfile: ./compose/django/Dockerfile
+    image: django_celery_celery_worker_develop
+    command: /start-celeryworker
+    volumes:
+      - .:/code
+    env_file:
+      - .env
+    networks:
+      - payroll_network
+
+  celery_beat_develop:
+    build: 
+      context: .
+      dockerfile: ./compose/django/Dockerfile
+    image: django_celery_celery_beat_develop
+    command: /start-celerybeat
+    volumes:
+      - .:/code
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    networks:
+      - payroll_network
+
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - payroll_network
 
 networks:
   payroll_network:
