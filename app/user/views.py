@@ -2329,6 +2329,7 @@ class SaveDraftView(View):
             print("data: ", data)
             drafts_saved = False
             # with transaction.atomic():
+            return_saved_message = False
             for employee_id, tabs in data.items():
                 print("tabs: ", tabs)
                 employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
@@ -2539,6 +2540,9 @@ class SaveDraftView(View):
                     draft.save()
                     drafts_saved = True
 
+                return_saved_message = True
+            
+            if return_saved_message:
                 return JsonResponse({'message': 'Draft saved' if drafts_saved else 'No changes to save'}, status=200)
                 
             return JsonResponse({'message': 'Draft processed, No changes detected to be drafted', 'drafts_saved': drafts_saved})

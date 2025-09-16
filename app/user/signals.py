@@ -44,11 +44,11 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
         # print("formula_ids: ", formula_ids)
         # formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
         department_formulas = formulas.filter(department_team=department_team)
-        print("department_formulas: ", department_formulas)
+        # print("department_formulas: ", department_formulas)
 
         formula_ids = list(department_formulas.values_list('id', flat=True))
         formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
-        print("formulas: ", formulas)
+        # print("formulas: ", formulas)
 
         if not formulas:
             print(f"No formulas found for company={company}, department_team={department_team}, employee={instance}")
@@ -57,12 +57,12 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
         # Topological sort with context
         print(formulas)
         ordered = topological_sort(formulas, company=company, employee=instance, department_team=department_team)
-        print("ordered: ", ordered)
+        # print("ordered: ", ordered)
 
         for model_name, field in ordered:
             if model_name.endswith("Draft"):
                 continue
-            print("model_name", model_name, " ::: field: ", field)
+            # print("model_name", model_name, " ::: field: ", field)
             # Prefer employee-specific formula, else department-specific
             # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
             #                department_formulas.filter(target_model=model_name, target_field=field).first()
@@ -97,13 +97,13 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
                     if employee_status != 'P':
                         continue
 
-            print("target_instance._meta.model_name: ", target_instance._meta.model_name)
+            # print("target_instance._meta.model_name: ", target_instance._meta.model_name)
 
             expression = field_formula.formula.formula_expression
-            print("expression: ", expression)
+            # print("expression: ", expression)
             try:
                 value = evaluate_formula(target_instance, expression, model_name)
-                print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)
+                # print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)
                 Model = apps.get_model('user', model_name)
                 
                 if model_name in ["IncrementDetailsSummary", "Employee"]:
@@ -152,34 +152,34 @@ def update_increment_summary(sender, instance, created, **kwargs):
         # print("employee_formulas: ", employee_formulas)
         # department_formulas = formulas.filter(employee__isnull=True, department_team=department_team)
         department_formulas = formulas.filter(department_team=department_team)
-        print("department_formulas: ", department_formulas)
+        # print("department_formulas: ", department_formulas)
         # Combine, prioritizing employee formulas
         # formula_ids = list(employee_formulas.values_list('id', flat=True))
         # formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
         formula_ids = list(department_formulas.values_list('id', flat=True))
-        print("formula_ids: ", formula_ids)
+        # print("formula_ids: ", formula_ids)
         formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
-        print("formulas: ", formulas)
+        # print("formulas: ", formulas)
 
         if not formulas:
-            print(f"No formulas found for company={company}, department_team={department_team}, employee={employee}")
+            # print(f"No formulas found for company={company}, department_team={department_team}, employee={employee}")
             return
 
         # Topological sort with context
         print(formulas)
         ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
-        print("ordered: ", ordered)
+        # print("ordered: ", ordered)
 
         for model_name, field in ordered:
             if model_name.endswith("Draft"):
                 continue
-            print("model_name", model_name, " ::: field: ", field)
+            # print("model_name", model_name, " ::: field: ", field)
             # Prefer employee-specific formula, else department-specific
             # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
             #                department_formulas.filter(target_model=model_name, target_field=field).first()
             field_formula = department_formulas.filter(formula__target_model=model_name, formula__target_field=field).first()
             if not field_formula:
-                print(f"No formula found for {model_name}.{field}")
+                # print(f"No formula found for {model_name}.{field}")
                 continue
 
             # Choose instance
@@ -193,7 +193,7 @@ def update_increment_summary(sender, instance, created, **kwargs):
                 target_instance = instance
 
             if not target_instance:
-                print(f"No instance found for {model_name} with company={company}, department_team={department_team}")
+                # print(f"No instance found for {model_name} with company={company}, department_team={department_team}")
                 continue
 
             if model_name == 'FinancialImpactPerMonth' and field == 'gratuity':
@@ -204,13 +204,13 @@ def update_increment_summary(sender, instance, created, **kwargs):
                     if employee_status != 'P':
                         continue
 
-            print("target_instance._meta.model_name: ", target_instance._meta.model_name)
+            # print("target_instance._meta.model_name: ", target_instance._meta.model_name)
 
             expression = field_formula.formula.formula_expression
-            print("expression: ", expression)
+            # print("expression: ", expression)
             try:
                 value = evaluate_formula(target_instance, expression, model_name)
-                print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)
+                # print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)
                 Model = apps.get_model('user', model_name)
                 
                 if model_name == "IncrementDetailsSummary":
@@ -266,10 +266,8 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
             if not existing_summary_status.exists():
                 new_summary_status = SummaryStatus.objects.create()
                 IncrementDetailsSummaryDraft.objects.create(company = instance.company, department_team = instance.department_team, summaries_status = new_summary_status)
-                print("new_summary_status: ", new_summary_status)
             else:
                 IncrementDetailsSummaryDraft.objects.create(company = instance.company, department_team = instance.department_team, summaries_status = existing_summary_status.first())
-                print("existing_summary_status: ", existing_summary_status)
 
         update_draft_department_team_increment_summary(sender, instance, instance.company, instance.department_team)
 
@@ -277,7 +275,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
         employee_draft = instance
         employee = instance.employee
 
-        print("instance.id: ", instance.id)
+        # print("instance.id: ", instance.id)
 
         currentpackagedetailsdraft_dr = getattr(instance, 'currentpackagedetailsdraft', None)
         if not currentpackagedetailsdraft_dr:
@@ -297,7 +295,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
         proposedpackagedetailsdraft_dr = getattr(instance, 'proposedpackagedetailsdraft', None)
         if not proposedpackagedetailsdraft_dr:
             proposedpackagedetails = employee.proposedpackagedetails
-            print("proposedpackagedetails employeedraft: ", proposedpackagedetails.__dict__)
+            # print("proposedpackagedetails employeedraft: ", proposedpackagedetails.__dict__)
             # ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=instance)
             ProposedPackageDetailsDraft.objects.get_or_create(
                 employee_draft=instance,
@@ -350,28 +348,28 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
         formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
 
         if not formulas:
-            print(f"No formulas found for company={company}, department_team={department_team}, employee={employee}")
+            # print(f"No formulas found for company={company}, department_team={department_team}, employee={employee}")
             return
 
         # Perform topological sort with context
         print(formulas)
         ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
-        print("ordered: ", ordered)
+        # print("ordered: ", ordered)
 
         for model_name, field in ordered:
-            print("model_name, field: ", model_name, field)
+            # print("model_name, field: ", model_name, field)
             # Map model to draft version if sender is a draft model
             target_model_name = model_name + 'Draft' if is_draft and model_name in model_mapping.values() else model_name
             if not target_model_name.endswith('Draft') and is_draft:
                 continue  # Skip non-draft models when processing drafts
 
-            print("target_model_name: ", target_model_name)
+            # print("target_model_name: ", target_model_name)
             # Prefer employee-specific formula, else department-specific
             # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
             #                department_formulas.filter(target_model=model_name, target_field=field).first()
             field_formula = department_formulas.filter(formula__target_model=model_name, formula__target_field=field).first()
             if not field_formula:
-                print(f"No formula found for {model_name}.{field}")
+                # print(f"No formula found for {model_name}.{field}")
                 continue
 
             # Choose instance
@@ -390,7 +388,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                 target_instance = model_class.objects.filter(employee_draft=instance).first()
 
             if not target_instance:
-                print(f"No instance found for {target_model_name} with company={company}, department_team={department_team}")
+                # print(f"No instance found for {target_model_name} with company={company}, department_team={department_team}")
                 continue
 
             if target_model_name == 'FinancialImpactPerMonthDraft' and field == 'gratuity':
@@ -401,18 +399,18 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                     if employee_status != 'P':
                         continue
 
-            print("target_instance._meta.model_name: ", target_instance._meta.model_name)
+            # print("target_instance._meta.model_name: ", target_instance._meta.model_name)
 
             expression = field_formula.formula.formula_expression
             try:
-                print("eveavavavav isdraff: ", is_draft, "  ::: target_model_name: ", target_model_name)
+                # print("eveavavavav isdraff: ", is_draft, "  ::: target_model_name: ", target_model_name)
                 value = evaluate_formula(
                     target_instance, expression, target_model_name, is_draft=is_draft, employee_draft=employee_draft
                 )
-                print(f"model_name: {target_model_name}, field: {field}, value: {value}")
+                # print(f"model_name: {target_model_name}, field: {field}, value: {value}")
                 Model = apps.get_model('user', target_model_name)
                 # Model.objects.filter(id=target_instance.id).update(**{field: value})
-                print("Model._meta.model_name: ", Model._meta.model_name)
+                # print("Model._meta.model_name: ", Model._meta.model_name)
 
                 if Model._meta.model_name in ["incrementdetailssummarydraft", "employee"]:
                     Model.objects.filter(id=target_instance.id).update(**{field: value})
@@ -442,10 +440,8 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
             if not existing_summary_status.exists():
                 new_summary_status = SummaryStatus.objects.create()
                 IncrementDetailsSummaryDraft.objects.create(company = instance.employee_draft.company, department_team = instance.employee_draft.department_team, summaries_status = new_summary_status)
-                print("new_summary_status: ", new_summary_status)
             else:
                 IncrementDetailsSummaryDraft.objects.create(company = instance.employee_draft.company, department_team = instance.employee_draft.department_team, summaries_status = existing_summary_status.first())
-                print("existing_summary_status: ", existing_summary_status)
 
         update_draft_department_team_increment_summary(sender, instance, instance.employee_draft.company, instance.employee_draft.department_team)
 
@@ -537,16 +533,16 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
         formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
 
         if not formulas:
-            print(f"No formulas found for company={company}, department_team={department_team}, employee={employee}")
+            # print(f"No formulas found for company={company}, department_team={department_team}, employee={employee}")
             return
 
         # Perform topological sort with context
-        print(formulas)
+        # print(formulas)
         ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
-        print("ordered: ", ordered)
+        # print("ordered: ", ordered)
 
         for model_name, field in ordered:
-            print("field check: ", field)
+            # print("field check: ", field)
             # Map model to draft version if sender is a draft model
             target_model_name = model_name + 'Draft' if is_draft and model_name in model_mapping.values() else model_name
             if not target_model_name.endswith('Draft') and is_draft:
@@ -557,7 +553,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
             #                department_formulas.filter(target_model=model_name, target_field=field).first()
             field_formula = department_formulas.filter(formula__target_model=model_name, formula__target_field=field).first()
             if not field_formula:
-                print(f"No formula found for {model_name}.{field}")
+                # print(f"No formula found for {model_name}.{field}")
                 continue
 
             # Choose instance
@@ -573,7 +569,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
                 target_instance.refresh_from_db()
 
             if not target_instance:
-                print(f"No instance found for {target_model_name} with company={company}, department_team={department_team}")
+                # print(f"No instance found for {target_model_name} with company={company}, department_team={department_team}")
                 continue
 
             if target_model_name == 'FinancialImpactPerMonthDraft' and field == 'gratuity':
@@ -584,15 +580,15 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
                     if employee_status != 'P':
                         continue
 
-            print("target_instance._meta.model_name: ", target_instance._meta.model_name)
+            # print("target_instance._meta.model_name: ", target_instance._meta.model_name)
 
             expression = field_formula.formula.formula_expression
             try:
-                print("eveavavavav isdraff: ", is_draft, "  ::: target_model_name: ", target_model_name)
+                # print("eveavavavav isdraff: ", is_draft, "  ::: target_model_name: ", target_model_name)
                 value = evaluate_formula(
                     target_instance, expression, target_model_name, is_draft=is_draft, employee_draft=employee_draft
                 )
-                print(f"model_name: {target_model_name}, field: {field}, value: {value}")
+                # print(f"model_name: {target_model_name}, field: {field}, value: {value}")
                 Model = apps.get_model('user', target_model_name)
                 # Model.objects.filter(id=target_instance.id).update(**{field: value})
 
@@ -696,25 +692,19 @@ def add_new_increment_details_summary_record_and_assign_initial_formulas_to_new_
             if not existing_summary_status.exists():
                 new_summary_status = SummaryStatus.objects.create()
                 IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance, summaries_status = new_summary_status)
-                print("new_summary_status: ", new_summary_status)
             else:
                 IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance, summaries_status = existing_summary_status.first())
-                print("existing_summary_status: ", existing_summary_status)
                 
             # Get all FieldFormula assignments from the default department
             default_formulas = Formula.objects.filter(formula_is_default=True)
-            print("checking")
-            print("default_formulas: ", default_formulas)
                 
             for default_ff in default_formulas:
-                print("creating")
                 # Copy to the new department (same formula FK, description, etc.)
                 FieldFormula.objects.create(
                     formula=default_ff,
                     company=instance.company,  # Use the new department's company
                     department_team=instance
                 )
-        print("sucesss")
 
     except Exception as e:
         print(f"Error in adding new increment details summary record: {e}")
