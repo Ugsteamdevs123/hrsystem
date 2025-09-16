@@ -364,9 +364,9 @@
             <a href="{% url 'view_section' %}">Section</a>
             {% endif %}
 
-            {% if perms.user.view_hr_assigned_companies %}
+            {% comment %}{% if perms.user.view_hr_assigned_companies %}
             <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
-            {% endif %}
+            {% endif %}{% endcomment %}
 
             {% if perms.user.view_vehiclebrand and perms.user.view_vehiclemodel %}
             <a href="{% url 'view_vehicles' %}">Vehicle Information</a>
