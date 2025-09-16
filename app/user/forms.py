@@ -229,7 +229,7 @@ class FieldReferenceAdminForm(forms.ModelForm):
 class CustomUserForm(forms.ModelForm):
     # password = forms.CharField(widget=forms.PasswordInput)
     groups = forms.ModelChoiceField(
-        queryset=Group.objects.exclude(name='Admin'),
+        queryset=Group.objects.exclude(name='Super Admin'),
         required=False,
         empty_label="Select Group",
         label="Assign Group"

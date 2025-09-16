@@ -1,3 +1,23 @@
+from django.contrib.auth.decorators import login_required , permission_required
+from django.contrib.auth.mixins import PermissionRequiredMixin, LoginRequiredMixin
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib import messages
+from django.http import JsonResponse
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
+from django.views.decorators.cache import cache_control
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.generic import View
+from django.views import View
+from django.core.exceptions import PermissionDenied
+from django.apps import apps
+from django.db import transaction, models
+from django.db.models import Q
+from django.db.models.signals import post_save
+from django.forms.models import model_to_dict
+from django.shortcuts import render, redirect , get_object_or_404
+from django.contrib.auth.forms import PasswordChangeForm
+
 from .models import (
     CustomUser,
     Company,
@@ -23,14 +43,10 @@ from .models import (
     ProposedPackageDetailsDraft,
     FinancialImpactPerMonthDraft,
     IncrementDetailsSummaryDraft,
+    FieldFormula,
+    FieldReference
 )
 
-from django.contrib.auth.mixins import PermissionRequiredMixin
-
-from django.views import View
-from django.shortcuts import render, redirect , get_object_or_404
-from django.contrib.auth import authenticate, login, logout
-from django.contrib import messages
 from .forms import (
     CompanyForm , 
     CustomUserForm,
@@ -39,24 +55,16 @@ from .forms import (
     DepartmentGroupsForm,
     HrAssignedCompaniesForm,
     VehicleModelForm,
-    ConfigurationsForm
+    ConfigurationsForm,
+    FieldFormulaForm,
+    FormulaForm,
+    VehicleBrandForm,
+    CustomPasswordChangeForm
+
 )
 from venv import logger
-from django.contrib.auth.decorators import login_required , permission_required
-from django.http import JsonResponse
-from django.views.decorators.cache import cache_control
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.generic import View
-from django.core.exceptions import PermissionDenied
-from django.db import transaction, models
-from django.apps import apps
-from django.db.models import Q
-from django.forms.models import model_to_dict
-
 from permissions import PermissionRequiredMixin
 
-from .models import FieldFormula, FieldReference
-from .forms import FieldFormulaForm, FormulaForm, VehicleBrandForm
 from .utils import get_companies_and_department_teams
 from .serializer import (
     IncrementDetailsSummarySerializer,
@@ -68,16 +76,29 @@ from .serializer import (
     EmployeeStatusSerializer
 )
 
+from .signals import (
+    update_increment_summary_employee,
+    update_increment_summary
+)
+
 import json
+from decimal import Decimal
+from datetime import date
+from dateutil.relativedelta import relativedelta
+
+from .signals import (
+    update_increment_summary_employee,
+    update_increment_summary
+)
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 '''
 When user login he redirect to pass reset
 '''
-from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth import update_session_auth_hash
-from .forms import CustomPasswordChangeForm
 
 
 class LoginView(View):
@@ -172,7 +193,6 @@ class AddUserView(PermissionRequiredMixin, View):
         return render(request, self.template_name, {"form": form})
 
 
-
 # --- UPDATE USER ---
 class UpdateUserView(PermissionRequiredMixin, View):
     permission_required = "user.change_customuser"
@@ -208,7 +228,6 @@ class UpdateUserView(PermissionRequiredMixin, View):
         return render(request, self.template_name, {"form": form, "user": user})
 
 
-
 # --- DELETE USER (soft delete) ---
 class DeleteUserView(PermissionRequiredMixin, View):
     permission_required = "user.delete_customuser"
@@ -224,8 +243,6 @@ class DeleteUserView(PermissionRequiredMixin, View):
         user.save()
         messages.success(request, "User deleted successfully")
         return redirect("view_users")
-
-
 
 
 # --- VIEW USERS ---
@@ -277,7 +294,6 @@ class AddCompanyView(PermissionRequiredMixin, View):
         return render(request, self.template_name, {"form": form})
 
 
-
 # --- UPDATE COMPANY ---
 class UpdateCompanyView(PermissionRequiredMixin, View):
     permission_required = "user.change_company"
@@ -298,7 +314,6 @@ class UpdateCompanyView(PermissionRequiredMixin, View):
         return render(request, self.template_name, {"form": form, "company": company})
 
 
-
 # --- DELETE COMPANY ---
 class DeleteCompanyView(PermissionRequiredMixin, View):
     permission_required = "user.delete_company"
@@ -309,7 +324,6 @@ class DeleteCompanyView(PermissionRequiredMixin, View):
         company.save()
         messages.success(request, "Company deleted successfully!")
         return redirect("view_company")
-
 
 
 # --- VIEW SECTIONS ---
@@ -372,8 +386,6 @@ class DeleteSectionView(PermissionRequiredMixin, View):
         section.save()
         messages.success(request, "Section deleted successfully!")
         return redirect("view_section")
-
-
 
 
 # --- VIEW DEPARTMENT GROUPS ---
@@ -757,11 +769,7 @@ class HrFinalApproveSummaryView(PermissionRequiredMixin, View):
                 data = json.loads(request.body)
                 status = SummaryStatus.objects.get(id=data["id"], summary_submitted=False)
                 status.approved = True
-                # status.save(update_fields=["approved"])
-                # return JsonResponse({"success": True})
-            
-
-            # try:
+                
                 increment_details_summary_draft = status.incrementdetailssummarydraft_set.filter(approved=True)
 
                 print(increment_details_summary_draft)
@@ -845,8 +853,6 @@ class HrFinalApproveSummaryView(PermissionRequiredMixin, View):
                 return JsonResponse({"error": str(e)}, status=400)
         return JsonResponse({"error": "Invalid request"}, status=405)
 
-
-from django.utils.decorators import method_decorator
 
 @method_decorator(login_required, name='dispatch')
 class CompanyDepartmentTeamView(View):
@@ -1112,11 +1118,18 @@ class DepartmentTableView(View):
 
         for emp in employees:
             emp_draft = emp.drafts.first()
-            print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
             is_draft = bool(emp_draft)
+
+            # Make sure date_of_joining exists
+            if emp.date_of_joining:
+                six_months_ago = date.today() - relativedelta(months=6)
+                past_six_months = emp.date_of_joining <= six_months_ago
+            else:
+                past_six_months = False
 
             data = {
                 'emp_id': emp.emp_id,
+                'past_six_months': past_six_months,
                 'fullname': emp_draft.fullname if is_draft and emp_draft.edited_fields.get('fullname') else emp.fullname,
                 'eligible_for_increment': emp_draft.eligible_for_increment if is_draft and emp_draft.edited_fields.get('eligible_for_increment') else emp.eligible_for_increment,
                 'company': emp.company.name,
@@ -1146,16 +1159,13 @@ class DepartmentTableView(View):
                     'gross_salary': current_package.gross_salary,
                     'vehicle': current_package.vehicle,
                     'company_pickup': current_package.company_pickup,
-                    # 'fuel_limit': current_package.fuel_limit,
                     'fuel_litre': current_package.fuel_litre,
-                    # 'vehicle_allowance': current_package.vehicle_allowance,
                     'fuel_allowance': current_package.fuel_allowance,
                     'mobile_provided': current_package.mobile_provided,
                     'total': current_package.total,
                 }
 
             # ✅ Handle proposed package
-            # proposed_draft = emp_draft.proposed_package_drafts.first() if is_draft else None
             proposed_draft = getattr(emp_draft, "proposedpackagedetailsdraft", None) if is_draft else None
             proposed_package = proposed_draft or getattr(emp, 'proposedpackagedetails', None)
             if proposed_package:
@@ -1163,19 +1173,16 @@ class DepartmentTableView(View):
                     'increment_percentage': proposed_package.increment_percentage,
                     'increased_amount': proposed_package.increased_amount,
                     'revised_salary': proposed_package.revised_salary,
-                    # 'increased_fuel_amount': proposed_package.increased_fuel_amount,
                     'increased_fuel_allowance': proposed_package.increased_fuel_allowance,
                     'increased_fuel_litre': proposed_package.increased_fuel_litre,
                     'revised_fuel_allowance': proposed_package.revised_fuel_allowance,
                     'company_pickup': proposed_package.company_pickup,
-                    # 'vehicle_allowance': proposed_package.vehicle_allowance,
                     'mobile_provided': proposed_package.mobile_provided,
                     'total': proposed_package.total,
                     'vehicle': proposed_package.vehicle,
                 }
 
             # ✅ Handle financial impact (Prioritize draft)
-            # financial_draft = emp_draft.financial_impact_drafts.first() if is_draft else None
             financial_draft = getattr(emp_draft, "financialimpactpermonthdraft", None) if is_draft else None
             financial_package = financial_draft or getattr(emp, 'financialimpactpermonth', None)
             if financial_package:
@@ -1262,10 +1269,6 @@ class EmployeesView(View):
         })
 
 
-from django.views.decorators.cache import cache_control
-from django.views.decorators.csrf import ensure_csrf_cookie
-
-
 @method_decorator(login_required, name='dispatch')
 @method_decorator(cache_control(no_cache=True, must_revalidate=True, no_store=True), name='dispatch')
 @method_decorator(ensure_csrf_cookie, name='dispatch')
@@ -1322,7 +1325,6 @@ class GetEmployeeDataView(View):
                     'gross_salary': fmt_float(getattr(use_current, 'gross_salary', None)),
                     'company_pickup': getattr(getattr(use_current, 'company_pickup', None), 'id', ''),
                     'vehicle_id': getattr(getattr(use_current, 'vehicle', None), 'id', ''),
-                    # 'fuel_limit': fmt_float(getattr(use_current, 'fuel_limit', None)),
                     'fuel_litre': fmt_float(getattr(use_current, 'fuel_litre', None)),
                     'mobile_allowance': fmt_float(getattr(use_current, 'mobile_allowance', None)),
                 },
@@ -1348,17 +1350,6 @@ class GetEmployeeDataView(View):
             return JsonResponse({'error': 'Employee not found'}, status=404)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
-
-
-
-from django.db.models.signals import post_save
-from .signals import (
-    update_increment_summary_employee,
-    update_increment_summary
-)
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class CreateEmployeeView(View):
@@ -1413,25 +1404,7 @@ class CreateEmployeeView(View):
                     post_save.disconnect(update_increment_summary, sender=CurrentPackageDetails)
                     post_save.disconnect(update_increment_summary, sender=ProposedPackageDetails)
                     post_save.disconnect(update_increment_summary, sender=FinancialImpactPerMonth)
-
-                    # # Create Employee
-                    # employee = Employee.objects.create(
-                    #     emp_id=request.POST.get('emp_id'),
-                    #     fullname=request.POST.get('fullname'),
-                    #     company_id=company_id,
-                    #     department_team=department,
-                    #     department_group_id=request.POST.get('department_group_id') or None,
-                    #     section_id=request.POST.get('section_id') or None,
-                    #     designation_id=request.POST.get('designation_id') or None,
-                    #     location_id=request.POST.get('location_id') or None,
-                    #     date_of_joining=request.POST.get('date_of_joining') or None,
-                    #     resign=request.POST.get('resign') == 'true',
-                    #     date_of_resignation=request.POST.get('date_of_resignation') or None,
-                    #     remarks=request.POST.get('remarks') or '',
-                    #     image=request.FILES.get('image') if 'image' in request.FILES else None,
-                    #     eligible_for_increment=request.POST.get('eligible_for_increment') == 'true'
-                    # )
-
+                    
                     emp_id = request.POST.get('emp_id')
 
                     # Get or create employee by emp_id
@@ -1451,6 +1424,20 @@ class CreateEmployeeView(View):
                         'eligible_for_increment': request.POST.get('eligible_for_increment') == 'true',
                     })
 
+                    designation_id_str = request.POST.get('designation_id')
+                    if designation_id_str:
+                        designation_id = int(designation_id_str)
+
+                        # Get the "intern" designation object (if exists)
+                        intern = Designation.objects.filter(title__iexact="intern", company=employee.company).first()
+
+                        if intern and designation_id == intern.id:
+                            is_intern = True
+                            promoted_from_intern_date = None
+                        else:
+                            is_intern = False
+                            promoted_from_intern_date = date.today()
+
                     # If the employee already existed, update the fields
                     if not created:
                         employee.fullname = request.POST.get('fullname')
@@ -1467,6 +1454,12 @@ class CreateEmployeeView(View):
                         if 'image' in request.FILES:
                             employee.image = request.FILES.get('image')
                         employee.eligible_for_increment = request.POST.get('eligible_for_increment') == 'true'
+                        employee.is_intern = is_intern
+                        employee.promoted_from_intern_date = promoted_from_intern_date
+                        employee.save()
+                    else:
+                        employee.is_intern = is_intern
+                        employee.promoted_from_intern_date = promoted_from_intern_date
                         employee.save()
 
                     # Create related models
@@ -1598,6 +1591,22 @@ class UpdateEmployeeView(View):
                     employee.department_group_id = request.POST.get('department_group_id') or None
                     employee.section_id = request.POST.get('section_id') or None
                     employee.designation_id = request.POST.get('designation_id') or None
+
+                    designation_id_str = request.POST.get('designation_id')
+                    if designation_id_str:
+                        designation_id = int(designation_id_str)
+
+                        # Get the "intern" designation object (if exists)
+                        intern = Designation.objects.filter(title__iexact="intern", company=employee.company).first()
+
+                        if intern and designation_id == intern.id:
+                            employee.is_intern = True
+                            employee.promoted_from_intern_date = None
+                        else:
+                            if employee.is_intern == True:
+                                employee.promoted_from_intern_date = date.today()
+                            employee.is_intern = False
+
                     employee.location_id = request.POST.get('location_id') or None
                     employee.date_of_joining = request.POST.get('date_of_joining') or None
                     employee.date_of_resignation = request.POST.get('date_of_resignation') or None
@@ -1638,13 +1647,11 @@ class UpdateEmployeeView(View):
                     current_package.gross_salary = request.POST.get('gross_salary') or None
                     current_package.company_pickup = request.POST.get('company_pickup_current') == 'true'
                     current_package.vehicle_id = request.POST.get('vehicle_id') or None
-                    # current_package.fuel_limit = request.POST.get('fuel_limit') or None
                     current_package.mobile_provided = request.POST.get('mobile_provided') == 'true'
                     if not request.POST.get('fuel_litre'):
                             current_package.fuel_allowance = request.POST.get('fuel_allowance') or None
                     else:
                         fuel_rate = Configurations.objects.values_list('fuel_rate', flat=True).first()
-                        # current_package.fuel_allowance = (float(request.POST.get('fuel_litre')) + fuel_rate) or None
                         try:
                             fuel_litre = float(request.POST.get('fuel_litre'))
                             current_package.fuel_allowance = fuel_litre * fuel_rate
@@ -1779,22 +1786,18 @@ class GetDataView(View):
                         'gross_salary': str(current_package.gross_salary) if current_package and current_package.gross_salary else '',
                         'company_pickup': current_package.company_pickup if current_package else False,
                         'vehicle_id': current_package.vehicle_id if current_package else '',
-                        # 'fuel_limit': str(current_package.fuel_limit) if current_package and current_package.fuel_limit else '',
                         'mobile_provided': current_package.mobile_provided if current_package else False,
                         'fuel_allowance': str(current_package.fuel_allowance) if current_package and current_package.fuel_allowance else '',
                         'fuel_litre': str(current_package.fuel_litre) if current_package and current_package.fuel_litre else ''
                     },
                     'proposed_package': {
                         'increment_percentage': str(proposed_package.increment_percentage) if proposed_package and proposed_package.increment_percentage else '',
-                        # 'increased_fuel_amount': str(proposed_package.increased_fuel_amount) if proposed_package and proposed_package.increased_fuel_amount else '',
                         'revised_salary': str(proposed_package.revised_salary) if proposed_package and proposed_package.revised_salary else '',
                         'mobile_provided': proposed_package.mobile_provided if proposed_package else False,
                         'company_pickup': proposed_package.company_pickup if proposed_package else False,
                         'vehicle_id': proposed_package.vehicle_id if proposed_package else '',
                         'increased_fuel_litre': str(proposed_package.increased_fuel_litre) if proposed_package and proposed_package.increased_fuel_litre else '',
                         'increased_fuel_allowance': str(proposed_package.increased_fuel_allowance) if proposed_package and proposed_package.increased_fuel_allowance else '',
-                        # 'fuel_litre': str(proposed_package.fuel_litre) if proposed_package and proposed_package.fuel_litre else '',
-                        # 'vehicle_allowance': str(proposed_package.vehicle_allowance) if proposed_package and proposed_package.vehicle_allowance else '',
                     },
                     'financial_impact': {
                         'emp_status_id': str(financial_impact.emp_status_id) if financial_impact and financial_impact.emp_status_id else '',
@@ -1970,9 +1973,7 @@ class EditFormulaView(PermissionRequiredMixin, View):
         })
 
 
-
 # For Manage Formula CRUD
-
 class FieldFormulaListView(PermissionRequiredMixin, View):
     permission_required = "user.view_fieldformula"
     template_name = "view_field_formulas.html"
@@ -1986,37 +1987,7 @@ class FieldFormulaListView(PermissionRequiredMixin, View):
             'field_references': field_references,
             'company_data': company_data
         })
-
-
-# class CreateFieldFormulaView(PermissionRequiredMixin, View):
-#     permission_required = "user.add_fieldformula"
-#     template_name = "create_field_formula.html"
-
-#     def get(self, request):
-#         form = FieldFormulaForm()
-#         field_references = FieldReference.objects.all()
-#         company_data = get_companies_and_department_teams(request.user)
-#         return render(request, self.template_name, {
-#             'form': form,
-#             'field_references': field_references,
-#             'company_data': company_data
-#         })
-
-#     def post(self, request):
-#         form = FieldFormulaForm(request.POST)
-#         field_references = FieldReference.objects.all()
-#         company_data = get_companies_and_department_teams(request.user)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, "Field Formula created successfully!")
-#             return redirect("view_field_formulas")
-#         return render(request, self.template_name, {
-#             'form': form,
-#             'field_references': field_references,
-#             'company_data': company_data
-#         })
-
-
+        
 
 class CreateFieldFormulaView(PermissionRequiredMixin, View):
     permission_required = "user.add_fieldformula"
@@ -2137,179 +2108,6 @@ class GetDepartmentEmployeesView(View):
         return JsonResponse({'employees': []})
 
 
-
-
-from django.views import View
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.cache import cache_control
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.db import transaction
-from .models import (
-    Employee, CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth,
-    EmployeeDraft, CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft
-)
-import json
-from decimal import Decimal
-
-
-# class SaveDraftView(View):
-#     @classmethod
-#     def as_view(cls, **initkwargs):
-#         view = super().as_view(**initkwargs)
-#         view = login_required(view)
-#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
-#         view = ensure_csrf_cookie(view)
-#         return view
-
-#     def post(self, request, department_id):
-#         try:
-#             data = json.loads(request.body)
-#             drafts_saved = False
-#             with transaction.atomic():
-#                 for employee_id, tabs in data.items():
-#                     employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
-#                     if not employee:
-#                         logger.error(f"Employee {employee_id} not found for department {department_id}")
-#                         return JsonResponse({'error': f'Employee {employee_id} not found'}, status=404)
-
-#                     has_changes = False
-#                     employee_draft_edited = {}
-#                     current_package_edited = {}
-#                     proposed_package_edited = {}
-#                     financial_impact_edited = {}
-
-#                     for tab, fields in tabs.items():
-#                         if tab == 'employee':
-#                             for field, value in fields.items():
-#                                 if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks']:
-#                                     current_value = getattr(employee, field, None)
-#                                     if field in ['department_group_id', 'section_id', 'designation_id', 'location_id']:
-#                                         current_value = getattr(getattr(employee, field, None), 'id', None)
-#                                     elif field == 'resign':
-#                                         current_value = str(current_value).lower()
-#                                     if str(value) != str(current_value):
-#                                         has_changes = True
-#                                         employee_draft_edited[field] = True
-#                         elif tab == 'current_package':
-#                             for field, value in fields.items():
-#                                 if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance']:
-#                                     current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
-#                                     current_value = getattr(current_package, field, None) if current_package else None
-#                                     if field == 'vehicle_id':
-#                                         current_value = current_value.id if current_value else None
-#                                     if str(value) != str(current_value):
-#                                         has_changes = True
-#                                         current_package_edited[field] = True
-#                         elif tab == 'proposed_package':
-#                             for field, value in fields.items():
-#                                 if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id']:
-#                                     proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
-#                                     field_key = 'mobile_allowance' if field == 'mobile_allowance_proposed' else ('vehicle_id' if field == 'vehicle_proposed_id' else field)
-#                                     current_value = getattr(proposed_package, field_key, None) if proposed_package else None
-#                                     if field in ['vehicle_proposed_id']:
-#                                         current_value = current_value.id if current_value else None
-#                                     if str(value) != str(current_value):
-#                                         has_changes = True
-#                                         proposed_package_edited[field_key] = True
-#                         elif tab == 'financial_impact':
-#                             for field, value in fields.items():
-#                                 if field == 'emp_status_id':
-#                                     financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
-#                                     current_value = getattr(financial_impact, 'emp_status_id', None) if financial_impact else None
-#                                     if str(value) != str(current_value):
-#                                         has_changes = True
-#                                         financial_impact_edited[field] = True
-
-#                     if not has_changes:
-#                         continue
-
-#                     employee_draft = EmployeeDraft.objects.filter(employee=employee).first()
-#                     if employee_draft_edited or current_package_edited or proposed_package_edited or financial_impact_edited:
-#                         if not employee_draft:
-#                             employee_draft = EmployeeDraft(employee=employee, company=employee.company, department_team=employee.department_team)
-#                         for field, value in tabs.get('employee', {}).items():
-#                             if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks'] and employee_draft_edited.get(field):
-#                                 try:
-#                                     if field == 'department_group_id':
-#                                         employee_draft.department_group_id = int(value) if value else None
-#                                     elif field == 'section_id':
-#                                         employee_draft.section_id = int(value) if value else None
-#                                     elif field == 'designation_id':
-#                                         employee_draft.designation_id = int(value) if value else None
-#                                         if employee_draft.designation_id:
-#                                             Designation.objects.get(id=employee_draft.designation_id)  # Validate designation_id
-#                                     elif field == 'location_id':
-#                                         employee_draft.location_id = int(value) if value else None
-#                                     elif field == 'resign':
-#                                         employee_draft.resign = value == 'true'
-#                                     elif field == 'date_of_joining' or field == 'date_of_resignation':
-#                                         employee_draft.__setattr__(field, value or None)
-#                                     elif field == 'fullname' or field == 'remarks':
-#                                         employee_draft.__setattr__(field, value or None)
-#                                 except (ValueError, Designation.DoesNotExist) as e:
-#                                     logger.error(f"Invalid designation_id {value} for employee {employee_id}: {str(e)}")
-#                                     return JsonResponse({'error': f'Invalid designation ID: {value}'}, status=400)
-#                         employee_draft.edited_fields = employee_draft_edited
-#                         if employee_draft_edited:
-#                             employee_draft.save()
-#                             drafts_saved = True
-
-#                         if current_package_edited:
-#                             draft, created = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-#                             for field, value in tabs.get('current_package', {}).items():
-#                                 if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance'] and current_package_edited.get(field):
-#                                     try:
-#                                         if field == 'vehicle_id':
-#                                             draft.vehicle_id = int(value) if value else None
-#                                         elif field in ['gross_salary', 'fuel_limit', 'mobile_allowance']:
-#                                             draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
-#                                     except ValueError as e:
-#                                         logger.error(f"Invalid value for {field} in current_package for employee {employee_id}: {str(e)}")
-#                                         return JsonResponse({'error': f'Invalid value for {field}: {value}'}, status=400)
-#                             draft.edited_fields = current_package_edited
-#                             draft.save()
-#                             drafts_saved = True
-
-#                         if proposed_package_edited:
-#                             draft, created = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-#                             for field, value in tabs.get('proposed_package', {}).items():
-#                                 if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id'] and proposed_package_edited.get('vehicle_id' if field == 'vehicle_proposed_id' else field):
-#                                     try:
-#                                         if field == 'vehicle_proposed_id':
-#                                             draft.vehicle_id = int(value) if value else None
-#                                         elif field == 'mobile_allowance_proposed':
-#                                             draft.mobile_allowance = Decimal(value) if value else Decimal('0')
-#                                         elif field in ['increment_percentage', 'increased_fuel_amount']:
-#                                             draft.__setattr__(field, Decimal(value) if value else Decimal('0'))
-#                                     except ValueError as e:
-#                                         logger.error(f"Invalid value for {field} in proposed_package for employee {employee_id}: {str(e)}")
-#                                         return JsonResponse({'error': f'Invalid value for {field}: {value}'}, status=400)
-#                             draft.edited_fields = proposed_package_edited
-#                             draft.save()
-#                             drafts_saved = True
-
-#                         if financial_impact_edited:
-#                             draft, created = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
-#                             for field, value in tabs.get('financial_impact', {}).items():
-#                                 if field == 'emp_status_id' and financial_impact_edited.get(field):
-#                                     try:
-#                                         draft.emp_status_id = int(value) if value else None
-#                                     except ValueError as e:
-#                                         logger.error(f"Invalid emp_status_id {value} for employee {employee_id}: {str(e)}")
-#                                         return JsonResponse({'error': f'Invalid emp_status_id: {value}'}, status=400)
-#                             draft.edited_fields = financial_impact_edited
-#                             draft.save()
-#                             drafts_saved = True
-
-#                 if drafts_saved:
-#                     return JsonResponse({'message': 'Draft saved'})
-#                 else:
-#                     return JsonResponse({'message': 'No changes to save'}, status=200)
-#         except Exception as e:
-#             logger.error(f"Error in SaveDraftView for department {department_id}: {str(e)}", exc_info=True)
-#             return JsonResponse({'error': str(e)}, status=500)
-
 '''
 Updated save draft view
 '''
@@ -2417,10 +2215,41 @@ class SaveDraftView(View):
                 # Create or update EmployeeDraft
                 employee_draft = EmployeeDraft.objects.filter(employee=employee).first()
                 print("employee_draft: ", employee_draft)
+
+                empl = tabs.get('employee', {})
+                if empl.get('designation_id'):
+                    designation_id = int(empl.get('designation_id'))
+
+                    # Get the "intern" designation object (if exists)
+                    intern = Designation.objects.filter(title__iexact="intern", company=employee.company).first()
+
+                    if intern and designation_id == intern.id:
+                        is_intern = True
+                        promoted_from_intern_date = None
+                    else:
+                        if employee_draft and employee_draft.is_intern == True:
+                            promoted_from_intern_date = date.today()
+                        else:
+                            promoted_from_intern_date = None
+                        is_intern = False
+                else:
+                    if employee_draft:
+                        is_intern = employee_draft.is_intern
+                        promoted_from_intern_date = employee_draft.promoted_from_intern_date
+                    else:
+                        is_intern = employee.is_intern
+                        promoted_from_intern_date = employee.promoted_from_intern_date
+
                 if not employee_draft:
-                    employee_draft = EmployeeDraft(emp_id=employee_id, resign=employee.resign, auto_mark_eligibility=employee.auto_mark_eligibility, is_intern=employee.is_intern, promoted_from_intern_date=employee.promoted_from_intern_date,
-                        fullname=employee.fullname, remarks=employee.remarks, date_of_joining=employee.date_of_joining, employee=employee, company=employee.company, department_team=employee.department_team, department_group=employee.department_group,
-                        section=employee.section, designation=employee.designation, location=employee.location)
+                    # fipm = tabs.get('financial_impact', {})
+                    # if fipm.get('eligible_for_increment'):
+                    #     eligible_for_increment = bool(empl.get('eligible_for_increment'))
+                    # else:
+                    #     eligible_for_increment = employee.eligible_for_increment
+
+                    employee_draft = EmployeeDraft(emp_id=employee_id, resign=employee.resign, eligible_for_increment=employee.eligible_for_increment, auto_mark_eligibility=employee.auto_mark_eligibility, is_intern=is_intern, 
+                        promoted_from_intern_date=promoted_from_intern_date, fullname=employee.fullname, remarks=employee.remarks, date_of_joining=employee.date_of_joining, employee=employee, company=employee.company, 
+                        department_team=employee.department_team, department_group=employee.department_group, section=employee.section, designation=employee.designation, location=employee.location)
                     print("NEW employee_draft: ", employee_draft)
                     employee_draft.save()   # <-- save immediately
 
@@ -2434,10 +2263,19 @@ class SaveDraftView(View):
                             setattr(employee_draft, field, value == 'true')
                         else:
                             setattr(employee_draft, field, value or None)
-                
+                            
+                setattr(employee_draft, 'promoted_from_intern_date', int(promoted_from_intern_date) if promoted_from_intern_date else None)
+                setattr(employee_draft, 'is_intern', int(is_intern) if is_intern else None)
                 # employee_draft.edited_fields = employee_draft_edited
                 if employee_draft_edited:
                     print("employee_draft_edited: ", employee_draft_edited)
+
+                    # empl = tabs.get('employee', {})
+                    # if empl.get('eligible_for_increment'):
+                    #     eligible_for_increment = bool(empl.get('eligible_for_increment'))
+                    # else:
+                    #     eligible_for_increment = employee.eligible_for_increment
+
                     existing_edited_fields = employee_draft.edited_fields
                     
                     if len(existing_edited_fields) > 0 and not isinstance(existing_edited_fields, dict):
@@ -2505,7 +2343,7 @@ class SaveDraftView(View):
                                 setattr(draft, field, int(value) if value else None)
                             elif isinstance(getattr(ProposedPackageDetailsDraft, field).field, models.BooleanField):
                                 print("boolean field")
-                                setattr(draft, field, value == True if isinstance(value, bool) else value== 'True')
+                                setattr(draft, field, value == True if isinstance(value, bool) else str(value).lower() == 'true')
                             else:
                                 print("setting decimal")
                                 setattr(draft, field, Decimal(value) if value else Decimal('0'))
@@ -2551,99 +2389,9 @@ class SaveDraftView(View):
             return JsonResponse({'error': str(e)}, status=500)
 
 
-
-
-# class SaveFinalView(View):
-#     @classmethod
-#     def as_view(cls, **initkwargs):
-#         view = super().as_view(**initkwargs)
-#         view = login_required(view)
-#         view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
-#         view = ensure_csrf_cookie(view)
-#         return view
-
-#     def post(self, request, department_id):
-#         try:
-#             data = json.loads(request.body)
-#             updated_employees = []
-#             with transaction.atomic():
-#                 for employee_id, tabs in data.items():
-#                     employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
-#                     if not employee:
-#                         return JsonResponse({'error': f'Employee {employee_id} not found'}, status=404)
-
-#                     employee_draft = EmployeeDraft.objects.filter(employee=employee).first()
-#                     if employee_draft and employee_draft.edited_fields:  # Only process if draft has edited fields
-#                         for tab, fields in tabs.items():
-#                             if tab == 'employee':
-#                                 for field, value in fields.items():
-#                                     if field in ['fullname', 'department_group_id', 'section_id', 'designation_id', 'location_id', 'date_of_joining', 'resign', 'date_of_resignation', 'remarks']:
-#                                         if field == 'department_group_id':
-#                                             employee.department_group_id = int(value) if value else None
-#                                         elif field == 'section_id':
-#                                             employee.section_id = int(value) if value else None
-#                                         elif field == 'designation_id':
-#                                             employee.designation_id = int(value) if value else None
-#                                         elif field == 'location_id':
-#                                             employee.location_id = int(value) if value else None
-#                                         elif field == 'resign':
-#                                             employee.resign = value == 'true'
-#                                         elif field == 'date_of_joining' or field == 'date_of_resignation':
-#                                             employee.__setattr__(field, value or None)
-#                                         elif field == 'fullname' or field == 'remarks':
-#                                             employee.__setattr__(field, value or None)
-#                                 employee.save()
-
-#                             elif tab == 'current_package':
-#                                 current_package, created = CurrentPackageDetails.objects.get_or_create(employee=employee)
-#                                 for field, value in fields.items():
-#                                     if field in ['gross_salary', 'vehicle_id', 'fuel_limit', 'mobile_allowance']:
-#                                         if field == 'vehicle_id':
-#                                             current_package.vehicle_id = int(value) if value else None
-#                                         elif field in ['gross_salary', 'fuel_limit', 'mobile_allowance']:
-#                                             current_package.__setattr__(field, Decimal(value) if value else Decimal('0'))
-#                                 current_package.save()
-
-#                             elif tab == 'proposed_package':
-#                                 proposed_package, created = ProposedPackageDetails.objects.get_or_create(employee=employee)
-#                                 for field, value in fields.items():
-#                                     if field in ['increment_percentage', 'increased_fuel_amount', 'mobile_allowance_proposed', 'vehicle_proposed_id']:
-#                                         if field == 'vehicle_proposed_id':
-#                                             proposed_package.vehicle_id = int(value) if value else None
-#                                         elif field == 'mobile_allowance_proposed':
-#                                             proposed_package.mobile_allowance = Decimal(value) if value else Decimal('0')
-#                                         elif field in ['increment_percentage', 'increased_fuel_amount']:
-#                                             proposed_package.__setattr__(field, Decimal(value) if value else Decimal('0'))
-#                                 proposed_package.save()
-
-#                             elif tab == 'financial_impact':
-#                                 financial_impact, created = FinancialImpactPerMonth.objects.get_or_create(employee=employee)
-#                                 for field, value in fields.items():
-#                                     if field == 'emp_status_id':
-#                                         financial_impact.emp_status_id = int(value) if value else None
-#                                 financial_impact.save()
-
-#                         updated_employees.append(employee_id)
-#                         employee_draft.delete()
-
-#                 if updated_employees:
-#                     EmployeeDraft.objects.filter(employee__department_team_id=department_id).delete()
-#                     return JsonResponse({'message': 'Changes saved'})
-#                 else:
-#                     return JsonResponse({'message': 'No changes to save'}, status=200)
-#         except Exception as e:
-#             return JsonResponse({'error': str(e)}, status=500)
-
-
 '''
 updated code for save final
 '''
-
-from django.views.decorators.http import require_POST
-from django.utils.decorators import method_decorator
-
-
-logger = logging.getLogger(__name__)
 
 class SaveFinalView(View):
     @classmethod
@@ -2657,17 +2405,13 @@ class SaveFinalView(View):
     # @method_decorator(require_POST)
     def post(self, request, department_id):
         try:
-            print("FINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINAL\nFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINALFINAL\n")
             data = json.loads(request.body)
-            print("data: ", data)
             logger.info(f"Received payload for save-final: {data}")
             updated_employees = []
 
             with transaction.atomic():
                 for employee_id, tabs in data.items():
-                    print("employee_id, tabs: ",employee_id, tabs)
                     employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
-                    print("employee: ", employee)
                     if not employee:
                         logger.error(f"Employee {employee_id} not found for department {department_id}")
                         return JsonResponse({'error': f'Employee {employee_id} not found'}, status=404)

@@ -440,9 +440,11 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                     # print("draft model: ", DraftModel)
                     
                     if target_model_name == 'EmployeeDraft':
+                        filter_kwargs["eligible_for_increment"] = True
                         draft_rows = Model.objects.filter(**filter_kwargs).values('employee_id', field_name)
                     
                     else:
+                        filter_kwargs["employee_draft__eligible_for_increment"] = True
                         draft_rows = Model.objects.filter(**filter_kwargs).values('employee_draft__employee_id', field_name)
                     
                     # draft_rows = DraftModel.objects.filter(
@@ -465,9 +467,11 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                     non_draft_model = apps.get_model('user', target_model_name[:-5]) # target_model_name ends with 'Draft' in this case so we slice it to remove 'Draft'
                     if Model._meta.model_name == 'employeedraft':
                         # non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_id__in=draft_employee_ids).values(field_name)
+                        filter_kwargs_non_draft["eligible_for_increment"] = True
                         non_draft_employees = non_draft_model.objects.filter(**filter_kwargs_non_draft).exclude(id__in=draft_employee_ids).values(field_name)
                     else:
                         # non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_draft__employee_id__in=draft_employee_ids).values(field_name)
+                        filter_kwargs_non_draft["employee__eligible_for_increment"] = True
                         non_draft_employees = non_draft_model.objects.filter(**filter_kwargs_non_draft).exclude(employee_id__in=draft_employee_ids).values(field_name)
                     # non_draft_employees = Model.objects.filter(
                     #     employee__company=instance.employee_draft.employee.company
@@ -481,6 +485,10 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                             draft_values.append(float(value))
 
                 else:
+                    if target_model_name=="Employee":
+                        filter_kwargs["eligible_for_increment"] = True
+                    else:
+                        filter_kwargs["employee__eligible_for_increment"] = True
                     # No draft model or not in draft mode, use original model
                     rows = Model.objects.filter(**filter_kwargs).values(field_name)
                     for row in rows:

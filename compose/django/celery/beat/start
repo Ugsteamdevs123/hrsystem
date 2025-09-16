@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+
+echo "Waiting for database and Django migrations..."
+
+# Wait until the PeriodicTask table exists
+until python manage.py showmigrations django_celery_beat | grep '\[X\] 0001_initial'; do
+  echo "Waiting for django_celery_beat migrations to be applied..."
+  sleep 3
+done
+
+rm -f './celerybeat.pid'
+celery -A pyroll beat --scheduler django_celery_beat.schedulers:DatabaseScheduler -l DEBUG
