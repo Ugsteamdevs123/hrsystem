@@ -73,7 +73,8 @@ from .serializer import (
     DesignationSerializer,
     DesignationCreateSerializer,
     LocationsSerializer,
-    EmployeeStatusSerializer
+    EmployeeStatusSerializer,
+    FieldFormulaSerializer
 )
 
 from .signals import (
@@ -1766,6 +1767,18 @@ class DeleteEmployeeView(View):
         except (DepartmentTeams.DoesNotExist, Employee.DoesNotExist):
             logger.error("Error in DeleteEmployeeView: Employee or department not found")
             return JsonResponse({'error': 'Invalid data'}, status=400)
+
+
+class GetFormulasView(View):
+    def get(self, request):
+        department_team_id = request.GET.get('department_team_id')
+        print(department_team_id)
+        if department_team_id:
+            field_formulas = FieldFormula.objects.filter(department_team_id=department_team_id)
+            field_formulas_data = FieldFormulaSerializer(instance=field_formulas, many=True).data
+            print("field_formulas_data: ", field_formulas_data)
+            return JsonResponse({'field_formulas_data': list(field_formulas_data)})
+        return JsonResponse({'field_formulas_data': []})
 
 
 class GetDataView(View):

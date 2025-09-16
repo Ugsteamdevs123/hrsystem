@@ -852,6 +852,17 @@
                 updateRowEditability(row);
             }
         });
+
+        fetch(`/payroll/get-formulas/?department_team_id={{department_id}}`)
+            .then(res => res.json())
+            .then(data => {
+                console.log(data);
+                // data.employees.forEach(emp => {
+                //     const opt = document.createElement('option');
+                //     opt.value = emp.id;
+                //     opt.textContent = emp.name;
+                // });
+            });
     });
     </script>
 {% else %}

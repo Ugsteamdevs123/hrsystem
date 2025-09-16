@@ -2,6 +2,8 @@ from rest_framework import serializers
 from collections import OrderedDict
 from .models import (
     IncrementDetailsSummary, 
+    Formula,
+    FieldFormula,
     DepartmentGroups, 
     Section, 
     Designation, 
@@ -154,3 +156,16 @@ class EmployeeStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployeeStatus
         fields = '__all__'
+
+
+class FormulaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Formula
+        fields = ['formula_name', 'formula_expression', 'target_model', 'target_field']
+
+
+class FieldFormulaSerializer(serializers.ModelSerializer):
+    formula = FormulaSerializer(read_only=True)
+    class Meta:
+        model = FieldFormula
+        fields = ['formula']
