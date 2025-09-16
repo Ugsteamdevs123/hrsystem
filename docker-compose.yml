@@ -32,11 +32,11 @@ services:
     networks:
       - payroll_network
 
-  celery_beat_develop:
+  hr_celery_beat_develop:
     build: 
       context: .
       dockerfile: ./compose/django/Dockerfile
-    image: django_celery_celery_beat_develop
+    image: hr_django_celery_celery_beat_develop
     command: /start-celerybeat
     volumes:
       - .:/code
