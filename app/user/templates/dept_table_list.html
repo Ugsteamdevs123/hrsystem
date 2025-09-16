@@ -694,6 +694,8 @@
         // console.log("IncreasedFuelLitre: ", IncreasedFuelLitre.textContent);
         const RevisedFuelAllowance = row.querySelector('td:nth-child(25)');
         // console.log("RevisedFuelAllowance: ", RevisedFuelAllowance.textContent);
+        const FinancialEmployeeStatus = row.querySelector('td:nth-child(29)');
+        console.log("FinancialEmployeeStatus: ", FinancialEmployeeStatus.textContent);
         const FinancialSalary = row.querySelector('td:nth-child(31)');
         // console.log("FinancialSalary: ", FinancialSalary.textContent);
         const FinancialGratuity = row.querySelector('td:nth-child(32)');
@@ -730,7 +732,7 @@
         
         RevisedFuelAllowance.textContent = (parseFloat(IncreasedFuelAllowance.textContent) + parseFloat(CurrentFuelAllowance.textContent)).toFixed(2);
         FinancialSalary.textContent = parseFloat(increasedAmountCell.textContent).toFixed(2);
-        FinancialGratuity.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
+        if (FinancialEmployeeStatus.textContent == 'P') FinancialGratuity.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
         FinancialBonus.textContent = (1.7*parseFloat(FinancialSalary.textContent)/12).toFixed(2);
         LeaveEncashment.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
         FinancialFuel.textContent = parseFloat(IncreasedFuelAllowance.textContent).toFixed(2);

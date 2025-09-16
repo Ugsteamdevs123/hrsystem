@@ -89,6 +89,16 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
                 print(f"No instance found for {model_name} with company={company}, department_team={department_team}")
                 continue
 
+            if model_name == 'FinancialImpactPerMonth' and field == 'gratuity':
+                employee_status = FinancialImpactPerMonth.objects.filter(employee=instance.id)
+                if employee_status.exists():
+                    employee_status = employee_status.first()
+                    employee_status = employee_status.emp_status.status
+                    if employee_status != 'P':
+                        continue
+
+            print("target_instance._meta.model_name: ", target_instance._meta.model_name)
+
             expression = field_formula.formula.formula_expression
             print("expression: ", expression)
             try:
@@ -186,6 +196,16 @@ def update_increment_summary(sender, instance, created, **kwargs):
                 print(f"No instance found for {model_name} with company={company}, department_team={department_team}")
                 continue
 
+            if model_name == 'FinancialImpactPerMonth' and field == 'gratuity':
+                employee_status = FinancialImpactPerMonth.objects.filter(employee=instance.employee)
+                if employee_status.exists():
+                    employee_status = employee_status.first()
+                    employee_status = employee_status.emp_status.status
+                    if employee_status != 'P':
+                        continue
+
+            print("target_instance._meta.model_name: ", target_instance._meta.model_name)
+
             expression = field_formula.formula.formula_expression
             print("expression: ", expression)
             try:
@@ -273,7 +293,6 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                 company_pickup=currentpackagedetails.company_pickup, 
                 is_deleted=currentpackagedetails.is_deleted
             )
-            
         
         proposedpackagedetailsdraft_dr = getattr(instance, 'proposedpackagedetailsdraft', None)
         if not proposedpackagedetailsdraft_dr:
@@ -374,6 +393,16 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                 print(f"No instance found for {target_model_name} with company={company}, department_team={department_team}")
                 continue
 
+            if target_model_name == 'FinancialImpactPerMonthDraft' and field == 'gratuity':
+                employee_status = FinancialImpactPerMonthDraft.objects.filter(employee_draft=instance.id)
+                if employee_status.exists():
+                    employee_status = employee_status.first()
+                    employee_status = employee_status.emp_status.status
+                    if employee_status != 'P':
+                        continue
+
+            print("target_instance._meta.model_name: ", target_instance._meta.model_name)
+
             expression = field_formula.formula.formula_expression
             try:
                 print("eveavavavav isdraff: ", is_draft, "  ::: target_model_name: ", target_model_name)
@@ -386,11 +415,8 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                 print("Model._meta.model_name: ", Model._meta.model_name)
 
                 if Model._meta.model_name in ["incrementdetailssummarydraft", "employee"]:
-                    print("hi 1")
                     Model.objects.filter(id=target_instance.id).update(**{field: value})
-                    print("saved 1")
                 else:
-                    print("hi 2")
                     Model.objects.filter(employee_draft=target_instance.employee_draft).update(**{field: value})
                 instance.refresh_from_db()
             except ValueError as e:
@@ -425,9 +451,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
 
         # Determine context
         employee_draft = getattr(instance, 'employee_draft', None)
-        employee = employee_draft.employee if employee_draft else getattr(instance, 'employee', None)    
-
-        print("employee_draft.id: ", employee_draft.id)
+        employee = employee_draft.employee if employee_draft else getattr(instance, 'employee', None)
 
         currentpackagedetailsdraft_dr = getattr(employee_draft, 'currentpackagedetailsdraft', None)
         if not currentpackagedetailsdraft_dr:
@@ -448,7 +472,6 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
         
         proposedpackagedetailsdraft_dr = getattr(employee_draft, 'proposedpackagedetailsdraft', None)
         if not proposedpackagedetailsdraft_dr:
-            print("creating here: ")
             proposedpackagedetails = employee.proposedpackagedetails
             # ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
             ProposedPackageDetailsDraft.objects.get_or_create(
@@ -523,6 +546,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
         print("ordered: ", ordered)
 
         for model_name, field in ordered:
+            print("field check: ", field)
             # Map model to draft version if sender is a draft model
             target_model_name = model_name + 'Draft' if is_draft and model_name in model_mapping.values() else model_name
             if not target_model_name.endswith('Draft') and is_draft:
@@ -551,6 +575,16 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
             if not target_instance:
                 print(f"No instance found for {target_model_name} with company={company}, department_team={department_team}")
                 continue
+
+            if target_model_name == 'FinancialImpactPerMonthDraft' and field == 'gratuity':
+                employee_status = FinancialImpactPerMonthDraft.objects.filter(employee_draft=instance.employee_draft)
+                if employee_status.exists():
+                    employee_status = employee_status.first()
+                    employee_status = employee_status.emp_status.status
+                    if employee_status != 'P':
+                        continue
+
+            print("target_instance._meta.model_name: ", target_instance._meta.model_name)
 
             expression = field_formula.formula.formula_expression
             try:
