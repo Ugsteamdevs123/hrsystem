@@ -19,11 +19,11 @@ services:
     env_file:
       - .env
 
-  celery_worker_develop:
+  hr_celery_worker_develop:
     build: 
       context: .
       dockerfile: ./compose/django/Dockerfile
-    image: django_celery_celery_worker_develop
+    image: hr_django_celery_celery_worker_develop
     command: /start-celeryworker
     volumes:
       - .:/code
