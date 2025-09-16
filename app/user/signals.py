@@ -5,7 +5,7 @@ from django.dispatch import receiver
 from django.apps import apps
 
 from .utils import update_department_team_increment_summary, topological_sort, evaluate_formula
-from .models import Employee, SummaryStatus, CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, DepartmentTeams, FieldFormula, CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft, IncrementDetailsSummaryDraft
+from .models import Employee, SummaryStatus, CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, DepartmentTeams, Formula, FieldFormula, CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft, IncrementDetailsSummaryDraft
 
 logger = logging.getLogger(__name__)
 
@@ -702,13 +702,15 @@ def add_new_increment_details_summary_record_and_assign_initial_formulas_to_new_
                 print("existing_summary_status: ", existing_summary_status)
                 
             # Get all FieldFormula assignments from the default department
-            default_formulas = FieldFormula.objects.filter(formula__formula_is_default=True)
+            default_formulas = Formula.objects.filter(formula_is_default=True)
+            print("checking")
+            print("default_formulas: ", default_formulas)
                 
             for default_ff in default_formulas:
+                print("creating")
                 # Copy to the new department (same formula FK, description, etc.)
                 FieldFormula.objects.create(
-                    formula=default_ff.formula,
-                    description=default_ff.description,
+                    formula=default_ff,
                     company=instance.company,  # Use the new department's company
                     department_team=instance
                 )
