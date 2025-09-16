@@ -83,7 +83,7 @@ from .signals import (
 
 import json
 from decimal import Decimal
-from datetime import date
+from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 
 from .signals import (
@@ -1600,6 +1600,21 @@ class UpdateEmployeeView(View):
 
                 # --- Update Employee Info ---
                 if step == 'employee':
+                    # Parse date_of_joining from POST data
+                    date_str = request.POST.get('date_of_joining')
+                    date_of_joining = None
+                    eligible_for_increment = False
+
+                    if date_str:
+                        try:
+                            # Adjust format if needed, e.g., "%Y-%m-%d"
+                            date_of_joining = datetime.strptime(date_str, "%Y-%m-%d").date()
+                            if date_of_joining <= (date.today() - relativedelta(months=6)):
+                                eligible_for_increment = True
+                        except ValueError:
+                            # Handle invalid date format if necessary
+                            pass
+
                     employee.emp_id = request.POST.get('emp_id') or employee.emp_id
                     employee.fullname = request.POST.get('fullname') or employee.fullname
                     employee.department_team_id = request.POST.get('department_team_id') or None
@@ -1620,11 +1635,12 @@ class UpdateEmployeeView(View):
                         else:
                             if employee.is_intern == True:
                                 employee.promoted_from_intern_date = date.today()
-                                employee.date_of_joining = date.today()
+                                date_of_joining = date.today()
                             employee.is_intern = False
 
                     employee.location_id = request.POST.get('location_id') or None
-                    employee.date_of_joining = request.POST.get('date_of_joining') or None
+                    employee.date_of_joining = date_of_joining
+                    employee.eligible_for_increment = eligible_for_increment
                     employee.date_of_resignation = request.POST.get('date_of_resignation') or None
 
                     if request.POST.get('date_of_resignation'):
