@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Department - {{ department.name }}{% endblock %}
+{% block title %}Group - {{ department.name }}{% endblock %}
 
 {% block content %}
 {% if perms.user.view_employee %}
@@ -11,7 +11,7 @@
 
         <!-- Page Heading -->
         <div class="section-head">
-            <h2>Department — {{ department.name }}</h2>
+            <h2>Group — {{ department.name }}</h2>
         </div>
 
         <!-- Buttons -->
@@ -26,59 +26,59 @@
             <table border="1" cellpadding="8" cellspacing="0" class="custom-table">
                 <thead>
                     <tr>
-                        <th rowspan="2" class="sticky-col sticky-col-1 sticky-header">SR.No</th>
-                        <th rowspan="2" class="sticky-col sticky-col-2 sticky-header">Employee ID</th>
-                        <th rowspan="2" class="sticky-col sticky-col-3 sticky-header">Full Name</th>
-                        <th rowspan="2" class="sticky-col sticky-col-4 sticky-header">Designation</th>
+                        <th rowspan="2" class="sticky-col sticky-col-1 sticky-header employee-color">SR.No</th>
+                        <th rowspan="2" class="sticky-col sticky-col-2 sticky-header employee-color">Emp ID</th>
+                        <th rowspan="2" class="sticky-col sticky-col-3 sticky-header employee-color">Full Name</th>
+                        <th rowspan="2" class="sticky-col sticky-col-4 sticky-header employee-color">Designation</th>
                         <!-- Employee Details -->
-                        <th colspan="9" class="group-header non-sticky-header">Employee Details</th>
+                        <th colspan="9" class="group-header non-sticky-header employee-color">Employee Details</th>
                         <!-- Current Package -->
-                        <th colspan="6" class="group-header non-sticky-header">Current Package</th>
+                        <th colspan="6" class="group-header non-sticky-header current-package-color">Current Package</th>
                         <!-- Proposed Package -->
-                        <th colspan="9" class="group-header non-sticky-header">Proposed Package</th>
+                        <th colspan="9" class="group-header non-sticky-header proposed-package-color">Proposed Package</th>
                         <!-- Financial Impact -->
-                        <th colspan="9" class="group-header non-sticky-header">Financial Impact</th>
+                        <th colspan="9" class="group-header non-sticky-header financial-impact-color">Financial Impact</th>
                     </tr>
                     <tr>
                         <!-- Employee Details Subheaders -->
-                        <th class="non-sticky-header">Eligible For Increment</th>
-                        <th class="non-sticky-header">Department Group</th>
-                        <th class="non-sticky-header">Department</th>
-                        <th class="non-sticky-header">Section</th>
-                        <th class="non-sticky-header">Location</th>
-                        <th class="non-sticky-header">Date of Joining</th>
-                        <th class="non-sticky-header">Resign</th>
-                        <th class="non-sticky-header">Date of Resignation</th>
-                        <th class="non-sticky-header">Remarks</th>
+                        <th class="non-sticky-header employee-color">Eligible For Increment</th>
+                        <th class="non-sticky-header employee-color">Department Group</th>
+                        <th class="non-sticky-header employee-color">Department</th>
+                        <th class="non-sticky-header employee-color">Section</th>
+                        <th class="non-sticky-header employee-color">Location</th>
+                        <th class="non-sticky-header employee-color">Date of Joining</th>
+                        <th class="non-sticky-header employee-color">Resign</th>
+                        <th class="non-sticky-header employee-color">Date of Resignation</th>
+                        <th class="non-sticky-header employee-color">Remarks</th>
                         <!-- Current Package Subheaders -->
-                        <th class="non-sticky-header">Gross Salary</th>
-                        <th class="non-sticky-header">Company Pickup</th>
-                        <th class="non-sticky-header">Vehicle</th>
-                        <th class="non-sticky-header">Fuel Allowance</th>
-                        <th class="non-sticky-header">Fuel Litre</th>
-                        <th class="non-sticky-header">Mobile Provided</th>
-                        {# <th class="non-sticky-header">Total</th> #}
+                        <th class="non-sticky-header current-package-color">Gross Salary</th>
+                        <th class="non-sticky-header current-package-color">Company Pickup</th>
+                        <th class="non-sticky-header current-package-color">Vehicle</th>
+                        <th class="non-sticky-header current-package-color">Fuel Allowance</th>
+                        <th class="non-sticky-header current-package-color">Fuel Litre</th>
+                        <th class="non-sticky-header current-package-color">Mobile Provided</th>
+                        {# <th class="non-sticky-header current-package-color">Total</th> #}
                         <!-- Proposed Package Subheaders -->
-                        <th class="non-sticky-header">Increment Percentage</th>
-                        <th class="non-sticky-header">Increased Amount</th>
-                        <th class="non-sticky-header">Revised Salary</th>
-                        <th class="non-sticky-header">Increased Fuel Allowance</th>
-                        <th class="non-sticky-header">Increased Fuel Litre</th>
-                        <th class="non-sticky-header">Revised Fuel Allowance</th>
-                        <th class="non-sticky-header">Mobile Provided</th>
-                        <th class="non-sticky-header">Company Pickup</th>
-                        <th class="non-sticky-header">Vehicle</th>
-                        {# <th class="non-sticky-header">Total</th>  #}
+                        <th class="non-sticky-header proposed-package-color">Increment Percentage</th>
+                        <th class="non-sticky-header proposed-package-color">Increased Amount</th>
+                        <th class="non-sticky-header proposed-package-color">Revised Salary</th>
+                        <th class="non-sticky-header proposed-package-color">Increased Fuel Allowance</th>
+                        <th class="non-sticky-header proposed-package-color">Increased Fuel Litre</th>
+                        <th class="non-sticky-header proposed-package-color">Revised Fuel Allowance</th>
+                        <th class="non-sticky-header proposed-package-color">Mobile Provided</th>
+                        <th class="non-sticky-header proposed-package-color">Company Pickup</th>
+                        <th class="non-sticky-header proposed-package-color">Vehicle</th>
+                        {# <th class="non-sticky-header proposed-package-color">Total</th>  #}
                         <!-- Financial Impact Subheaders -->
-                        <th class="non-sticky-header">Employee Status</th>
-                        <th class="non-sticky-header">Serving Years</th>
-                        <th class="non-sticky-header">Salary</th>
-                        <th class="non-sticky-header">Gratuity</th>
-                        <th class="non-sticky-header">Bonus</th>
-                        <th class="non-sticky-header">Leave Encashment</th>
-                        <th class="non-sticky-header">Fuel</th>
-                        <th class="non-sticky-header">Vehicle</th>
-                        <th class="non-sticky-header">Total</th>
+                        <th class="non-sticky-header financial-impact-color">Employee Status</th>
+                        <th class="non-sticky-header financial-impact-color">Serving Years</th>
+                        <th class="non-sticky-header financial-impact-color">Salary</th>
+                        <th class="non-sticky-header financial-impact-color">Gratuity</th>
+                        <th class="non-sticky-header financial-impact-color">Bonus</th>
+                        <th class="non-sticky-header financial-impact-color">Leave Encashment</th>
+                        <th class="non-sticky-header financial-impact-color">Fuel</th>
+                        <th class="non-sticky-header financial-impact-color">Vehicle</th>
+                        <th class="non-sticky-header financial-impact-color">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -145,6 +145,18 @@
     </div>
 
     <style>
+        .employee-color {
+            background-color: #6495ed;
+        }
+        .current-package-color {
+            background-color: #b2a1c7;
+        }
+        .proposed-package-color {
+            background-color: #f2dbdb;
+        }
+        .financial-impact-color {
+            background-color: #31859b;
+        }
         .container {
             overflow: hidden !important;
             padding: 20px;
@@ -192,7 +204,7 @@
             background-color: inherit;
         }
         th {
-            background-color: #f2f2f2;
+            /* background-color: #f2f2f2; */
             font-weight: 600;
         }
         th[rowspan="2"] {
@@ -212,18 +224,18 @@
         }
         .sticky-col.sticky-header {
             z-index: 50;
-            background-color: #f2f2f2 !important;
+            background-color: #6495ed !important;
         }
         /* Non-sticky headers and cells */
         .non-sticky-header {
             position: sticky;
             top: 0;
             z-index: 20;
-            background-color: #f2f2f2 !important;
+            /* background-color: #f2f2f2 !important; */
         }
         .non-sticky {
             z-index: 5;
-            background-color: #ffffff !important;
+            /* background-color: #ffffff !important; */
         }
         th.group-header {
             text-align: center;

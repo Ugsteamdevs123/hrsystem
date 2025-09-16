@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Configurations{% endblock %}
+
+{% block content %}
+<h2>Configurations</h2>
+
+<div class="config-form-card">
+    <h3>{% if config %}Edit Configuration{% else %}Add Configuration{% endif %}</h3>
+    <form id="configForm" method="POST">
+        {% csrf_token %}
+        <!-- Fuel Rate -->
+        <div class="form-field">
+            {{ form.fuel_rate.label_tag }}
+            {{ form.fuel_rate }}
+            {% if form.fuel_rate.errors %}
+                <div class="error">{{ form.fuel_rate.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- As Of Date -->
+        <div class="form-field">
+            {{ form.as_of_date.label_tag }}
+            {{ form.as_of_date }}
+            {% if form.as_of_date.errors %}
+                <div class="error">{{ form.as_of_date.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Bonus Constant Multiplier -->
+        <div class="form-field">
+            {{ form.bonus_constant_multiplier.label_tag }}
+            {{ form.bonus_constant_multiplier }}
+            {% if form.bonus_constant_multiplier.errors %}
+                <div class="error">{{ form.bonus_constant_multiplier.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Buttons -->
+        <div class="button-group">
+            <button type="button" class="form-btn btn-submit"
+                onclick="showConfirmPopup('Are you sure you want to {% if config %}update{% else %}add{% endif %} this configuration?', function(){ 
+                    document.getElementById('configForm').submit(); 
+                })">
+                {% if config %}Update Configuration{% else %}Add Configuration{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+/* Form fields styling */
+.form-field {
+    margin-bottom: 20px;
+    text-align: left;
+}
+.form-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+}
+.form-field input, .form-field select, .form-field textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+    border-color: #28a745;
+    outline: none;
+}
+
+/* Config form card */
+.config-form-card {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.config-form-card h3 {
+    margin: 0 0 15px;
+    font-size: 16px;
+    color: #333;
+}
+
+/* Buttons */
+.form-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+    transition: background-color 0.3s;
+}
+.btn-submit { background-color: #28a745; color: #fff; }
+.btn-submit:hover { background-color: #218838; }
+
+/* Error messages */
+.error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+/* Responsive */
+@media screen and (max-width: 500px) {
+    .form-btn { font-size: 12px; padding: 10px; }
+    .form-field input, .form-field select, .form-field textarea { font-size: 14px; padding: 10px; }
+    .config-form-card { padding: 15px; }
+}
+</style>
+{% endblock %}
