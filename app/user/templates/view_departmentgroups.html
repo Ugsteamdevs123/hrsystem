@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}View Department Groups{% endblock %}
+{% block title %}View Departments{% endblock %}
 
 {% block content %}
-<h2>All Department Groups</h2>
+<h2>All Departments</h2>
 
 <!-- Add Department Group Button -->
 {% if perms.user.add_departmentgroups %}
-<button class="form-btn btn-add" onclick="window.location.href='{% url 'add_departmentgroups' %}'">Add New Department Group</button>
+<button class="form-btn btn-add" onclick="window.location.href='{% url 'add_departmentgroups' %}'">Add New Department</button>
 {% endif %}
 
 <!-- Department Groups Table -->
@@ -14,7 +14,7 @@
     <thead>
         <tr>
             <th>SR.No</th>
-            <th>Department Group Name</th>
+            <th>Department Name</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -30,7 +30,7 @@
                 
                 {% if perms.user.delete_departmentgroups %}
                 <button class="action-btn delete-btn" 
-                        onclick="showConfirmPopup('Are you sure you want to delete this department group?', function(){
+                        onclick="showConfirmPopup('Are you sure you want to delete this department?', function(){
                             window.location.href='{% url 'delete_departmentgroups' group.id %}';
                         })">
                     Delete
@@ -40,7 +40,7 @@
         </tr>
         {% empty %}
         <tr>
-            <td colspan="3" style="text-align: center;">No department groups found.</td>
+            <td colspan="3" style="text-align: center;">No department found.</td>
         </tr>
         {% endfor %}
     </tbody>

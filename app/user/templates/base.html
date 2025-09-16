@@ -338,7 +338,7 @@
         <span></span>
         <span></span>
     </div>
-    <h1>United Marine Agencies (Pvt.) Ltd.</h1>
+    <h1>HR Payroll System</h1>
 </header>
 
 <div class="main-layout">
@@ -349,15 +349,15 @@
             {% endif %}
 
             {% if perms.user.view_incrementdetailssummary %}
-            <a href="{% url 'hr_dashboard' %}">Dashboard</a>
+            <a href="{% url 'hr_dashboard' %}">Summary</a>
             {% endif %}
 
             {% if perms.user.view_departmentteams %}
-            <a href="{% url 'department_team' %}">Department</a>
+            <a href="{% url 'department_team' %}">Group</a>
             {% endif %}
 
             {% if perms.user.view_departmentgroups %}
-            <a href="{% url 'view_departmentgroups' %}">Department Groups</a>
+            <a href="{% url 'view_departmentgroups' %}">Department</a>
             {% endif %}
 
             {% if perms.user.view_section %}
@@ -380,14 +380,18 @@
             <a href="{% url 'view_field_formulas' %}">Formulas Manage</a>
             {% endif %}
 
+            {% if perms.user.view_configurations %}
+            <a href="{% url 'manage_configurations' %}">Configurations</a>
+            {% endif %}
+
             {% if perms.user.view_employee %}
-            <a href="{% url 'employees_view' %}">Manage Employees</a>
+            <a href="{% url 'employees_view' %}">Employee</a>
             {% endif %}
 
             {% if perms.user.view_employee and company_data %}
             <div class="departments-dropdown">
                 <button class="departments-toggle" type="button">
-                    <span class="label">Departments</span>
+                    <span class="label">Groups</span>
                     <span class="departments-caret"></span>
                 </button>
 

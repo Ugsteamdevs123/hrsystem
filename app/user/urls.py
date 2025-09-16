@@ -5,6 +5,7 @@ from . import views
 # app_name = 'user'
 urlpatterns = [
     path('login/', views.LoginView.as_view(), name='login'),
+    path("logout/", views.LogoutView.as_view(), name="logout"),
 
     # user crud
     path("add-user/", views.AddUserView.as_view(), name="add_user"),
@@ -70,7 +71,7 @@ urlpatterns = [
 
     # For employee crud
     path('employee/', views.EmployeesView.as_view(), name='employees_view'),
-    path('department/create/', views.CreateEmployeeView.as_view(), name='create_employee'),
+    path('employee/create/', views.CreateEmployeeView.as_view(), name='create_employee'),
     path('employee/update/<int:employee_id>/', views.UpdateEmployeeView.as_view(), name='update_employee'),
     path('department/delete/<int:employee_id>/', views.DeleteEmployeeView.as_view(), name='delete_employee'),
     path('employee/<int:employee_id>/', views.EmployeeDetailView.as_view(), name='employee_detail'),
@@ -100,5 +101,5 @@ urlpatterns = [
 
     path('vehicles-dropdown/', views.VehiclesDropdownView.as_view(), name='vehicles-dropdown'),
 
-    path("logout/", views.LogoutView.as_view(), name="logout"),
+    path('configurations/', views.ManageConfigurationsView.as_view(), name='manage_configurations'),
 ]

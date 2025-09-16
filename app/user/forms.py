@@ -17,7 +17,8 @@ from .models import (
     FieldFormula,
     FieldReference,
     Employee,
-    DepartmentTeams
+    DepartmentTeams,
+    Configurations
 )
 
 
@@ -406,7 +407,7 @@ class DepartmentGroupsForm(forms.ModelForm):
         fields = ['name']
         widgets = {
             'name': forms.TextInput(attrs={
-                'placeholder': 'Enter Department Group Name',
+                'placeholder': 'Enter Department Name',
                 'class': 'form-control'
             })
         }
@@ -471,12 +472,22 @@ class VehicleBrandForm(forms.ModelForm):
         fields = ["name"]
 
 
+class ConfigurationsForm(forms.ModelForm):
+    as_of_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
 
+    class Meta:
+        model = Configurations
+        fields = ['fuel_rate', 'as_of_date', 'bonus_constant_multiplier']
 
+    def clean(self):
+        cleaned_data = super().clean()
+        # Basic validation to ensure fields are not negative
+        fuel_rate = cleaned_data.get('fuel_rate')
+        bonus_constant_multiplier = cleaned_data.get('bonus_constant_multiplier')
 
+        if fuel_rate is not None and fuel_rate < 0:
+            self.add_error('fuel_rate', 'Fuel rate cannot be negative.')
+        if bonus_constant_multiplier is not None and bonus_constant_multiplier < 0:
+            self.add_error('bonus_constant_multiplier', 'Bonus constant multiplier cannot be negative.')
 
-
-
-
-
-        
+        return cleaned_data
