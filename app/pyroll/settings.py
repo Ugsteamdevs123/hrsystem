@@ -74,14 +74,14 @@ CELERY_TIMEZONE = 'Asia/Karachi'  # Celery timezone set to PKT
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 CELERY_BEAT_SCHEDULE = {
-    'run-every-30-seconds': {
-        'task': 'user.tasks.task_day',
-        'schedule': 30.0,  # Every 30 seconds
-    },
-    # 'run-every-2-days': {
-    #     'task': 'tasks.tasks.task_days',
-    #     'schedule': 2 * 24 * 60 * 60,  # Every 2 days
+    # 'run-every-30-seconds': {
+    #     'task': 'user.tasks.task_seconds',
+    #     'schedule': 30.0,  # Every 30 seconds
     # },
+    'run-every-1-day': {
+        'task': 'tasks.tasks.task_day',
+        'schedule': 24 * 60 * 60,  # Every 2 days
+    },
     # 'run-first-day-of-month': {
     #     'task': 'tasks.tasks.task_monthly',
     #     'schedule': crontab(day_of_month=1, hour=0, minute=0),  # 1st of every month at midnight PKT
