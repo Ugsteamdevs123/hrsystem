@@ -1404,7 +1404,22 @@ class CreateEmployeeView(View):
                     post_save.disconnect(update_increment_summary, sender=CurrentPackageDetails)
                     post_save.disconnect(update_increment_summary, sender=ProposedPackageDetails)
                     post_save.disconnect(update_increment_summary, sender=FinancialImpactPerMonth)
-                    
+
+                    # Parse date_of_joining from POST data
+                    date_str = request.POST.get('date_of_joining')
+                    date_of_joining = None
+                    eligible_for_increment = False
+
+                    if date_str:
+                        try:
+                            # Adjust format if needed, e.g., "%Y-%m-%d"
+                            date_of_joining = datetime.strptime(date_str, "%Y-%m-%d").date()
+                            if date_of_joining <= (date.today() - relativedelta(months=6)):
+                                eligible_for_increment = True
+                        except ValueError:
+                            # Handle invalid date format if necessary
+                            pass
+
                     emp_id = request.POST.get('emp_id')
 
                     # Get or create employee by emp_id
@@ -1421,7 +1436,7 @@ class CreateEmployeeView(View):
                         'date_of_resignation': request.POST.get('date_of_resignation') or None,
                         'remarks': request.POST.get('remarks') or '',
                         'image': request.FILES.get('image') if 'image' in request.FILES else None,
-                        'eligible_for_increment': request.POST.get('eligible_for_increment') == 'true',
+                        'eligible_for_increment': eligible_for_increment,
                     })
 
                     designation_id_str = request.POST.get('designation_id')
@@ -1453,7 +1468,7 @@ class CreateEmployeeView(View):
                         employee.remarks = request.POST.get('remarks') or ''
                         if 'image' in request.FILES:
                             employee.image = request.FILES.get('image')
-                        employee.eligible_for_increment = request.POST.get('eligible_for_increment') == 'true'
+                        employee.eligible_for_increment = eligible_for_increment
                         employee.is_intern = is_intern
                         employee.promoted_from_intern_date = promoted_from_intern_date
                         employee.save()
@@ -1605,6 +1620,7 @@ class UpdateEmployeeView(View):
                         else:
                             if employee.is_intern == True:
                                 employee.promoted_from_intern_date = date.today()
+                                employee.date_of_joining = date.today()
                             employee.is_intern = False
 
                     employee.location_id = request.POST.get('location_id') or None
@@ -2217,6 +2233,7 @@ class SaveDraftView(View):
                 print("employee_draft: ", employee_draft)
 
                 empl = tabs.get('employee', {})
+                date_of_joining = employee.date_of_joining
                 if empl.get('designation_id'):
                     designation_id = int(empl.get('designation_id'))
 
@@ -2229,6 +2246,7 @@ class SaveDraftView(View):
                     else:
                         if employee_draft and employee_draft.is_intern == True:
                             promoted_from_intern_date = date.today()
+                            date_of_joining = date.today()
                         else:
                             promoted_from_intern_date = None
                         is_intern = False
