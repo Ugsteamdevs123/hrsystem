@@ -12,7 +12,7 @@ from django.views import View
 from django.core.exceptions import PermissionDenied
 from django.apps import apps
 from django.db import transaction, models
-from django.db.models import Q
+from django.db.models import Q, Case, When
 from django.db.models.signals import post_save
 from django.forms.models import model_to_dict
 from django.shortcuts import render, redirect , get_object_or_404
@@ -65,7 +65,7 @@ from .forms import (
 from venv import logger
 from permissions import PermissionRequiredMixin
 
-from .utils import get_companies_and_department_teams
+from .utils import get_companies_and_department_teams, topological_sort
 from .serializer import (
     IncrementDetailsSummarySerializer,
     IncrementDetailsSummaryDraftSerializer,
@@ -73,7 +73,8 @@ from .serializer import (
     DesignationSerializer,
     DesignationCreateSerializer,
     LocationsSerializer,
-    EmployeeStatusSerializer
+    EmployeeStatusSerializer,
+    FieldFormulaSerializer
 )
 
 from .signals import (
@@ -181,6 +182,7 @@ class AddUserView(PermissionRequiredMixin, View):
         return render(request, self.template_name, {"form": form})
 
     def post(self, request):
+        print("request.POST: ", request.POST)
         form = CustomUserForm(request.POST)
         if form.is_valid():
             user = form.save()
@@ -190,6 +192,8 @@ class AddUserView(PermissionRequiredMixin, View):
             hr_assigned_companies.objects.create(hr=user, company=Company.objects.all().first())
             messages.success(request, "User added successfully!")
             return redirect("view_users")
+        else:
+            print(form.errors)
         return render(request, self.template_name, {"form": form})
 
 
@@ -1068,12 +1072,6 @@ class DepartmentTableView(View):
         ).first()
         if not department:
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
-        
-        # formula = FieldFormula.objects.filter(
-        #     department_team = department.pk,
-        #     company = department.company.pk
-        # )
-        # print(formula , 'mmmmmmmmm')
 
         company_data = get_companies_and_department_teams(request.user)
         employees = Employee.objects.filter(department_team=department).select_related(
@@ -1084,37 +1082,6 @@ class DepartmentTableView(View):
 
         employee_data = []
         draft_data = {}
-
-        '''
-        Passing formula to frontend
-        '''
-
-        formulas_qs = FieldFormula.objects.filter(
-            company=department.company
-        ).filter(
-            Q(department_team=department) |
-            Q(department_team__isnull=True)
-        )
-
-        print(formulas_qs , 'mmmmmmmmm')
-
-        formulas_data = []
-
-        for f in formulas_qs:
-            try:
-                formulas_data.append({
-                    "target_model": f.target_model or "",   # fallback empty string
-                    "target_field": f.target_field or "",
-                    "formula": str(f.formula) if f.formula else "",  # safe check for None
-                    "employee_id": f.employee_id if f.employee_id is not None else None,
-                    "department_id": f.department_team_id if f.department_team_id is not None else None,
-                    "company_id": f.company_id if f.company_id is not None else None,
-                })
-            except Exception as e:
-                # Log or skip the problematic formula
-                print(f"Error serializing formula {f.id if f.id else 'unknown'}: {e}")
-
-            print(formulas_data,'data')
 
         for emp in employees:
             emp_draft = emp.drafts.first()
@@ -1206,7 +1173,7 @@ class DepartmentTableView(View):
             'department_id': department_id,
             'company_data': company_data,
             'draft_data': draft_data,
-            "formulas": json.dumps(formulas_data),   # 👉 pass as JSON
+            'fuel_rate': Configurations.objects.values_list('fuel_rate', flat=True).first(),
         })
 
 
@@ -1766,6 +1733,33 @@ class DeleteEmployeeView(View):
         except (DepartmentTeams.DoesNotExist, Employee.DoesNotExist):
             logger.error("Error in DeleteEmployeeView: Employee or department not found")
             return JsonResponse({'error': 'Invalid data'}, status=400)
+
+
+class GetFormulasView(View):
+    def get(self, request):
+        department_team_id = request.GET.get('department_team_id')
+        print(department_team_id)
+        if department_team_id:
+            configurations_data = Configurations.objects.values('fuel_rate', 'bonus_constant_multiplier').first()
+            formulas = FieldFormula.objects.filter(department_team_id=department_team_id).exclude(formula__target_model='IncrementDetailsSummary').select_related('formula')
+            ordered = topological_sort(formulas, company=Company.objects.all().first(), employee=None, department_team=DepartmentTeams.objects.filter(id=department_team_id).first())
+
+            # Create a custom order using Case and When
+            order_conditions = [
+                When(formula__target_model=model, formula__target_field=field, then=idx)
+                for idx, (model, field) in enumerate(ordered)
+            ]
+
+            # Apply the custom order to the queryset
+            formulas_sorted = formulas.order_by(
+                Case(*order_conditions, default=len(ordered), output_field=models.IntegerField())
+            )
+
+            # Serialize the sorted queryset
+            field_formulas_data = FieldFormulaSerializer(instance=formulas_sorted, many=True).data
+            print("field_formulas_data:", field_formulas_data)
+            return JsonResponse({'field_formulas_data': list(field_formulas_data), 'configurations_data': configurations_data})
+        return JsonResponse({'field_formulas_data': []})
 
 
 class GetDataView(View):

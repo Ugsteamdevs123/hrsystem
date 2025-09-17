@@ -84,6 +84,7 @@ urlpatterns = [
     path('get-data/<str:table>/<str:id>/', views.GetDataView.as_view(), name='get_data'),
     path('save-draft/<int:department_id>/', views.SaveDraftView.as_view(), name='save_draft'),
     path('save-final/<int:department_id>/', views.SaveFinalView.as_view(), name='save_final'),
+    path('get-formulas/', views.GetFormulasView.as_view(), name='get_formula'),
 
 
     path('department-groups-sections/', views.DepartmentGroupsSectionsView.as_view(), name='department_groups_sections'),
@@ -91,8 +92,6 @@ urlpatterns = [
     path('designations/create/', views.DesignationCreateView.as_view(), name='designation_create'),
     path('locations/', views.LocationsView.as_view(), name='locations'),
     path('employee-status-choices/', views.EmployeeStatusView.as_view(), name='employee_status_choices'),
-
-
 
     path("get-model-fields/", views.GetModelFieldsView.as_view(), name="get_model_fields"),
 

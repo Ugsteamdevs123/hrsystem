@@ -11,7 +11,8 @@
 
         <!-- Page Heading -->
         <div class="section-head">
-            <h2>Group — {{ department.name }}</h2>
+            <h2>Group {# — #}- {{ department.name }}</h2>
+            <span style="font-weight: bold; margin-right: 20px;">Fuel Rate: {{ fuel_rate }}</span>
         </div>
 
         <!-- Buttons -->
@@ -98,36 +99,36 @@
                             <td class="non-sticky">{{ employee.remarks|default:"-" }}</td>
                             <!-- Current Package -->
                             {% with current_package=employee.currentpackagedetails %}
-                                <td class="non-sticky">{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="CurrentPackageDetails" data-field="gross_salary">{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky">{{ current_package.company_pickup|yesno:"Yes,No,-" }}</td>
                                 <td class="non-sticky">{{ current_package.vehicle|default:"-" }}</td>
-                                <td class="non-sticky">{{ current_package.fuel_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="CurrentPackageDetails" data-field="fuel_allowance">{{ current_package.fuel_allowance|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky">{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky">{{ current_package.mobile_provided|yesno:"Yes,No,-" }}</td>
                             {% endwith %}
                             <!-- Proposed Package -->
                             {% with proposed_package=employee.proposedpackagedetails %}
-                                <td class="non-sticky editable" data-tab="proposed_package" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky">{{ proposed_package.increased_amount|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky">{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky editable" data-tab="proposed_package" data-field="increased_fuel_allowance" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_allowance|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky editable" data-tab="proposed_package" data-field="increased_fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_litre|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky">{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky editable" data-tab="proposed_package" data-field="mobile_provided" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.mobile_provided|yesno:"Yes,No,-" }}</td>
-                                <td class="non-sticky editable" data-tab="proposed_package" data-field="company_pickup" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.company_pickup|yesno:"Yes,No,-" }}</td>
-                                <td class="non-sticky editable" data-tab="proposed_package" data-field="vehicle_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ proposed_package.vehicle|default:"-" }}</td>
+                                <td class="non-sticky editable" data-tab="ProposedPackageDetails" data-field="increment_percentage" data-type="number" data-step="0.01">{{ proposed_package.increment_percentage|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="ProposedPackageDetails" data-field="increased_amount">{{ proposed_package.increased_amount|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="ProposedPackageDetails" data-field="revised_salary">{{ proposed_package.revised_salary|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky editable" data-tab="ProposedPackageDetails" data-field="increased_fuel_allowance" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky editable" data-tab="ProposedPackageDetails" data-field="increased_fuel_litre" data-type="number" data-step="0.01">{{ proposed_package.increased_fuel_litre|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="ProposedPackageDetails" data-field="revised_fuel_allowance">{{ proposed_package.revised_fuel_allowance|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky editable" data-tab="ProposedPackageDetails" data-field="mobile_provided" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.mobile_provided|yesno:"Yes,No,-" }}</td>
+                                <td class="non-sticky editable" data-tab="ProposedPackageDetails" data-field="company_pickup" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.company_pickup|yesno:"Yes,No,-" }}</td>
+                                <td class="non-sticky editable" data-tab="ProposedPackageDetails" data-field="vehicle_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ proposed_package.vehicle|default:"-" }}</td>
                             {% endwith %}
                             <!-- Financial Impact -->
                             {% with financial_impact=employee.financialimpactpermonth %}
-                                <td class="non-sticky">{{ financial_impact.emp_status.status|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="emp_status">{{ financial_impact.emp_status.status|default:"-" }}</td>
                                 <td class="non-sticky">{{ financial_impact.serving_years|floatformat:1|default:"-" }}</td>
-                                <td class="non-sticky">{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky">{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky">{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky">{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky">{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="salary">{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="gratuity">{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="bonus">{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="leave_encashment">{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="fuel">{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky">{{ financial_impact.vehicle|default:"-" }}</td>
-                                <td class="non-sticky">{{ financial_impact.total|floatformat:2|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="total">{{ financial_impact.total|floatformat:2|default:"-" }}</td>
                             {% endwith %}
                         </tr>
                     {% empty %}
@@ -585,7 +586,7 @@
             }
 
             if (field === 'increment_percentage' || field === 'increased_fuel_allowance' || field === 'increased_fuel_litre' || field === 'vehicle_id') {
-                recalcProposedPackage(row);
+                recalcValues(row);
             }
         });
 
@@ -729,46 +730,115 @@
         setTimeout(() => spinner.remove(), 1000);
     }
 
-    function recalcProposedPackage(row) {
-        const grossSalary = parseFloat(row.querySelector('td:nth-child(14)')?.textContent) || 0;
-        const incrementCell = row.querySelector('[data-tab="proposed_package"][data-field="increment_percentage"]');
-        const increasedAmountCell = row.querySelector('td:nth-child(21)');
-        const revisedSalaryCell = row.querySelector('td:nth-child(22)');
-        const CurrentFuelAllowance = row.querySelector('td:nth-child(17)');
-        const IncreasedFuelAllowance = row.querySelector('td:nth-child(23)');
-        const IncreasedFuelLitre = row.querySelector('td:nth-child(24)');
-        const RevisedFuelAllowance = row.querySelector('td:nth-child(25)');
-        const FinancialEmployeeStatus = row.querySelector('td:nth-child(29)');
-        const FinancialSalary = row.querySelector('td:nth-child(31)');
-        const FinancialGratuity = row.querySelector('td:nth-child(32)');
-        const FinancialBonus = row.querySelector('td:nth-child(33)');
-        const LeaveEncashment = row.querySelector('td:nth-child(34)');
-        const FinancialFuel = row.querySelector('td:nth-child(35)');
-        const FinancialTotal = row.querySelector('td:nth-child(37)');
+    function getValueFromRow(row, model, field) {
+        // console.log("model: ", model, "\nfield: ", field.trim().toLowerCase().replaceAll(' ', '_'));
 
-        if (!incrementCell || !increasedAmountCell || !revisedSalaryCell) return;
+        if (model == "Configurations") {return configurations[field.trim().toLowerCase().replaceAll(' ', '_')];}
+        else {
+            const selector = `[data-tab="${model}"][data-field="${field.trim().toLowerCase().replaceAll(' ', '_')}"]`;
+            const cell = row.querySelector(selector);
+            if (!cell) return 0;
 
-        const incPercent = parseFloat(incrementCell.textContent) || 0;
-        const increasedAmount = (grossSalary * incPercent) / 100;
-        const revisedSalary = grossSalary + increasedAmount;
-
-        increasedAmountCell.textContent = increasedAmount.toFixed(2);
-        revisedSalaryCell.textContent = revisedSalary.toFixed(2);
-
-        if (IncreasedFuelLitre.textContent > 0) {
-            IncreasedFuelAllowance.textContent = (154.7 * parseFloat(IncreasedFuelLitre.textContent)).toFixed(2);
+            const val = cell.textContent?.trim() || cell.value || '0';
+            return parseFloat(val) || 0;
         }
-        
-        RevisedFuelAllowance.textContent = (parseFloat(IncreasedFuelAllowance.textContent) + parseFloat(CurrentFuelAllowance.textContent)).toFixed(2);
-        FinancialSalary.textContent = parseFloat(increasedAmountCell.textContent).toFixed(2);
-        if (FinancialEmployeeStatus.textContent == 'P') FinancialGratuity.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
-        FinancialBonus.textContent = (1.7*parseFloat(FinancialSalary.textContent)/12).toFixed(2);
-        LeaveEncashment.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
-        FinancialFuel.textContent = parseFloat(IncreasedFuelAllowance.textContent).toFixed(2);
-        FinancialTotal.textContent = (parseFloat(FinancialFuel.textContent)+parseFloat(LeaveEncashment.textContent)+parseFloat(FinancialBonus.textContent)+parseFloat(FinancialSalary.textContent)+parseFloat(FinancialGratuity.textContent)).toFixed(2);
     }
 
+    function recalcValues(row) {
+        const IncreasedFuelAllowance = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="increased_fuel_allowance"]');
+        const IncreasedFuelLitre = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="increased_fuel_litre"]');
+        
+        if (IncreasedFuelLitre.textContent > 0) {
+            IncreasedFuelAllowance.textContent = (parseFloat(configurations['fuel_rate']) * parseFloat(IncreasedFuelLitre.textContent)).toFixed(2);
+        }
+
+        fieldFormulas.forEach((formula) => {
+            let expression = formula.formula_expression;
+
+            // Replace [Model: Field] with actual values from the row
+            const regex = /\[([^\]:]+):\s*([^\]]+)\]/g; // matches [Model: Field]
+            expression = expression.replace(regex, (_, model, field) => {
+            const value = getValueFromRow(row, model, field);
+            return value;
+            });
+
+            // console.log(`Evaluating: ${expression}`);
+
+            let result = 0;
+            try {
+            result = eval(expression); // ⚠️ Consider using a safe eval later
+            } catch (e) {
+            console.error("Failed to evaluate formula:", formula.formula_name, e);
+            }
+
+            // Apply result to target field
+            const targetSelector = `[data-tab="${formula.target_model}"][data-field="${formula.target_field.trim().toLowerCase().replaceAll(' ', '_')}"]`;
+            const targetCell = row.querySelector(targetSelector);
+
+            if (targetCell) {
+            targetCell.textContent = result.toFixed(2); // Round to 2 decimal places
+            } else {
+            console.warn("Target cell not found for formula:", formula.formula_name);
+            }
+        });
+
+        // console.log("row: ", row);
+        // const grossSalary = parseFloat(row.querySelector('[data-tab="CurrentPackageDetails"][data-field="gross_salary"]')?.textContent) || 0;
+        // console.log("grossSalary: ", grossSalary);
+        // const incrementCell = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="increment_percentage"]');
+        // console.log("incrementCell: ", incrementCell.textContent);
+        // const increasedAmountCell = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="increased_amount"]');
+        // console.log("increasedAmountCell: ", increasedAmountCell.textContent);
+        // const revisedSalaryCell = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="revised_salary"]');
+        // console.log("revisedSalaryCell: ", revisedSalaryCell.textContent);
+        // const CurrentFuelAllowance = row.querySelector('[data-tab="CurrentPackageDetails"][data-field="fuel_allowance"]');
+        // console.log("CurrentFuelAllowance: ", CurrentFuelAllowance.textContent);
+        // const RevisedFuelAllowance = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="revised_fuel_allowance"]');
+        // console.log("RevisedFuelAllowance: ", RevisedFuelAllowance.textContent);
+        // const FinancialEmployeeStatus = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="emp_status"]');
+        // console.log("FinancialEmployeeStatus: ", FinancialEmployeeStatus.textContent);
+        // const FinancialSalary = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="salary"]');
+        // console.log("FinancialSalary: ", FinancialSalary.textContent);
+        // const FinancialGratuity = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="gratuity"]');
+        // console.log("FinancialGratuity: ", FinancialGratuity.textContent);
+        // const FinancialBonus = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="bonus"]');
+        // console.log("FinancialBonus: ", FinancialBonus.textContent);
+        // const LeaveEncashment = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="leave_encashment"]');
+        // console.log("LeaveEncashment: ", LeaveEncashment.textContent);
+        // const FinancialFuel = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="fuel"]');
+        // console.log("FinancialFuel: ", FinancialFuel.textContent);
+        // const FinancialTotal = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="total"]');
+        // console.log("FinancialTotal: ", FinancialTotal.textContent);
+
+        // if (!incrementCell || !increasedAmountCell || !revisedSalaryCell) return;
+
+        // const incPercent = parseFloat(incrementCell.textContent) || 0;
+        // const increasedAmount = (grossSalary * incPercent) / 100;
+        // const revisedSalary = grossSalary + increasedAmount;
+
+        // increasedAmountCell.textContent = increasedAmount.toFixed(2);
+        // revisedSalaryCell.textContent = revisedSalary.toFixed(2);
+
+        
+        // RevisedFuelAllowance.textContent = (parseFloat(IncreasedFuelAllowance.textContent) + parseFloat(CurrentFuelAllowance.textContent)).toFixed(2);
+        // FinancialSalary.textContent = parseFloat(increasedAmountCell.textContent).toFixed(2);
+        // if (FinancialEmployeeStatus.textContent == 'P') FinancialGratuity.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
+        // FinancialBonus.textContent = (1.7*parseFloat(FinancialSalary.textContent)/12).toFixed(2);
+        // LeaveEncashment.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
+        // FinancialFuel.textContent = parseFloat(IncreasedFuelAllowance.textContent).toFixed(2);
+        // FinancialTotal.textContent = (parseFloat(FinancialFuel.textContent)+parseFloat(LeaveEncashment.textContent)+parseFloat(FinancialBonus.textContent)+parseFloat(FinancialSalary.textContent)+parseFloat(FinancialGratuity.textContent)).toFixed(2);
+    }
+
+    let fieldFormulas = [];  // Global array to hold formula data
+    let configurations = [];  // Global array to hold formula data
     document.addEventListener('DOMContentLoaded', () => {
+        fetch(`/payroll/get-formulas/?department_team_id={{department_id}}`)
+            .then(res => res.json())
+            .then(data => {
+                fieldFormulas = data.field_formulas_data.map(item => item.formula); // flatten out structure
+                configurations = data.configurations_data;
+            });
+
         const table = document.querySelector('.custom-table');
         const headerRows = table.querySelectorAll('thead tr');
         const bodyRows = table.querySelectorAll('tbody tr');
