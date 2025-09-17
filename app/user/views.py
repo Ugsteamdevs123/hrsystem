@@ -192,8 +192,6 @@ class AddUserView(PermissionRequiredMixin, View):
             hr_assigned_companies.objects.create(hr=user, company=Company.objects.all().first())
             messages.success(request, "User added successfully!")
             return redirect("view_users")
-        else:
-            print(form.errors)
         return render(request, self.template_name, {"form": form})
 
 
