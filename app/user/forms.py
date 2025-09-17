@@ -247,11 +247,17 @@ class CustomUserForm(forms.ModelForm):
         ]
 
     def save(self, commit=True):
+        print("here")
         full_name = self.cleaned_data["full_name"]
+        print("here", full_name)
         email = self.cleaned_data["email"]
+        print("here", email)
         gender = self.cleaned_data["gender"]
+        print("here", gender)
         contact = self.cleaned_data["contact"]
+        print("here", contact)
         group = self.cleaned_data.get("groups")
+        print("here", group)
 
         # ✅ Call manager method instead of model.save()
         user = CustomUser.objects.create_user(
@@ -260,9 +266,12 @@ class CustomUserForm(forms.ModelForm):
             gender=gender,
             contact=contact,
         )
+        print("here")
 
         if group:
+            print("group here")
             user.groups.add(group)
+            print("group here")
 
         return user
 
