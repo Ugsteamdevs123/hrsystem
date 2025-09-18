@@ -752,7 +752,12 @@
             IncreasedFuelAllowance.textContent = (parseFloat(configurations['fuel_rate']) * parseFloat(IncreasedFuelLitre.textContent)).toFixed(2);
         }
 
+        const FinancialEmployeeStatus = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="emp_status"]');
+        
         fieldFormulas.forEach((formula) => {
+            if (FinancialEmployeeStatus.textContent != 'P' && formula.target_field.trim().toLowerCase().replaceAll(' ', '_') == 'gratuity') {
+                return; // Equivalent to 'continue' in .forEach
+            }
             let expression = formula.formula_expression;
 
             // Replace [Model: Field] with actual values from the row
