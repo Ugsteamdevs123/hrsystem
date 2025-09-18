@@ -1096,8 +1096,6 @@ class DepartmentTableView(View):
                 past_six_months = False
             
             data = {}
-
-            print("emp.__dict__: ", emp.__dict__)
             # for key, value in emp.__dict__:
             #     if key == "dynamic_attribute":
             #         for d_key, d_value in value:
