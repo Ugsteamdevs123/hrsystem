@@ -91,26 +91,53 @@
             min-height: calc(100vh - 60px);
         }
 
-        /* Sidebar */
         .sidebar {
             width: 220px;
+            height: calc(100vh - 60px); /* Fit within window, minus header */
             background-color: #343a40;
             color: #fff;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
             padding: 20px;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
+            box-sizing: border-box;
             position: fixed;
             top: 60px;
-            bottom: 0;
+            left: 0;
             z-index: 999;
+
+            /* Key parts */
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
         }
 
         .sidebar.open {
             transform: translateX(0);
         }
+
+        /* Scrollbar styling (optional but nice) */
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: #2c2c2c;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+        .sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: #555 #2c2c2c;
+        }
+
 
         .sidebar .menu { 
             display: flex; 
@@ -300,43 +327,14 @@
             transform: rotate(90deg); 
         }
 
-        /* .departments-panel { 
+        .departments-panel { 
             margin: 6px 0 0 0;
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease;
-        } */
-         
-        .departments-panel { 
-            margin: 6px 0 0 0;
-            max-height: 0; /* Start collapsed */
-            overflow: hidden; /* Hide content when collapsed */
-            transition: max-height 0.3s ease;
         }
-
         .departments-panel.expanded { 
-            max-height: 300px; /* Expand with scrolling */
-            overflow-y: auto; /* Enable scrolling only when expanded */
-            scrollbar-width: thin;
-            scrollbar-color: #888 #343a40;
-        }
-
-        /* Webkit scrollbar styles - only apply when expanded */
-        .departments-panel.expanded::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .departments-panel.expanded::-webkit-scrollbar-track {
-            background: #343a40;
-        }
-
-        .departments-panel.expanded::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 3px;
-        }
-
-        .departments-panel.expanded::-webkit-scrollbar-thumb:hover {
-            background: #555;
+            max-height: 3000px;
         }
         .departments-list { 
             list-style: none; 
@@ -523,11 +521,21 @@ function showSnackbar(message, bgColor = '#28a745') {
 function toggleDepartments() {
     const toggle = document.querySelector('.departments-toggle');
     const panel = document.getElementById('departments-panel');
-    const expanded = toggle.classList.contains('expanded');
-    
+    const sidebar = document.querySelector('.sidebar');
+
+    const isExpanding = !toggle.classList.contains('expanded');
+
     toggle.classList.toggle('expanded');
     panel.classList.toggle('expanded');
+
+    if (isExpanding) {
+        // Delay to wait for the dropdown to expand before scrolling
+        setTimeout(() => {
+            sidebar.scrollTop = sidebar.scrollHeight;
+        }, 300); // matches your CSS transition duration
+    }
 }
+
 
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
@@ -537,22 +545,17 @@ function toggleSidebar() {
     sidebar.classList.toggle('open');
     content.classList.toggle('shifted');
     hamburger.classList.toggle('open');
-    
-    // Save sidebar state to localStorage
+
     localStorage.setItem('sidebarState', sidebar.classList.contains('open') ? 'open' : 'closed');
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.querySelector('.departments-toggle');
-    if (toggle) {
-        toggle.addEventListener('click', toggleDepartments);
-    }
-    const hamburger = document.getElementById('hamburger');
-    if (hamburger) {
-        hamburger.addEventListener('click', toggleSidebar);
-    }
+    if (toggle) toggle.addEventListener('click', toggleDepartments);
 
-    // Restore sidebar state from localStorage
+    const hamburger = document.getElementById('hamburger');
+    if (hamburger) hamburger.addEventListener('click', toggleSidebar);
+
     const sidebarState = localStorage.getItem('sidebarState');
     if (sidebarState === 'open') {
         document.querySelector('.sidebar').classList.add('open');
@@ -560,6 +563,19 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('hamburger').classList.add('open');
     }
 });
+
+const sidebar = document.querySelector('.sidebar');
+
+const observer = new MutationObserver(() => {
+    // If content overflows, scroll to bottom
+    if (sidebar.scrollHeight > sidebar.clientHeight) {
+        sidebar.scrollTop = sidebar.scrollHeight;
+    }
+});
+
+observer.observe(sidebar, { childList: true, subtree: true });
+
+
 </script>
 
 </body>
