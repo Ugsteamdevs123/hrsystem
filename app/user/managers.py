@@ -30,8 +30,6 @@ class CustomUserManager(BaseUserManager):
         return ''.join(password_list)
 
 
-
-
     def create_user(self,full_name,email,gender,contact,password=None,**extra_fields):
 
         # create and save user with email and password

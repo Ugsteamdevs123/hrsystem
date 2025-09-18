@@ -15,7 +15,7 @@
         }
 
         /* Header */
-        header {
+        /* header {
             background-color: #343a40;
             color: #fff;
             display: flex;
@@ -30,6 +30,26 @@
             margin: 0; 
             font-size: 20px; 
             flex-grow: 1;
+        } */
+
+        header {
+            background-color: #343a40;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* This keeps everything on the left */
+            padding: 15px 30px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            gap: 15px; /* This adds space between title and hamburger */
+        }
+
+        header h1 { 
+            margin: 0; 
+            font-size: 20px; 
+            flex-shrink: 1; /* Allow title to shrink if needed */
+            /* Remove flex-grow: 1 to prevent expansion */
         }
 
         /* Hamburger Menu */
@@ -280,14 +300,43 @@
             transform: rotate(90deg); 
         }
 
-        .departments-panel { 
+        /* .departments-panel { 
             margin: 6px 0 0 0;
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease;
+        } */
+         
+        .departments-panel { 
+            margin: 6px 0 0 0;
+            max-height: 0; /* Start collapsed */
+            overflow: hidden; /* Hide content when collapsed */
+            transition: max-height 0.3s ease;
         }
+
         .departments-panel.expanded { 
-            max-height: 300px;
+            max-height: 300px; /* Expand with scrolling */
+            overflow-y: auto; /* Enable scrolling only when expanded */
+            scrollbar-width: thin;
+            scrollbar-color: #888 #343a40;
+        }
+
+        /* Webkit scrollbar styles - only apply when expanded */
+        .departments-panel.expanded::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .departments-panel.expanded::-webkit-scrollbar-track {
+            background: #343a40;
+        }
+
+        .departments-panel.expanded::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+
+        .departments-panel.expanded::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
         .departments-list { 
             list-style: none; 
@@ -333,12 +382,12 @@
 <body>
 
 <header>
+    <h1>HR Payroll System</h1>
     <div class="hamburger" id="hamburger">
         <span></span>
         <span></span>
         <span></span>
     </div>
-    <h1>HR Payroll System</h1>
 </header>
 
 <div class="main-layout">
