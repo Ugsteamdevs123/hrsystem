@@ -36,12 +36,31 @@
                 {% endif %}
             </td>
             <td>
-                <a href="{% url 'update_user' user.id %}" class="action-btn edit-btn">Edit</a>
+                {% comment %}<a href="{% url 'update_user' user.id %}" class="action-btn edit-btn">Edit</a>
                 <button class="action-btn delete-btn" 
                         onclick="showConfirmPopup('Are you sure you want to delete this user?', function(){
                             window.location.href='{% url 'delete_user' user.id %}';
                         })">
                     Delete
+                </button>{% endcomment %}
+                
+                <a href="{% url 'update_user' user.id %}" class="action-btn edit-btn" title="Edit">
+                    <!-- Pencil Icon -->
+                    <svg viewBox="0 0 22 22" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04c.39-.39.39-1.02 
+                                0-1.41l-2.34-2.34a1 1 0 00-1.41 
+                                0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+                    </svg>
+                </a>
+                
+                <button class="action-btn delete-btn" onclick="showConfirmPopup('Are you sure you want to delete this user?', function(){
+                            window.location.href='{% url 'delete_user' user.id %}';
+                        })" title="Delete">
+                    <!-- Improved Trash Can Icon -->
+                    <svg viewBox="0 0 22 22" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 7h12l-1 12.5a1 1 0 01-1 .5H8a1 1 0 01-1-.5L6 7zm3 2v8h2V9H9zm4 0v8h2V9h-2z" fill="currentColor"/>
+                        <path d="M9 4h6l.75 1.5H21V7H3V5.5h5.25L9 4z" fill="currentColor"/>
+                    </svg>
                 </button>
             </td>
         </tr>

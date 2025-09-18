@@ -284,7 +284,7 @@ class CustomUserUpdateForm(forms.ModelForm):
     # )
 
     groups = forms.ModelChoiceField(
-        queryset=Group.objects.all(),
+        queryset=Group.objects.exclude(name='Super Admin'),
         required=False,
         empty_label="Select Group",
         label="Assign Group"

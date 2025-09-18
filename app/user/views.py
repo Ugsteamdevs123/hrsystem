@@ -185,16 +185,36 @@ class AddUserView(PermissionRequiredMixin, View):
     def post(self, request):
         print("request.POST: ", request.POST)
         form = CustomUserForm(request.POST)
+        
         if form.is_valid():
-            user = form.save()
-            user.is_staff = True
-            user.is_superuser = False
-            user.save()
-            hr_assigned_companies.objects.create(hr=user, company=Company.objects.all().first())
-            messages.success(request, "User added successfully!")
-            return redirect("view_users")
+            try:
+                user = form.save()
+                user.is_staff = True
+                user.is_superuser = False
+                user.save()
+                hr_assigned_companies.objects.create(hr=user, company=Company.objects.all().first())
+                messages.success(request, "User added successfully!")
+                return redirect("view_users")
+            except ValueError as e:
+                # Handle validation errors from manager
+                error_message = str(e)
+                messages.error(request, f"Validation Error: {error_message}")
+                # Add field-specific errors
+                if "Contact" in error_message:
+                    form.add_error('contact', error_message)
+                elif "Email" in error_message:
+                    form.add_error('email', error_message)
+                elif "Fullname" in error_message:
+                    form.add_error('full_name', error_message)
+                elif "Gender" in error_message:
+                    form.add_error('gender', error_message)
         else:
             print(form.errors)
+            # Convert form errors to messages for better UX
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{dict(form.fields).get(field).label}: {error}")
+        
         return render(request, self.template_name, {"form": form})
 
 
@@ -337,8 +357,9 @@ class ViewSectionsView(PermissionRequiredMixin, View):
     template_name = "view_section.html"
 
     def get(self, request):
+        company_data = get_companies_and_department_teams(request.user)
         sections = Section.objects.filter(is_deleted=False)
-        return render(request, self.template_name, {"sections": sections})
+        return render(request, self.template_name, {"sections": sections, "company_data": company_data})
 
 
 # --- ADD SECTION ---
@@ -347,8 +368,9 @@ class AddSectionView(PermissionRequiredMixin, View):
     template_name = "add_section.html"
 
     def get(self, request):
+        company_data = get_companies_and_department_teams(request.user)
         form = SectionForm()
-        return render(request, self.template_name, {"form": form})
+        return render(request, self.template_name, {"form": form, "company_data": company_data})
 
     def post(self, request):
         form = SectionForm(request.POST)
@@ -367,9 +389,10 @@ class UpdateSectionView(PermissionRequiredMixin, View):
     template_name = "update_section.html"
 
     def get(self, request, pk):
+        company_data = get_companies_and_department_teams(request.user)
         section = get_object_or_404(Section, pk=pk, is_deleted=False)
         form = SectionForm(instance=section)
-        return render(request, self.template_name, {"form": form, "section": section})
+        return render(request, self.template_name, {"form": form, "section": section, "company_data": company_data})
 
     def post(self, request, pk):
         section = get_object_or_404(Section, pk=pk, is_deleted=False)
@@ -399,8 +422,9 @@ class ViewDepartmentGroupsView(PermissionRequiredMixin, View):
     template_name = "view_departmentgroups.html"
 
     def get(self, request):
+        company_data = get_companies_and_department_teams(request.user)
         groups = DepartmentGroups.objects.filter(is_deleted=False)
-        return render(request, self.template_name, {"groups": groups})
+        return render(request, self.template_name, {"groups": groups, "company_data": company_data})
 
 
 # --- ADD DEPARTMENT GROUP ---
@@ -409,8 +433,9 @@ class AddDepartmentGroupView(PermissionRequiredMixin, View):
     template_name = "add_departmentgroups.html"
 
     def get(self, request):
+        company_data = get_companies_and_department_teams(request.user)
         form = DepartmentGroupsForm()
-        return render(request, self.template_name, {"form": form})
+        return render(request, self.template_name, {"form": form, "company_data": company_data})
 
     def post(self, request):
         form = DepartmentGroupsForm(request.POST)
@@ -429,9 +454,10 @@ class UpdateDepartmentGroupView(PermissionRequiredMixin, View):
     template_name = "update_departmentgroups.html"
 
     def get(self, request, pk):
+        company_data = get_companies_and_department_teams(request.user)
         group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
         form = DepartmentGroupsForm(instance=group)
-        return render(request, self.template_name, {"form": form, "group": group})
+        return render(request, self.template_name, {"form": form, "group": group, "company_data": company_data})
 
     def post(self, request, pk):
         group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
@@ -1075,7 +1101,7 @@ class DepartmentTableView(View):
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
 
         company_data = get_companies_and_department_teams(request.user)
-        employees = Employee.objects.filter(department_team=department).select_related(
+        employees = Employee.objects.filter(department_team=department, resign=False).select_related(
             'company', 'department_team', 'department_group', 'section', 'designation', 'location'
         ).prefetch_related(
             'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts'
@@ -2300,7 +2326,7 @@ class SaveDraftView(View):
                         else:
                             setattr(employee_draft, field, value or None)
                             
-                setattr(employee_draft, 'promoted_from_intern_date', int(promoted_from_intern_date) if promoted_from_intern_date else None)
+                setattr(employee_draft, 'promoted_from_intern_date', promoted_from_intern_date if promoted_from_intern_date else None)
                 setattr(employee_draft, 'is_intern', int(is_intern) if is_intern else None)
                 # employee_draft.edited_fields = employee_draft_edited
                 if employee_draft_edited:
