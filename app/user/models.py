@@ -13,6 +13,10 @@ from decimal import Decimal, InvalidOperation
 from auditlog.registry import auditlog
 from auditlog.models import AuditlogHistoryField
     
+from django.db import models
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+
 
 class Gender(models.Model):
     gender = models.CharField(max_length=12)
@@ -259,6 +263,18 @@ class VehicleModel(models.Model):
     
 
 
+class DynamicAttribute(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    key = models.CharField(max_length=100)
+    value = models.TextField()
+
+    def __str__(self):
+        return f"{self.key}: {self.value}"
+
+
 class Employee(models.Model):
 
     emp_id = models.IntegerField(unique=True)
@@ -278,6 +294,7 @@ class Employee(models.Model):
     auto_mark_eligibility = models.BooleanField(default=True)
     is_intern = models.BooleanField(default=False)
     promoted_from_intern_date = models.DateField(blank=True, null=True)
+    dynamic_attribute = GenericRelation(DynamicAttribute)
 
     is_deleted = models.BooleanField(default=False)
     history = AuditlogHistoryField()  # Required to store log
@@ -635,3 +652,34 @@ class FieldReference(models.Model):
 
     def __str__(self):
         return f"{self.model_name}: {self.display_name}"
+
+
+
+
+
+
+
+# 4️⃣ Access dynamic attributes
+# for attr in product.dynamic_attributes.all():
+#     print(attr.key, attr.value)
+
+# # Or access one specific field
+# warranty = product.dynamic_attributes.filter(key="warranty_period").first()
+# print(warranty.value)  # Output: 2 years
+
+# 🚀 Optional: Access as Dictionary
+
+# You can write a helper method on your Product model to get dynamic fields easily:
+
+# class Product(models.Model):
+#     name = models.CharField(max_length=100)
+#     dynamic_attributes = GenericRelation('DynamicAttribute')
+
+#     def get_dynamic_dict(self):
+#         return {attr.key: attr.value for attr in self.dynamic_attributes.all()}
+
+
+# Now use it like:
+
+# fields = product.get_dynamic_dict()
+# print(fields["origin_country"])  # Output: Germany

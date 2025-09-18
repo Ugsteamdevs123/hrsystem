@@ -28,6 +28,7 @@ from .models import (
     DepartmentTeams,
     SummaryStatus,
     IncrementDetailsSummary,
+    DynamicAttribute,
     Employee,
     Configurations,
     CurrentPackageDetails,
@@ -1093,7 +1094,14 @@ class DepartmentTableView(View):
                 past_six_months = emp.date_of_joining <= six_months_ago
             else:
                 past_six_months = False
-
+            
+            data = {}
+            # for key, value in emp.__dict__:
+            #     if key == "dynamic_attribute":
+            #         for d_key, d_value in value:
+            #             data[d_key] = d_value
+            #     if key not in ["auto_mark_eligibility", "is_intern", "promoted_from_intern_date", "is_deleted", "history"]:
+            #         data[key] = value
             data = {
                 'emp_id': emp.emp_id,
                 'past_six_months': past_six_months,
