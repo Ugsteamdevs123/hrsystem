@@ -429,11 +429,26 @@
         return pastSixMonths === 'true';
     }
 
+    function isNotInternDesignation(row, employeeId) {
+        const isIntern = row.querySelector('[data-tab="employee"][data-field="designation_id"]');
+        let internValue = isIntern.dataset.original || isIntern.textContent;
+        console.log("internValue: ", internValue);
+        console.log("isIntern.textContent: ", isIntern.textContent);
+
+        if (isIntern.textContent.toLowerCase() == 'intern') return false;
+        else return true;
+    }
+
     function updateRowEditability(row) {
         const employeeId = row.dataset.employeeId;
         const isEligible = isEligibleForIncrement(row, employeeId);
+        const isNotIntern = isNotInternDesignation(row, employeeId);
         row.querySelectorAll('.editable').forEach(cell => {
-            if (cell.dataset.field !== 'eligible_for_increment' && cell.dataset.field !== 'designation_id') {
+            if (cell.dataset.field == 'eligible_for_increment') {
+                cell.classList.toggle('eligible', isNotIntern);
+                if (!(isNotIntern)) cell.textContent = 'No';
+            }
+            else if (cell.dataset.field !== 'eligible_for_increment' && cell.dataset.field !== 'designation_id') {
                 cell.classList.toggle('eligible', isEligible);
             } else {
                 cell.classList.add('eligible'); // Always allow editing eligible_for_increment
@@ -579,9 +594,12 @@
             const row = cell.parentElement;
             const hasEdits = Object.keys(editedCells[employeeId] || {}).some(tab => Object.keys(editedCells[employeeId][tab]).length > 0);
             row.classList.toggle('edited-row', hasEdits);
-            console.log('Updated editedCells:', JSON.stringify(editedCells));
-
-            if (field === 'eligible_for_increment') {
+            console.log('Updated editedCells xoxox:', JSON.stringify(editedCells));
+            
+            if (field === 'designation_id') {
+                updateRowEditability(row);
+            }
+            else if (field === 'eligible_for_increment') {
                 updateRowEditability(row);
             }
 
