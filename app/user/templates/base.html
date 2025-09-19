@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,50 +7,75 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            margin: 0; /* ✅ No margin here */
+            padding: 0; /* ✅ No padding here */
             background: #f2f2f2;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        /* Header */
-        /* header {
-            background-color: #343a40;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            padding: 15px 30px;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        header h1 { 
-            margin: 0; 
-            font-size: 20px; 
-            flex-grow: 1;
-        } */
-
+        /* Header - ISSUE 1: Need to calculate exact height */
         header {
             background-color: #343a40;
             color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start; /* This keeps everything on the left */
-            padding: 15px 30px;
+            padding: 15px 30px; /* ISSUE 2: This creates 15px top/bottom padding */
             position: sticky;
             top: 0;
             z-index: 1000;
-            gap: 15px; /* This adds space between title and hamburger */
+            /* Exact height calculation: 15px top + 15px bottom + 20px font-size + line-height ≈ 50px */
+            height: 50px; /* ✅ Fixed height to eliminate uncertainty */
+            box-sizing: border-box; /* ✅ Include padding in height calculation */
         }
 
         header h1 { 
-            margin: 0; 
+            margin: 0; /* ✅ No margin */
             font-size: 20px; 
-            flex-shrink: 1; /* Allow title to shrink if needed */
-            /* Remove flex-grow: 1 to prevent expansion */
+            line-height: 1; /* ✅ Remove default line-height spacing */
+        }
+
+        /* Layout */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            min-height: calc(100vh - 50px); /* ✅ Updated to match header height */
+        }
+
+        /* Sidebar - Now properly connected */
+        .sidebar {
+            width: 60px; /* Narrow collapsed state */
+            height: calc(100vh - 50px); /* ✅ Matches exact header height */
+            background-color: #343a40; /* Same color as header */
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 0; /* ✅ No padding at all - was causing gap */
+            box-sizing: border-box;
+            position: fixed;
+            top: 50px; /* ✅ Exact header height - was 60px before */
+            left: 0;
+            z-index: 999;
+            transition: width 0.3s ease-in-out;
+            overflow: hidden;
+        }
+
+        .sidebar.expanded {
+            width: 220px;
+        }
+
+        /* Hamburger container - ISSUE 3: Proper spacing without gaps */
+        .hamburger-container {
+            height: 50px; /* ✅ Matches header height */
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Center when collapsed */
+            background-color: #343a40; /* ✅ Ensure continuous background */
+            border-bottom: none; /* ✅ No border spacing */
+        }
+
+        .sidebar.expanded .hamburger-container {
+            justify-content: flex-end; /* Right-align when expanded */
+            padding-right: 10px; /* Small padding for right positioning */
         }
 
         /* Hamburger Menu */
@@ -61,7 +87,13 @@
             width: 30px;
             height: 30px;
             cursor: pointer;
-            margin-right: 10px;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger:hover {
+            background-color: rgba(255, 255, 255, 0.1);
         }
 
         .hamburger span {
@@ -70,6 +102,7 @@
             background-color: #fff;
             margin: 2px 0;
             transition: all 0.3s ease;
+            border-radius: 2px;
         }
 
         /* .hamburger.open span:nth-child(1) {
@@ -84,38 +117,7 @@
             transform: rotate(-45deg) translate(6px, -6px);
         } */
 
-        /* Layout */
-        .main-layout {
-            display: flex;
-            flex: 1;
-            min-height: calc(100vh - 60px);
-        }
-
-        .sidebar {
-            width: 220px;
-            height: calc(100vh - 60px); /* Fit within window, minus header */
-            background-color: #343a40;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            box-sizing: border-box;
-            position: fixed;
-            top: 60px;
-            left: 0;
-            z-index: 999;
-
-            /* Key parts */
-            overflow-y: auto;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-        }
-
-        .sidebar.open {
-            transform: translateX(0);
-        }
-
-        /* Scrollbar styling (optional but nice) */
+        /* Scrollbar styling for expanded sidebar */
         .sidebar::-webkit-scrollbar {
             width: 8px;
         }
@@ -138,21 +140,43 @@
             scrollbar-color: #555 #2c2c2c;
         }
 
+        /* Menu content - ISSUE 4: Proper spacing from top */
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            width: 100%;
+            padding: 10px 0; /* ✅ Minimal padding, no top gap */
+        }
+
+        .sidebar.expanded .sidebar-content {
+            opacity: 1;
+            transform: translateX(0);
+            padding: 0 15px; /* ✅ Proper side padding when expanded */
+        }
 
         .sidebar .menu { 
             display: flex; 
             flex-direction: column; 
             gap: 10px; 
+            padding: 0; /* ✅ No additional padding */
         }
+
         .sidebar a {
             color: #fff; 
             text-decoration: none; 
-            padding: 10px; 
+            padding: 10px 15px; /* ✅ Consistent padding */
             border-radius: 5px;
             display: block; 
             font-size: 14px; 
             transition: 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+
         .sidebar a:hover { 
             background-color: #495057; 
         }
@@ -163,11 +187,16 @@
             color: #fff; 
             border: none;
             border-radius: 5px; 
-            padding: 10px; 
+            padding: 10px 15px; 
             cursor: pointer; 
             font-size: 14px; 
             transition: 0.2s;
+            margin: 10px 15px 15px 15px; /* ✅ Proper margins */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+
         .sidebar .logout-btn:hover { 
             background-color: #c82333; 
         }
@@ -179,11 +208,13 @@
             background: #fff;
             border-radius: 8px; 
             margin: 20px;
+            margin-left: 100px; /* Adjusted for narrow sidebar + margin */
+            margin-top: 10px; /* ✅ Slightly reduced top margin */
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             transition: margin-left 0.3s ease-in-out;
         }
 
-        .content.shifted {
+        .sidebar.expanded + .content {
             margin-left: 260px;
         }
 
@@ -200,6 +231,7 @@
             align-items: center;
             z-index: 1000;
         }
+
         .popup-content {
             background: #fff; 
             padding: 25px 30px; 
@@ -208,6 +240,7 @@
             width: 300px; 
             box-shadow: 0 0 10px rgba(0,0,0,0.3);
         }
+
         .popup-btn {
             padding: 10px 20px; 
             border-radius: 6px; 
@@ -216,17 +249,21 @@
             cursor: pointer; 
             font-size: 14px;
         }
+
         .yes-btn { 
             background-color: #28a745; 
             color: #fff; 
         }
+
         .yes-btn:hover { 
             background-color: #218838; 
         }
+
         .no-btn { 
             background-color: #dc3545; 
             color: #fff; 
         }
+
         .no-btn:hover { 
             background-color: #c82333; 
         }
@@ -236,25 +273,53 @@
             .main-layout { 
                 flex-direction: column; 
             }
+            
             .sidebar {
+                width: 60px;
+                top: 50px; /* ✅ Matches header height */
+                flex-direction: row;
+                height: auto;
+                position: relative;
+                padding: 0;
+                background-color: #343a40;
+            }
+            
+            .sidebar.expanded {
                 width: 100%;
-                top: 60px;
-                transform: translateX(-100%);
+                flex-direction: column;
+                height: auto;
+                padding: 0;
             }
-            .sidebar.open { 
-                transform: translateX(0); 
+            
+            .hamburger-container {
+                height: 50px;
+                justify-content: center;
             }
+            
+            .sidebar.expanded .hamburger-container {
+                justify-content: flex-end;
+                padding-right: 10px;
+            }
+            
+            .sidebar-content {
+                width: 100%;
+                padding: 10px;
+            }
+            
             .sidebar .menu { 
                 flex-direction: column; 
+                padding: 0;
             }
-            .sidebar a, .sidebar .logout-btn { 
-                text-align: left; 
-            }
+            
             .content { 
                 margin: 10px; 
+                margin-left: 10px;
+                margin-top: 10px;
             }
-            .content.shifted { 
-                margin-left: 10px; 
+            
+            .sidebar.expanded + .content {
+                margin-left: 10px;
+                margin-top: 10px;
             }
         }
 
@@ -285,6 +350,7 @@
             from { top: 0; opacity: 0; }
             to { top: 20px; opacity: 1; }
         }
+
         @keyframes fadeout {
             from { top: 20px; opacity: 1; }
             to { top: 0; opacity: 0; }
@@ -302,7 +368,7 @@
             gap: 8px;
             width: 100%;
             cursor: pointer;
-            padding: 10px;
+            padding: 10px 15px;
             border-radius: 5px;
             background-color: #343a40;
             color: #fff;
@@ -310,6 +376,7 @@
             text-align: left;
             transition: background-color .2s ease;
         }
+
         .departments-toggle:hover { 
             background-color: #495057; 
         }
@@ -322,7 +389,9 @@
             border-bottom: 5px solid transparent;
             border-left: 6px solid #ffffff;
             transition: transform .2s ease;
+            margin-left: auto;
         }
+
         .departments-toggle.expanded .departments-caret { 
             transform: rotate(90deg); 
         }
@@ -333,35 +402,42 @@
             overflow: hidden;
             transition: max-height 0.3s ease;
         }
+
         .departments-panel.expanded { 
             max-height: 3000px;
         }
+
         .departments-list { 
             list-style: none; 
             padding-left: 10px;
             margin: 0; 
         }
+
         .departments-list li { 
             margin: 6px 0; 
         }
+
         .departments-list li.child { 
             margin-left: 0;
         }
+
         .departments-list a {
             display: block;
             color: #fff;
             text-decoration: none;
-            padding: 10px;
+            padding: 10px 15px;
             border-radius: 5px;
             font-size: 14px;
         }
+
         .departments-list a:hover { 
             background-color: #495057; 
         }
+
         .muted { 
             color: #b8b8b8; 
             font-size: 13px; 
-            padding: 10px; 
+            padding: 10px 15px; 
         }
 
         /* Responsive adjustments for dropdown */
@@ -381,89 +457,94 @@
 
 <header>
     <h1>HR Payroll System</h1>
-    <div class="hamburger" id="hamburger">
-        <span></span>
-        <span></span>
-        <span></span>
-    </div>
 </header>
 
 <div class="main-layout">
-    <div class="sidebar">
-        <div class="menu">
-            {% if perms.user.view_customuser %}
-            <a href="{% url 'view_users' %}">User Management</a>
-            {% endif %}
-
-            {% if perms.user.view_incrementdetailssummary %}
-            <a href="{% url 'hr_dashboard' %}">Summary</a>
-            {% endif %}
-
-            {% if perms.user.view_departmentteams %}
-            <a href="{% url 'department_team' %}">Group</a>
-            {% endif %}
-
-            {% if perms.user.view_departmentgroups %}
-            <a href="{% url 'view_departmentgroups' %}">Department</a>
-            {% endif %}
-
-            {% if perms.user.view_section %}
-            <a href="{% url 'view_section' %}">Section</a>
-            {% endif %}
-
-            {% comment %}{% if perms.user.view_hr_assigned_companies %}
-            <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
-            {% endif %}{% endcomment %}
-
-            {% if perms.user.view_vehiclebrand and perms.user.view_vehiclemodel %}
-            <a href="{% url 'view_vehicles' %}">Vehicle Information</a>
-            {% endif %}
-
-            {% if perms.user.view_formula %}
-            <a href="{% url 'view_formula' %}">Formulas</a>
-            {% endif %}
-
-            {% if perms.user.view_fieldformula %}
-            <a href="{% url 'view_field_formulas' %}">Formulas Manage</a>
-            {% endif %}
-
-            {% if perms.user.view_configurations %}
-            <a href="{% url 'manage_configurations' %}">Configurations</a>
-            {% endif %}
-
-            {% if perms.user.view_employee %}
-            <a href="{% url 'employees_view' %}">Employee</a>
-            {% endif %}
-
-            {% if perms.user.view_employee and company_data %}
-            <div class="departments-dropdown">
-                <button class="departments-toggle" type="button">
-                    <span class="label">Groups</span>
-                    <span class="departments-caret"></span>
-                </button>
-
-                <div id="departments-panel" class="departments-panel">
-                    <ul class="departments-list">
-                        {% for company in company_data %}
-                            {% for department in company.departments %}
-                            <li class="child">
-                                <a href="{% url 'department_table' department.id %}">
-                                {{ department.name }}
-                                </a>
-                            </li>
-                            {% empty %}
-                            <li class="muted">No departments</li>
-                            {% endfor %}
-                        {% endfor %}
-                    </ul>
-                </div>
+    <div class="sidebar" id="sidebar">
+        <div class="hamburger-container">
+            <div class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
             </div>
-            {% endif %}
         </div>
+        
+        <div class="sidebar-content">
+            <div class="menu">
+                {% if perms.user.view_customuser %}
+                <a href="{% url 'view_users' %}">User Management</a>
+                {% endif %}
 
-        <form method="get" action="{% url 'logout' %}">
-            <button type="submit" class="logout-btn">Logout</button>
-        </form>
+                {% if perms.user.view_incrementdetailssummary %}
+                <a href="{% url 'hr_dashboard' %}">Summary</a>
+                {% endif %}
+
+                {% if perms.user.view_departmentteams %}
+                <a href="{% url 'department_team' %}">Group</a>
+                {% endif %}
+
+                {% if perms.user.view_departmentgroups %}
+                <a href="{% url 'view_departmentgroups' %}">Department</a>
+                {% endif %}
+
+                {% if perms.user.view_section %}
+                <a href="{% url 'view_section' %}">Section</a>
+                {% endif %}
+
+                {% comment %}{% if perms.user.view_hr_assigned_companies %}
+                <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
+                {% endif %}{% endcomment %}
+
+                {% if perms.user.view_vehiclebrand and perms.user.view_vehiclemodel %}
+                <a href="{% url 'view_vehicles' %}">Vehicle Information</a>
+                {% endif %}
+
+                {% if perms.user.view_formula %}
+                <a href="{% url 'view_formula' %}">Formulas</a>
+                {% endif %}
+
+                {% if perms.user.view_fieldformula %}
+                <a href="{% url 'view_field_formulas' %}">Formulas Manage</a>
+                {% endif %}
+
+                {% if perms.user.view_configurations %}
+                <a href="{% url 'manage_configurations' %}">Configurations</a>
+                {% endif %}
+
+                {% if perms.user.view_employee %}
+                <a href="{% url 'employees_view' %}">Employee</a>
+                {% endif %}
+
+                {% if perms.user.view_employee and company_data %}
+                <div class="departments-dropdown">
+                    <button class="departments-toggle" type="button">
+                        <span class="label">Groups</span>
+                        <span class="departments-caret"></span>
+                    </button>
+
+                    <div id="departments-panel" class="departments-panel">
+                        <ul class="departments-list">
+                            {% for company in company_data %}
+                                {% for department in company.departments %}
+                                <li class="child">
+                                    <a href="{% url 'department_table' department.id %}">
+                                    {{ department.name }}
+                                    </a>
+                                </li>
+                                {% empty %}
+                                <li class="muted">No departments</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <form method="get" action="{% url 'logout' %}">
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+        </div>
     </div> 
 
     <div class="content">
@@ -536,17 +617,24 @@ function toggleDepartments() {
     }
 }
 
-
 function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    const content = document.querySelector('.content');
+    const sidebar = document.getElementById('sidebar');
     const hamburger = document.getElementById('hamburger');
+    const content = document.querySelector('.content');
     
-    sidebar.classList.toggle('open');
-    content.classList.toggle('shifted');
+    const isExpanding = !sidebar.classList.contains('expanded');
+    
+    sidebar.classList.toggle('expanded');
     hamburger.classList.toggle('open');
+    
+    // Adjust content margin based on sidebar state
+    if (isExpanding) {
+        content.style.marginLeft = '260px';
+    } else {
+        content.style.marginLeft = '100px';
+    }
 
-    localStorage.setItem('sidebarState', sidebar.classList.contains('open') ? 'open' : 'closed');
+    localStorage.setItem('sidebarState', sidebar.classList.contains('expanded') ? 'open' : 'closed');
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -556,12 +644,38 @@ document.addEventListener('DOMContentLoaded', function () {
     const hamburger = document.getElementById('hamburger');
     if (hamburger) hamburger.addEventListener('click', toggleSidebar);
 
+    // Restore sidebar state
     const sidebarState = localStorage.getItem('sidebarState');
+    const sidebar = document.getElementById('sidebar');
+    const content = document.querySelector('.content');
+    
     if (sidebarState === 'open') {
-        document.querySelector('.sidebar').classList.add('open');
-        document.querySelector('.content').classList.add('shifted');
+        sidebar.classList.add('expanded');
         document.getElementById('hamburger').classList.add('open');
+        content.style.marginLeft = '260px';
+    } else {
+        content.style.marginLeft = '100px';
     }
+
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            // On mobile, always collapse sidebar
+            sidebar.classList.remove('expanded');
+            hamburger.classList.remove('open');
+            content.style.marginLeft = '10px';
+        } else {
+            // Restore desktop state
+            if (sidebarState === 'open') {
+                sidebar.classList.add('expanded');
+                hamburger.classList.add('open');
+                content.style.marginLeft = '260px';
+            } else {
+                content.style.marginLeft = '100px';
+            }
+        }
+    });
 });
 
 const sidebar = document.querySelector('.sidebar');
@@ -574,7 +688,6 @@ const observer = new MutationObserver(() => {
 });
 
 observer.observe(sidebar, { childList: true, subtree: true });
-
 
 </script>
 

@@ -259,6 +259,7 @@ class CustomUserForm(forms.ModelForm):
             email=email,
             gender=gender,
             contact=contact,
+            group=group,
         )
 
         if group:
