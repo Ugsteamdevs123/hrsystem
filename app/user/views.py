@@ -230,7 +230,9 @@ class UpdateUserView(PermissionRequiredMixin, View):
             is_staff=True,
             is_superuser=False,
         )
+
         form = CustomUserUpdateForm(instance=user)
+        
         return render(request, self.template_name, {"form": form, "user": user})
 
     def post(self, request, pk):
@@ -473,7 +475,16 @@ class DeleteDepartmentGroupView(PermissionRequiredMixin, View):
     permission_required = "user.delete_departmentgroups"
 
     def get(self, request, pk):
-        group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
+        # group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
+        group = DepartmentGroups.objects.filter(pk=pk, is_deleted=False).prefetch_related('section_set').first()
+        
+        print(group.__dict__)
+        print(group.section_set)
+
+        for section in group.section_set.all():
+            section.is_deleted = True
+            section.save()
+
         group.is_deleted = True  # soft delete
         group.save()
         messages.success(request, "Department Group deleted successfully!")

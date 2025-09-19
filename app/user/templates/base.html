@@ -74,6 +74,14 @@
             flex-shrink: 0;
         }
 
+        .sidebar-inner {
+            display: flex;
+            flex-direction: column;
+            flex: 1; /* take up available height */
+            overflow: hidden;
+        }
+
+
         .sidebar.expanded .hamburger-container {
             justify-content: flex-end;
             padding-right: 10px;
@@ -105,18 +113,6 @@
             transition: all 0.3s ease;
             border-radius: 2px;
         }
-
-        /* .hamburger.open span:nth-child(1) {
-            transform: rotate(45deg) translate(6px, 6px);
-        }
-
-        .hamburger.open span:nth-child(2) {
-            opacity: 0;
-        }
-
-        .hamburger.open span:nth-child(3) {
-            transform: rotate(-45deg) translate(6px, -6px);
-        } */
 
         /* ✅ FIXED: Scrollbar styling - Apply to sidebar-content instead of sidebar */
         .sidebar-content::-webkit-scrollbar {
@@ -482,81 +478,86 @@
             </div>
         </div>
         
-        <div class="sidebar-content">
-            <div class="menu">
-                {% if perms.user.view_customuser %}
-                <a href="{% url 'view_users' %}">User Management</a>
-                {% endif %}
+        <!-- ✅ Wrap content + logout -->
+        <div class="sidebar-inner">
+            <div class="sidebar-content">
+                <div class="menu">
+                    {% if perms.user.view_customuser %}
+                    <a href="{% url 'view_users' %}">User Management</a>
+                    {% endif %}
 
-                {% if perms.user.view_incrementdetailssummary %}
-                <a href="{% url 'hr_dashboard' %}">Summary</a>
-                {% endif %}
+                    {% if perms.user.view_incrementdetailssummary %}
+                    <a href="{% url 'hr_dashboard' %}">Summary</a>
+                    {% endif %}
 
-                {% if perms.user.view_departmentteams %}
-                <a href="{% url 'department_team' %}">Group</a>
-                {% endif %}
+                    {% if perms.user.view_departmentteams %}
+                    <a href="{% url 'department_team' %}">Group</a>
+                    {% endif %}
 
-                {% if perms.user.view_departmentgroups %}
-                <a href="{% url 'view_departmentgroups' %}">Department</a>
-                {% endif %}
+                    {% if perms.user.view_departmentgroups %}
+                    <a href="{% url 'view_departmentgroups' %}">Department</a>
+                    {% endif %}
 
-                {% if perms.user.view_section %}
-                <a href="{% url 'view_section' %}">Section</a>
-                {% endif %}
+                    {% if perms.user.view_section %}
+                    <a href="{% url 'view_section' %}">Section</a>
+                    {% endif %}
 
-                {% comment %}{% if perms.user.view_hr_assigned_companies %}
-                <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
-                {% endif %}{% endcomment %}
+                    {% comment %}{% if perms.user.view_hr_assigned_companies %}
+                    <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
+                    {% endif %}{% endcomment %}
 
-                {% if perms.user.view_vehiclebrand and perms.user.view_vehiclemodel %}
-                <a href="{% url 'view_vehicles' %}">Vehicle Information</a>
-                {% endif %}
+                    {% if perms.user.view_vehiclebrand and perms.user.view_vehiclemodel %}
+                    <a href="{% url 'view_vehicles' %}">Vehicle Information</a>
+                    {% endif %}
 
-                {% if perms.user.view_formula %}
-                <a href="{% url 'view_formula' %}">Formulas</a>
-                {% endif %}
+                    {% if perms.user.view_formula %}
+                    <a href="{% url 'view_formula' %}">Formulas</a>
+                    {% endif %}
 
-                {% if perms.user.view_fieldformula %}
-                <a href="{% url 'view_field_formulas' %}">Formulas Manage</a>
-                {% endif %}
+                    {% if perms.user.view_fieldformula %}
+                    <a href="{% url 'view_field_formulas' %}">Formulas Manage</a>
+                    {% endif %}
 
-                {% if perms.user.view_configurations %}
-                <a href="{% url 'manage_configurations' %}">Configurations</a>
-                {% endif %}
+                    {% if perms.user.view_configurations %}
+                    <a href="{% url 'manage_configurations' %}">Configurations</a>
+                    {% endif %}
 
-                {% if perms.user.view_employee %}
-                <a href="{% url 'employees_view' %}">Employee</a>
-                {% endif %}
+                    {% if perms.user.view_employee %}
+                    <a href="{% url 'employees_view' %}">Employee</a>
+                    {% endif %}
 
-                {% if perms.user.view_employee and company_data %}
-                <div class="departments-dropdown">
-                    <button class="departments-toggle" type="button">
-                        <span class="label">Groups</span>
-                        <span class="departments-caret"></span>
-                    </button>
+                    {% if perms.user.view_employee and company_data %}
+                    <div class="departments-dropdown">
+                        <button class="departments-toggle" type="button">
+                            <span class="label">Groups</span>
+                            <span class="departments-caret"></span>
+                        </button>
 
-                    <div id="departments-panel" class="departments-panel">
-                        <ul class="departments-list">
-                            {% for company in company_data %}
-                                {% for department in company.departments %}
-                                <li class="child">
-                                    <a href="{% url 'department_table' department.id %}">
-                                    {{ department.name }}
-                                    </a>
-                                </li>
-                                {% empty %}
-                                <li class="muted">No departments</li>
+                        <div id="departments-panel" class="departments-panel">
+                            <ul class="departments-list">
+                                {% for company in company_data %}
+                                    {% for department in company.departments %}
+                                    <li class="child">
+                                        <a href="{% url 'department_table' department.id %}">
+                                        {{ department.name }}
+                                        </a>
+                                    </li>
+                                    {% empty %}
+                                    <li class="muted">No departments</li>
+                                    {% endfor %}
                                 {% endfor %}
-                            {% endfor %}
-                        </ul>
+                            </ul>
+                        </div>
                     </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
 
+            <!-- ✅ Logout button inside sidebar-inner, outside scrollable content -->
             <form method="get" action="{% url 'logout' %}">
                 <button type="submit" class="logout-btn">Logout</button>
             </form>
+
         </div>
     </div> 
 
