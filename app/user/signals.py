@@ -93,7 +93,7 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
                 employee_status = FinancialImpactPerMonth.objects.filter(employee=instance.id)
                 if employee_status.exists():
                     employee_status = employee_status.first()
-                    employee_status = employee_status.status
+                    employee_status = employee_status.emp_status
                     if employee_status and employee_status.status != 'P':
                         continue
 
@@ -200,7 +200,7 @@ def update_increment_summary(sender, instance, created, **kwargs):
                 employee_status = FinancialImpactPerMonth.objects.filter(employee=instance.employee)
                 if employee_status.exists():
                     employee_status = employee_status.first()
-                    employee_status = employee_status.status
+                    employee_status = employee_status.emp_status
                     if employee_status and employee_status.status != 'P':
                         continue
 
@@ -395,7 +395,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                 employee_status = FinancialImpactPerMonthDraft.objects.filter(employee_draft=instance.id)
                 if employee_status.exists():
                     employee_status = employee_status.first()
-                    employee_status = employee_status.status
+                    employee_status = employee_status.emp_status
                     if employee_status and employee_status.status != 'P':
                         continue
 
@@ -576,7 +576,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
                 employee_status = FinancialImpactPerMonthDraft.objects.filter(employee_draft=instance.employee_draft)
                 if employee_status.exists():
                     employee_status = employee_status.first()
-                    employee_status = employee_status.status
+                    employee_status = employee_status.emp_status
                     if employee_status and employee_status.status != 'P':
                         continue
 

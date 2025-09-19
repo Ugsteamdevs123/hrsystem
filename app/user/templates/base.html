@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,55 +6,55 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0; /* ✅ No margin here */
-            padding: 0; /* ✅ No padding here */
+            margin: 0;
+            padding: 0;
             background: #f2f2f2;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        /* Header - ISSUE 1: Need to calculate exact height */
+        /* Header */
         header {
             background-color: #343a40;
             color: #fff;
-            padding: 15px 30px; /* ISSUE 2: This creates 15px top/bottom padding */
+            padding: 15px 30px;
             position: sticky;
             top: 0;
             z-index: 1000;
-            /* Exact height calculation: 15px top + 15px bottom + 20px font-size + line-height ≈ 50px */
-            height: 50px; /* ✅ Fixed height to eliminate uncertainty */
-            box-sizing: border-box; /* ✅ Include padding in height calculation */
+            height: 50px;
+            box-sizing: border-box;
         }
 
         header h1 { 
-            margin: 0; /* ✅ No margin */
+            margin: 0;
             font-size: 20px; 
-            line-height: 1; /* ✅ Remove default line-height spacing */
+            line-height: 1;
         }
 
         /* Layout */
         .main-layout {
             display: flex;
             flex: 1;
-            min-height: calc(100vh - 50px); /* ✅ Updated to match header height */
+            min-height: calc(100vh - 50px);
         }
 
-        /* Sidebar - Now properly connected */
+        /* Sidebar - Fixed scrollbar issues */
         .sidebar {
-            width: 60px; /* Narrow collapsed state */
-            height: calc(100vh - 50px); /* ✅ Matches exact header height */
-            background-color: #343a40; /* Same color as header */
+            width: 60px;
+            height: calc(100vh - 50px);
+            background-color: #343a40;
             color: #fff;
             display: flex;
             flex-direction: column;
-            padding: 0; /* ✅ No padding at all - was causing gap */
+            padding: 0;
             box-sizing: border-box;
             position: fixed;
-            top: 50px; /* ✅ Exact header height - was 60px before */
+            top: 50px;
             left: 0;
             z-index: 999;
             transition: width 0.3s ease-in-out;
+            /* ✅ Fixed: Ensure proper overflow for scrollbar */
             overflow: hidden;
         }
 
@@ -63,19 +62,21 @@
             width: 220px;
         }
 
-        /* Hamburger container - ISSUE 3: Proper spacing without gaps */
+        /* Hamburger container */
         .hamburger-container {
-            height: 50px; /* ✅ Matches header height */
+            height: 50px;
             display: flex;
             align-items: center;
-            justify-content: center; /* Center when collapsed */
-            background-color: #343a40; /* ✅ Ensure continuous background */
-            border-bottom: none; /* ✅ No border spacing */
+            justify-content: center;
+            background-color: #343a40;
+            border-bottom: none;
+            /* ✅ Fixed: Don't interfere with sidebar overflow */
+            flex-shrink: 0;
         }
 
         .sidebar.expanded .hamburger-container {
-            justify-content: flex-end; /* Right-align when expanded */
-            padding-right: 10px; /* Small padding for right positioning */
+            justify-content: flex-end;
+            padding-right: 10px;
         }
 
         /* Hamburger Menu */
@@ -117,57 +118,60 @@
             transform: rotate(-45deg) translate(6px, -6px);
         } */
 
-        /* Scrollbar styling for expanded sidebar */
-        .sidebar::-webkit-scrollbar {
+        /* ✅ FIXED: Scrollbar styling - Apply to sidebar-content instead of sidebar */
+        .sidebar-content::-webkit-scrollbar {
             width: 8px;
         }
 
-        .sidebar::-webkit-scrollbar-track {
+        .sidebar-content::-webkit-scrollbar-track {
             background: #2c2c2c;
         }
 
-        .sidebar::-webkit-scrollbar-thumb {
+        .sidebar-content::-webkit-scrollbar-thumb {
             background-color: #555;
             border-radius: 4px;
         }
 
-        .sidebar::-webkit-scrollbar-thumb:hover {
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
             background: #777;
         }
 
-        .sidebar {
+        .sidebar-content {
             scrollbar-width: thin;
             scrollbar-color: #555 #2c2c2c;
         }
 
-        /* Menu content - ISSUE 4: Proper spacing from top */
+        /* Menu content - Fixed for proper scrolling */
         .sidebar-content {
             flex: 1;
+            /* ✅ FIXED: Enable scrolling on content area */
             overflow-y: auto;
             opacity: 0;
             transform: translateX(-20px);
             transition: opacity 0.3s ease, transform 0.3s ease;
             width: 100%;
-            padding: 10px 0; /* ✅ Minimal padding, no top gap */
+            padding: 10px 0;
+            /* ✅ FIXED: Ensure content can scroll independently */
+            box-sizing: border-box;
         }
 
         .sidebar.expanded .sidebar-content {
             opacity: 1;
             transform: translateX(0);
-            padding: 0 15px; /* ✅ Proper side padding when expanded */
+            padding: 0 15px;
         }
 
         .sidebar .menu { 
             display: flex; 
             flex-direction: column; 
             gap: 10px; 
-            padding: 0; /* ✅ No additional padding */
+            padding: 0;
         }
 
         .sidebar a {
             color: #fff; 
             text-decoration: none; 
-            padding: 10px 15px; /* ✅ Consistent padding */
+            padding: 10px 15px;
             border-radius: 5px;
             display: block; 
             font-size: 14px; 
@@ -191,10 +195,11 @@
             cursor: pointer; 
             font-size: 14px; 
             transition: 0.2s;
-            margin: 10px 15px 15px 15px; /* ✅ Proper margins */
+            margin: 10px 15px 15px 15px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            flex-shrink: 0; /* ✅ Prevent logout from being compressed */
         }
 
         .sidebar .logout-btn:hover { 
@@ -208,8 +213,8 @@
             background: #fff;
             border-radius: 8px; 
             margin: 20px;
-            margin-left: 100px; /* Adjusted for narrow sidebar + margin */
-            margin-top: 10px; /* ✅ Slightly reduced top margin */
+            margin-left: 100px;
+            margin-top: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             transition: margin-left 0.3s ease-in-out;
         }
@@ -276,7 +281,7 @@
             
             .sidebar {
                 width: 60px;
-                top: 50px; /* ✅ Matches header height */
+                top: 50px;
                 flex-direction: row;
                 height: auto;
                 position: relative;
@@ -304,6 +309,7 @@
             .sidebar-content {
                 width: 100%;
                 padding: 10px;
+                overflow-y: auto; /* ✅ Ensure mobile scrolling */
             }
             
             .sidebar .menu { 
@@ -356,7 +362,7 @@
             to { top: 0; opacity: 0; }
         }
 
-        /* Custom accordion for departments */
+        /* Custom accordion for departments - FIXED arrow visibility */
         .departments-dropdown { 
             margin-top: 10px; 
         }
@@ -365,7 +371,7 @@
             all: unset;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between; /* ✅ FIXED: Ensure proper space for caret */
             width: 100%;
             cursor: pointer;
             padding: 10px 15px;
@@ -375,21 +381,24 @@
             font-size: 14px;
             text-align: left;
             transition: background-color .2s ease;
+            box-sizing: border-box; /* ✅ FIXED: Include padding in width calculation */
         }
 
         .departments-toggle:hover { 
             background-color: #495057; 
         }
 
+        /* ✅ FIXED: Departments caret styling */
         .departments-caret {
-            display: inline-block;
+            display: inline-block !important; /* ✅ Force display */
             width: 0; 
             height: 0;
             border-top: 5px solid transparent;
             border-bottom: 5px solid transparent;
             border-left: 6px solid #ffffff;
             transition: transform .2s ease;
-            margin-left: auto;
+            flex-shrink: 0; /* ✅ Prevent caret from shrinking */
+            margin-left: 8px; /* ✅ Add some space from text */
         }
 
         .departments-toggle.expanded .departments-caret { 
@@ -449,6 +458,10 @@
             .departments-list a { 
                 font-size: 12px; 
                 padding: 6px 8px; 
+            }
+            .departments-caret {
+                border-left: 4px solid #ffffff; /* Smaller arrow on mobile */
+                margin-left: 4px;
             }
         }
     </style>
@@ -602,7 +615,7 @@ function showSnackbar(message, bgColor = '#28a745') {
 function toggleDepartments() {
     const toggle = document.querySelector('.departments-toggle');
     const panel = document.getElementById('departments-panel');
-    const sidebar = document.querySelector('.sidebar');
+    const sidebarContent = document.querySelector('.sidebar-content'); // ✅ FIXED: Scroll on content area
 
     const isExpanding = !toggle.classList.contains('expanded');
 
@@ -610,10 +623,10 @@ function toggleDepartments() {
     panel.classList.toggle('expanded');
 
     if (isExpanding) {
-        // Delay to wait for the dropdown to expand before scrolling
+        // ✅ FIXED: Scroll on sidebar-content instead of sidebar
         setTimeout(() => {
-            sidebar.scrollTop = sidebar.scrollHeight;
-        }, 300); // matches your CSS transition duration
+            sidebarContent.scrollTop = sidebarContent.scrollHeight;
+        }, 300);
     }
 }
 
@@ -627,7 +640,6 @@ function toggleSidebar() {
     sidebar.classList.toggle('expanded');
     hamburger.classList.toggle('open');
     
-    // Adjust content margin based on sidebar state
     if (isExpanding) {
         content.style.marginLeft = '260px';
     } else {
@@ -657,16 +669,25 @@ document.addEventListener('DOMContentLoaded', function () {
         content.style.marginLeft = '100px';
     }
 
+    // ✅ FIXED: Auto-scroll observer for sidebar-content
+    const sidebarContent = document.querySelector('.sidebar-content');
+    const observer = new MutationObserver(() => {
+        // If content overflows, scroll to bottom
+        if (sidebarContent.scrollHeight > sidebarContent.clientHeight) {
+            sidebarContent.scrollTop = sidebarContent.scrollHeight;
+        }
+    });
+
+    observer.observe(sidebarContent, { childList: true, subtree: true });
+
     // Handle window resize
     window.addEventListener('resize', function() {
         const isMobile = window.innerWidth <= 768;
         if (isMobile) {
-            // On mobile, always collapse sidebar
             sidebar.classList.remove('expanded');
             hamburger.classList.remove('open');
             content.style.marginLeft = '10px';
         } else {
-            // Restore desktop state
             if (sidebarState === 'open') {
                 sidebar.classList.add('expanded');
                 hamburger.classList.add('open');
@@ -677,17 +698,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
-
-const sidebar = document.querySelector('.sidebar');
-
-const observer = new MutationObserver(() => {
-    // If content overflows, scroll to bottom
-    if (sidebar.scrollHeight > sidebar.clientHeight) {
-        sidebar.scrollTop = sidebar.scrollHeight;
-    }
-});
-
-observer.observe(sidebar, { childList: true, subtree: true });
 
 </script>
 
