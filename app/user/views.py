@@ -1148,7 +1148,7 @@ class DepartmentTableView(View):
                 'financialimpactpermonth': None,
             }
 
-            draft_data[emp.emp_id] = {'employee': {}, 'current_package': {}, 'proposed_package': {}, 'financial_impact': {}}
+            draft_data[emp.emp_id] = {'employee': {}, 'CurrentPackageDetails': {}, 'ProposedPackageDetails': {}, 'FinancialImpactPerMonth': {}}
 
             # ✅ Handle current package
             current_draft = getattr(emp_draft, "currentpackagedetailsdraft", None) if is_draft else None
@@ -2221,7 +2221,7 @@ class SaveDraftView(View):
                             has_changes = True
                             employee_draft_edited[field] = True
 
-                    elif tab == 'current_package':
+                    elif tab == 'CurrentPackageDetails':
                         current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
                         print("current_package: ", current_package)
                         for field, value in fields.items():
@@ -2237,7 +2237,7 @@ class SaveDraftView(View):
                             has_changes = True
                             current_package_edited[field] = True
 
-                    elif tab == 'proposed_package':
+                    elif tab == 'ProposedPackageDetails':
                         proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
                         print("proposed_package: ", proposed_package)
                         for field, value in fields.items():
@@ -2253,7 +2253,7 @@ class SaveDraftView(View):
                             has_changes = True
                             proposed_package_edited[field] = True
 
-                    elif tab == 'financial_impact':
+                    elif tab == 'FinancialImpactPerMonth':
                         financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
                         print("financial_impact: ", financial_impact)
                         for field, value in fields.items():
@@ -2354,7 +2354,7 @@ class SaveDraftView(View):
                 if current_package_edited:
                     print("if current_package_edited")
                     draft, _ = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-                    for field, value in tabs.get('current_package', {}).items():
+                    for field, value in tabs.get('CurrentPackageDetails', {}).items():
                         if current_package_edited.get(field):
                             if field.endswith('_id'):
                                 setattr(draft, field, int(value) if value else None)
@@ -2382,14 +2382,14 @@ class SaveDraftView(View):
                     #     draft.company_pickup = proposed_package_details.company_pickup
                     #     draft.is_deleted = proposed_package_details.is_deleted
 
-                    proposed_package = tabs.get('proposed_package', {})
+                    proposed_package = tabs.get('ProposedPackageDetails', {})
                     fuel_litre = float(proposed_package.get('increased_fuel_litre', 0))
                     if fuel_litre > 0 and 'increased_fuel_allowance' in proposed_package:
                         print("Removing increased_fuel_allowance because fuel_litre > 0")
                         del proposed_package['increased_fuel_allowance']
                             
                     print("draft: ", draft)
-                    for field, value in tabs.get('proposed_package', {}).items():
+                    for field, value in tabs.get('ProposedPackageDetails', {}).items():
                         print("field, value: ", field, value, type(value))
                         if proposed_package_edited.get(field):
                             if field == 'increased_fuel_litre':
@@ -2429,7 +2429,7 @@ class SaveDraftView(View):
                 if financial_impact_edited:
                     print("if financial_impact_edited")
                     draft, _ = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
-                    for field, value in tabs.get('financial_impact', {}).items():
+                    for field, value in tabs.get('FinancialImpactPerMonth', {}).items():
                         if financial_impact_edited.get(field):
                             if field.endswith('_id'):
                                 setattr(draft, field, int(value) if value else None)
