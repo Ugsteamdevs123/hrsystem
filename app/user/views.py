@@ -186,6 +186,7 @@ class AddUserView(PermissionRequiredMixin, View):
         form = CustomUserForm(request.POST)
         
         if form.is_valid():
+<<<<<<< HEAD
             try:
                 user = form.save()
                 user.is_staff = True
@@ -214,6 +215,15 @@ class AddUserView(PermissionRequiredMixin, View):
                 for error in errors:
                     messages.error(request, f"{dict(form.fields).get(field).label}: {error}")
         
+=======
+            user = form.save()
+            user.is_staff = True
+            user.is_superuser = False
+            user.save()
+            hr_assigned_companies.objects.create(hr=user, company=Company.objects.all().first())
+            messages.success(request, "User added successfully!")
+            return redirect("view_users")
+>>>>>>> 8911f68b607a3084d0abd65f10927de1ae9731dd
         return render(request, self.template_name, {"form": form})
 
 

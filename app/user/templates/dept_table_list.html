@@ -27,6 +27,7 @@
             <table border="1" cellpadding="8" cellspacing="0" class="custom-table">
                 <thead>
                     <tr>
+                        <th rowspan="2" class="sticky-col sticky-col-0 sticky-header employee-color"> </th>
                         <th rowspan="2" class="sticky-col sticky-col-1 sticky-header employee-color">SR.No</th>
                         <th rowspan="2" class="sticky-col sticky-col-2 sticky-header employee-color">Emp ID</th>
                         <th rowspan="2" class="sticky-col sticky-col-3 sticky-header employee-color">Full Name</th>
@@ -82,7 +83,8 @@
                 </thead>
                 <tbody>
                     {% for employee in employees %}
-                        <tr data-employee-id="{{ employee.emp_id }}" data-past-six-months="{{ employee.past_six_months|yesno:'true,false' }}" class="{% if employee.is_draft %}draft-row{% endif %}">
+                        <tr data-employee-id="{{ employee.emp_id }}" data-past-six-months="{{ employee.past_six_months|yesno:'true,false' }}">
+                            <td class="{% if employee.is_draft %}draft-row{% else %}non-draft-row{% endif %} sticky-col sticky-col-0"> </td>
                             <td class="sticky-col sticky-col-1">{{ forloop.counter }}</td>
                             <td class="sticky-col sticky-col-2">{{ employee.emp_id|default:"-" }}</td>
                             <td class="sticky-col sticky-col-3">{{ employee.fullname|default:"-" }}</td>
@@ -142,6 +144,7 @@
     </div>
 
     <style>
+        /* Zebra for sticky cells */
         .employee-color {
             background-color: #6495ed;
         }
@@ -182,7 +185,7 @@
             overflow-x: auto;
             overflow-y: auto;
             max-height: 500px;
-            border: 1px solid #dee2e6;
+            /* border: 1px solid #dee2e6; */
             border-radius: 8px;
             -webkit-clip-path: inset(0);
             clip-path: inset(0);
@@ -215,7 +218,10 @@
         .sticky-col {
             position: sticky;
             z-index: 30;
+            border: none;
             background-color: #ffffff !important;
+            /* Add bottom border manually */
+            box-shadow: inset 0 -1px 0 #dee2e6;
         }
         .sticky-col.sticky-header {
             z-index: 50;
@@ -238,8 +244,14 @@
         tr:hover {
             background-color: #f1f3f5;
         }
-        .draft-row {
+        /* .draft-row {
             border-left: 4px solid #ffc107;
+        } */
+        .draft-row {
+            background-color:#ffc107  !important;
+        }
+        .non-draft-row {
+            background-color:#ffffff  !important;
         }
         .editable.eligible {
             background-color: #e6ffe6 !important; /* Light green for editable cells */
@@ -330,10 +342,32 @@
         .confirm-popup .form-btn {
             min-width: 100px;
         }
+        .sticky-col-0 { width: 8px; }
         .sticky-col-1 { width: 60px; }
         .sticky-col-2 { width: 100px; }
         .sticky-col-3 { width: 150px; }
         .sticky-col-4 { width: 120px; }
+        /* Fake right border */
+        .sticky-col-0::after,
+        .sticky-col-1::after,
+        .sticky-col-2::after,
+        .sticky-col-3::after,
+        .sticky-col-4::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0; /* use left: 0 if you want a left border instead */
+            width: 1px;
+            height: 100%;
+            background-color: #ccc; /* the color of your border line */
+            z-index: 20; /* ensure it's above other content */
+        }
+        tbody tr:nth-child(even) .sticky-col {
+            background-color: #f9f9f9 !important;
+        }
+        tbody tr:nth-child(odd) .sticky-col {
+            background-color: #ffffff !important;
+        }
         .non-sticky {
             min-width: 100px;
         }
@@ -867,22 +901,22 @@
         const bodyRows = table.querySelectorAll('tbody tr');
 
         const setStickyOffsets = () => {
-            const stickyColumns = [1, 2, 3, 4];
+            const stickyColumns = [0, 1, 2, 3, 4];
             let cumulativeLeft = 0;
 
             stickyColumns.forEach((colIndex) => {
                 const headerCell = headerRows[0].querySelector(`th.sticky-col-${colIndex}`);
                 if (headerCell) {
                     const width = headerCell.offsetWidth;
+                    console.log("width: ", width)
                     const className = `.sticky-col-${colIndex}`;
                     document.querySelectorAll(className).forEach(cell => {
+                        console.log("cell: ", cell);
                         cell.style.left = `${cumulativeLeft}px`;
                     });
                     cumulativeLeft += width;
                 }
             });
-
-            console.log('Table scrollWidth:', table.scrollWidth);
         };
 
         setStickyOffsets();

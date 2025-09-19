@@ -26,26 +26,25 @@
             <table border="1" cellpadding="8" cellspacing="0">
                 <thead>
                     <tr>
-                        <th rowspan="2">SR.No</th>
-                        <th rowspan="2">Full Name</th>
+                        <th rowspan="2" class="sticky-main">SR.No</th>
+                        <th rowspan="2" class="sticky-main">Full Name</th>
                         <!-- Employee Details -->
-                        <th colspan="9" class="group-header">Employee Details</th>
-                        <th rowspan="3">Actions</th>
+                        <th colspan="9" class="group-header sticky-main">Employee Details</th>
+                        <th rowspan="2" class="sticky-main">Actions</th>
                     </tr>
                     <tr>
                         <!-- Employee Details Subheaders -->
-                        <th>Employee ID</th>
-                        <th>Department Group</th>
-                        <th>Department</th>
-                        <th>Section</th>
-                        <th>Designation</th>
-                        <th>Location</th>
-                        <th>Date of Joining</th>
-                        <th>Resign</th>
-                        <th>Employee Status</th>
+                        <th class="sticky-subheader">Employee ID</th>
+                        <th class="sticky-subheader">Department Group</th>
+                        <th class="sticky-subheader">Department</th>
+                        <th class="sticky-subheader">Section</th>
+                        <th class="sticky-subheader">Designation</th>
+                        <th class="sticky-subheader">Location</th>
+                        <th class="sticky-subheader">Date of Joining</th>
+                        <th class="sticky-subheader">Resign</th>
+                        <th class="sticky-subheader">Employee Status</th>
                     </tr>
                 </thead>
-
                 <tbody>
                 {% for employee in employees %}
                     <tr data-employee-id="{{ employee.emp_id }}">
@@ -65,7 +64,6 @@
                         <td>
                         {% if perms.user.view_employee %}
                             <a href="{% url 'employee_detail' employee_id=employee.emp_id %}" class="action-btn view-btn" title="View">
-                                <!-- Eye Icon -->
                                 <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M12 4.5C7 4.5 2.73 7.97 1 12c1.73 4.03 6 7.5 11 7.5s9.27-3.47 11-7.5C21.27 7.97 17 4.5 12 4.5zm0 12.5c-2.76 0-5-2.24-5-5
                                         s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8a3 3 0 100 6 3 3 0 000-6z" fill="currentColor"/>
@@ -74,7 +72,6 @@
                         {% endif %}
                         {% if perms.user.change_employee %}
                             <a href="{% url 'update_employee' employee_id=employee.emp_id %}" class="action-btn edit-btn" title="Edit">
-                                <!-- Pencil Icon -->
                                 <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04c.39-.39.39-1.02 
                                             0-1.41l-2.34-2.34a1 1 0 00-1.41 
@@ -84,7 +81,6 @@
                         {% endif %}
                         {% if perms.user.delete_employee %}
                             <button class="action-btn delete-btn delete-employee-btn" data-employee-id="{{ employee.emp_id }}" title="Delete">
-                                <!-- Improved Trash Can Icon -->
                                 <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M6 7h12l-1 12.5a1 1 0 01-1 .5H8a1 1 0 01-1-.5L6 7zm3 2v8h2V9H9zm4 0v8h2V9h-2z" fill="currentColor"/>
                                     <path d="M9 4h6l.75 1.5H21V7H3V5.5h5.25L9 4z" fill="currentColor"/>
@@ -101,7 +97,6 @@
                 </tbody>
             </table>
         </div>
-
     </div>
 
     <style>
@@ -136,6 +131,7 @@
             overflow-y: auto;
             border: 1px solid #dee2e6;
             border-radius: 8px;
+            position: relative;
         }
         table {
             {% comment %} border-collapse: collapse; {% endcomment %}
@@ -155,12 +151,20 @@
         th {
             background-color: #f2f2f2;
             font-weight: 600;
+        }
+        /* Sticky headers for the first row */
+        th.sticky-main {
             position: sticky;
             top: 0;
-            z-index: 10;
-        }
-        th[rowspan="2"] {
+            background-color: #f2f2f2;
+            z-index: 11; /* Higher z-index to stay above subheaders */
             vertical-align: middle;
+        }
+        /* Sticky subheaders for Employee Details */
+        th.sticky-subheader {
+            position: sticky;
+            background-color: #f2f2f2; /* Slightly different background for subheaders */
+            z-index: 10; /* Below main headers */
         }
         th.group-header {
             text-align: center;
@@ -209,14 +213,12 @@
             border: none;
             line-height: 1;
         }
-
         .action-btn svg {
             display: block;
             width: 20px;
             height: 20px;
             fill: currentColor;
         }
-
         .view-btn {
             background-color: #ffc107;
         }
@@ -427,7 +429,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Log CSRF token on page load for debugging
         const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
         if (csrfInput) {
             console.log('CSRF token on load:', csrfInput.value);
@@ -435,11 +436,18 @@
             console.error('CSRF token input not found on page load');
         }
 
-        bindRowActions();
-        
-    });
-</script>
+        const firstRow = document.querySelector('thead tr:first-child');
+        const subHeaders = document.querySelectorAll('th.sticky-subheader');
+        if (firstRow && subHeaders.length) {
+            const firstRowHeight = firstRow.getBoundingClientRect().height;
+            subHeaders.forEach(subHeader => {
+                subHeader.style.top = `${firstRowHeight}px`;
+            });
+        }
 
+        bindRowActions();
+    });
+    </script>
 {% else %}
     <p>You do not have permission to view this page.</p>
 {% endif %}
