@@ -95,7 +95,7 @@ def get_companies_and_department_teams(hr_id):
             .prefetch_related(
                 Prefetch(
                     "company__departmentteams_set",  # reverse relation from Company → DepartmentTeams
-                    queryset=DepartmentTeams.objects.all(),
+                    queryset=DepartmentTeams.objects.filter(is_deleted=False),
                     to_attr="prefetched_departments"
                 )
             )
