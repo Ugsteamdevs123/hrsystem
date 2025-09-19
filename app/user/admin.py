@@ -20,13 +20,13 @@ class GenderAdmin(admin.ModelAdmin):
 @admin.register(models.CustomUser)
 class CustomUserAdmin(UserAdmin):
     # Fields to display in the admin list view
-    list_display = ("email", "full_name", "gender", "contact", "is_staff", "is_active")
+    list_display = ("email", "full_name", "gender", "contact", "is_staff", "is_active" , "is_deleted" , "first_time_login_to_reset_pass")
     list_filter = ("is_staff", "is_active", "gender", "groups")
 
     # Fieldsets for editing users
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        (_("Personal info"), {"fields": ("full_name", "gender", "contact")}),
+        (_("Personal info"), {"fields": ("full_name", "gender", "contact" , "is_deleted" , "first_time_login_to_reset_pass")}),
         (_("Permissions"), {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         (_("Important dates"), {"fields": ("last_login",)}),
     )

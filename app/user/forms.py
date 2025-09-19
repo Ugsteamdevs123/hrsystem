@@ -227,7 +227,7 @@ class FieldReferenceAdminForm(forms.ModelForm):
 
 
 class CustomUserForm(forms.ModelForm):
-    # password = forms.CharField(widget=forms.PasswordInput)
+    password = forms.CharField(widget=forms.PasswordInput)
     groups = forms.ModelChoiceField(
         queryset=Group.objects.exclude(name='Super Admin'),
         required=False,
@@ -240,7 +240,7 @@ class CustomUserForm(forms.ModelForm):
         fields = [
             "full_name", 
             "email", 
-            # "password", 
+            "password", 
             "gender", 
             "contact", 
             "groups"
@@ -252,6 +252,7 @@ class CustomUserForm(forms.ModelForm):
         gender = self.cleaned_data["gender"]
         contact = self.cleaned_data["contact"]
         group = self.cleaned_data.get("groups")
+        password = self.cleaned_data["password"]
 
         # ✅ Call manager method instead of model.save()
         user = CustomUser.objects.create_user(
@@ -259,6 +260,7 @@ class CustomUserForm(forms.ModelForm):
             email=email,
             gender=gender,
             contact=contact,
+            password=password,   # pass password here
         )
 
         if group:
