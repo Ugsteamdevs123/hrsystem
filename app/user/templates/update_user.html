@@ -4,37 +4,79 @@
 {% block content %}
 <h2>Edit User</h2>
 
-<form id="editUserForm" method="POST">
+<!-- Display non-field errors -->
+{% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        {{ form.non_field_errors }}
+    </div>
+{% endif %}
+
+<form id="editUserForm" method="POST" novalidate>
     {% csrf_token %}
 
     <!-- Full Name -->
-    <div class="form-field">
+    <div class="form-field {% if form.full_name.errors %}has-error{% endif %}">
         {{ form.full_name.label_tag }}
         {{ form.full_name }}
+        {% if form.full_name.errors %}
+            <div class="error-message">
+                {% for error in form.full_name.errors %}
+                    <small class="text-danger">{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
 
     <!-- Email -->
-    <div class="form-field">
+    <div class="form-field {% if form.email.errors %}has-error{% endif %}">
         {{ form.email.label_tag }}
         {{ form.email }}
+        {% if form.email.errors %}
+            <div class="error-message">
+                {% for error in form.email.errors %}
+                    <small class="text-danger">{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
 
     <!-- Gender -->
-    <div class="form-field">
+    <div class="form-field {% if form.gender.errors %}has-error{% endif %}">
         {{ form.gender.label_tag }}
         {{ form.gender }}
+        {% if form.gender.errors %}
+            <div class="error-message">
+                {% for error in form.gender.errors %}
+                    <small class="text-danger">{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
 
     <!-- Contact -->
-    <div class="form-field">
+    <div class="form-field {% if form.contact.errors %}has-error{% endif %}">
         {{ form.contact.label_tag }}
         {{ form.contact }}
+        {% if form.contact.errors %}
+            <div class="error-message">
+                {% for error in form.contact.errors %}
+                    <small class="text-danger">{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
 
     <!-- Group -->
-    <div class="form-field">
+    <div class="form-field {% if form.groups.errors %}has-error{% endif %}">
         {{ form.groups.label_tag }}
         {{ form.groups }}
+        {% if form.groups.errors %}
+            <div class="error-message">
+                {% for error in form.groups.errors %}
+                    <small class="text-danger">{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
 
     <!-- Buttons -->
@@ -67,6 +109,18 @@
     box-sizing: border-box;
 }
 
+/* Error styling */
+.form-field.has-error input,
+.form-field.has-error select {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.error-message {
+    margin-top: 5px;
+    display: block;
+}
+
 /* Buttons */
 .form-btn {
     padding: 12px 20px;
@@ -81,11 +135,57 @@
 .btn-back { background-color: #6c757d; color: #fff; }
 .btn-back:hover { background-color: #5a6268; }
 
+/* Alert styling */
+.alert {
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
 /* Responsive */
 @media screen and (max-width: 500px) {
     .form-btn { font-size: 12px; padding: 10px; }
     .form-field input, .form-field select { font-size: 14px; padding: 10px; }
 }
 </style>
+
+<script>
+// Client-side validation
+document.getElementById('editUserForm').addEventListener('submit', function(e) {
+    let isValid = true;
+    const fields = ['id_full_name', 'id_email', 'id_gender', 'id_contact', 'id_groups'];
+    
+    fields.forEach(function(fieldId) {
+        const field = document.getElementById(fieldId);
+        const value = field.value.trim();
+        const errorDiv = field.parentNode.querySelector('.error-message');
+        
+        if (!value) {
+            field.style.borderColor = '#dc3545';
+            field.style.backgroundColor = '#fff5f5';
+            if (!errorDiv || !errorDiv.textContent.includes('required')) {
+                if (errorDiv) {
+                    errorDiv.innerHTML = '<small class="text-danger">This field is required.</small>';
+                }
+            }
+            isValid = false;
+        } else {
+            field.style.borderColor = '#ccc';
+            field.style.backgroundColor = '#fff';
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+    }
+});
+</script>
 
 {% endblock %}
