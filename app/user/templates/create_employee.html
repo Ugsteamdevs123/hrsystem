@@ -602,6 +602,7 @@ function restoreStepData(stepIndex) {
     const q = sel => form.querySelector(sel);
     
     console.log('📂 Restoring step data:', stepIndex, data);
+    console.log('data.original_emp_id', data.original_emp_id);
     
     // Restore update flags and original emp_id FIRST
     if (data && data.is_update) {
@@ -762,12 +763,14 @@ async function handleNext() {
         console.log('✅ Backend response:', result);
         
         // SUCCESS - Update original_emp_id ONLY if it was changed AND backend confirms the change
-        if (result.success && empIdChanged && result.emp_id_changed === true) {
+        if (empIdChanged) {
             console.log('🔄 Updating original_emp_id from', currentOriginalEmpId, 'to', currentEmpId);
             
             // Update the global variable and hidden field
             originalEmpId = currentEmpId;
             document.getElementById('original_emp_id').value = currentEmpId;
+
+            console.log("document.getElementById('original_emp_id').value 2: ", document.getElementById('original_emp_id').value);
             
             // Update ALL stored data to reflect the new original
             Object.keys(formDataStore).forEach(stepIndex => {
@@ -778,6 +781,8 @@ async function handleNext() {
                 }
             });
             
+            console.log("document.getElementById('original_emp_id').value 3: ", document.getElementById('original_emp_id').value);
+
             // Clear visual indicators
             const empIdInput = document.getElementById('emp_id');
             empIdInput.style.borderColor = '';
@@ -913,6 +918,8 @@ async function handleSubmit() {
             // Update the global variable and hidden field
             originalEmpId = currentEmpId;
             document.getElementById('original_emp_id').value = currentEmpId;
+
+            console.log("document.getElementById('original_emp_id').value: ", document.getElementById('original_emp_id').value);
             
             // Update ALL stored data to reflect the new original
             Object.keys(formDataStore).forEach(stepIndex => {
