@@ -614,20 +614,20 @@
             if (editedCells[empId].employee && editedCells[empId].employee.location_id) {
                 editedCells[empId].employee.location_id = parseInt(editedCells[empId].employee.location_id, 10);
             }
-            if (editedCells[empId].current_package && editedCells[empId].current_package.vehicle_id) {
-                editedCells[empId].current_package.vehicle_id = parseInt(editedCells[empId].current_package.vehicle_id, 10);
+            if (editedCells[empId].CurrentPackageDetails && editedCells[empId].CurrentPackageDetails.vehicle_id) {
+                editedCells[empId].CurrentPackageDetails.vehicle_id = parseInt(editedCells[empId].CurrentPackageDetails.vehicle_id, 10);
             }
-            if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_id) {
-                editedCells[empId].proposed_package.vehicle_id = parseInt(editedCells[empId].proposed_package.vehicle_id, 10);
+            if (editedCells[empId].ProposedPackageDetails && editedCells[empId].ProposedPackageDetails.vehicle_id) {
+                editedCells[empId].ProposedPackageDetails.vehicle_id = parseInt(editedCells[empId].ProposedPackageDetails.vehicle_id, 10);
             }
-            if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
-                editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
+            if (editedCells[empId].FinancialImpactPerMonth && editedCells[empId].FinancialImpactPerMonth.emp_status_id) {
+                editedCells[empId].FinancialImpactPerMonth.emp_status_id = parseInt(editedCells[empId].FinancialImpactPerMonth.emp_status_id, 10);
             }
-            if (editedCells[empId].current_package && editedCells[empId].current_package.company_pickup) {
-                editedCells[empId].current_package.company_pickup = editedCells[empId].current_package.company_pickup === 'true';
+            if (editedCells[empId].CurrentPackageDetails && editedCells[empId].CurrentPackageDetails.company_pickup) {
+                editedCells[empId].CurrentPackageDetails.company_pickup = editedCells[empId].CurrentPackageDetails.company_pickup === 'true';
             }
-            if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.company_pickup) {
-                editedCells[empId].proposed_package.company_pickup = editedCells[empId].proposed_package.company_pickup === 'true';
+            if (editedCells[empId].ProposedPackageDetails && editedCells[empId].ProposedPackageDetails.company_pickup) {
+                editedCells[empId].ProposedPackageDetails.company_pickup = editedCells[empId].ProposedPackageDetails.company_pickup === 'true';
             }
         });
         try {
@@ -910,10 +910,11 @@
         });
 
         Object.keys(draftData).forEach(empId => {
+            console.log("draftData: ", draftData);
             editedCells[empId] = JSON.parse(JSON.stringify(draftData[empId]));
             const row = document.querySelector(`tr[data-employee-id="${empId}"]`);
             if (row) {
-                ['employee', 'current_package', 'proposed_package', 'financial_impact'].forEach(tab => {
+                ['employee', 'CurrentPackageDetails', 'ProposedPackageDetails', 'FinancialImpactPerMonth'].forEach(tab => {
                     const draftDataTab = draftData?.[empId]?.[tab] || {};
                     Object.keys(draftDataTab).forEach(field => {
                         const cell = row.querySelector(`[data-tab="${tab}"][data-field="${field}"]`);

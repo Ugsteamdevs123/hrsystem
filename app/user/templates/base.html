@@ -15,41 +15,68 @@
         }
 
         /* Header */
-        /* header {
-            background-color: #343a40;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            padding: 15px 30px;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        header h1 { 
-            margin: 0; 
-            font-size: 20px; 
-            flex-grow: 1;
-        } */
-
         header {
             background-color: #343a40;
             color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start; /* This keeps everything on the left */
             padding: 15px 30px;
             position: sticky;
             top: 0;
             z-index: 1000;
-            gap: 15px; /* This adds space between title and hamburger */
+            height: 50px;
+            box-sizing: border-box;
         }
 
         header h1 { 
-            margin: 0; 
+            margin: 0;
             font-size: 20px; 
-            flex-shrink: 1; /* Allow title to shrink if needed */
-            /* Remove flex-grow: 1 to prevent expansion */
+            line-height: 1;
+        }
+
+        /* Layout */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            min-height: calc(100vh - 50px);
+        }
+
+        /* Sidebar - Fixed scrollbar issues */
+        .sidebar {
+            width: 60px;
+            height: calc(100vh - 50px);
+            background-color: #343a40;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            box-sizing: border-box;
+            position: fixed;
+            top: 50px;
+            left: 0;
+            z-index: 999;
+            transition: width 0.3s ease-in-out;
+            /* ✅ Fixed: Ensure proper overflow for scrollbar */
+            overflow: hidden;
+        }
+
+        .sidebar.expanded {
+            width: 220px;
+        }
+
+        /* Hamburger container */
+        .hamburger-container {
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #343a40;
+            border-bottom: none;
+            /* ✅ Fixed: Don't interfere with sidebar overflow */
+            flex-shrink: 0;
+        }
+
+        .sidebar.expanded .hamburger-container {
+            justify-content: flex-end;
+            padding-right: 10px;
         }
 
         /* Hamburger Menu */
@@ -61,7 +88,13 @@
             width: 30px;
             height: 30px;
             cursor: pointer;
-            margin-right: 10px;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger:hover {
+            background-color: rgba(255, 255, 255, 0.1);
         }
 
         .hamburger span {
@@ -70,6 +103,7 @@
             background-color: #fff;
             margin: 2px 0;
             transition: all 0.3s ease;
+            border-radius: 2px;
         }
 
         /* .hamburger.open span:nth-child(1) {
@@ -84,48 +118,69 @@
             transform: rotate(-45deg) translate(6px, -6px);
         } */
 
-        /* Layout */
-        .main-layout {
-            display: flex;
+        /* ✅ FIXED: Scrollbar styling - Apply to sidebar-content instead of sidebar */
+        .sidebar-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-track {
+            background: #2c2c2c;
+        }
+
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 4px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+        .sidebar-content {
+            scrollbar-width: thin;
+            scrollbar-color: #555 #2c2c2c;
+        }
+
+        /* Menu content - Fixed for proper scrolling */
+        .sidebar-content {
             flex: 1;
-            min-height: calc(100vh - 60px);
+            /* ✅ FIXED: Enable scrolling on content area */
+            overflow-y: auto;
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            width: 100%;
+            padding: 10px 0;
+            /* ✅ FIXED: Ensure content can scroll independently */
+            box-sizing: border-box;
         }
 
-        /* Sidebar */
-        .sidebar {
-            width: 220px;
-            background-color: #343a40;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            position: fixed;
-            top: 60px;
-            bottom: 0;
-            z-index: 999;
-        }
-
-        .sidebar.open {
+        .sidebar.expanded .sidebar-content {
+            opacity: 1;
             transform: translateX(0);
+            padding: 0 15px;
         }
 
         .sidebar .menu { 
             display: flex; 
             flex-direction: column; 
             gap: 10px; 
+            padding: 0;
         }
+
         .sidebar a {
             color: #fff; 
             text-decoration: none; 
-            padding: 10px; 
+            padding: 10px 15px;
             border-radius: 5px;
             display: block; 
             font-size: 14px; 
             transition: 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+
         .sidebar a:hover { 
             background-color: #495057; 
         }
@@ -136,11 +191,17 @@
             color: #fff; 
             border: none;
             border-radius: 5px; 
-            padding: 10px; 
+            padding: 10px 15px; 
             cursor: pointer; 
             font-size: 14px; 
             transition: 0.2s;
+            margin: 10px 15px 15px 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0; /* ✅ Prevent logout from being compressed */
         }
+
         .sidebar .logout-btn:hover { 
             background-color: #c82333; 
         }
@@ -152,11 +213,13 @@
             background: #fff;
             border-radius: 8px; 
             margin: 20px;
+            margin-left: 100px;
+            margin-top: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             transition: margin-left 0.3s ease-in-out;
         }
 
-        .content.shifted {
+        .sidebar.expanded + .content {
             margin-left: 260px;
         }
 
@@ -173,6 +236,7 @@
             align-items: center;
             z-index: 1000;
         }
+
         .popup-content {
             background: #fff; 
             padding: 25px 30px; 
@@ -181,6 +245,7 @@
             width: 300px; 
             box-shadow: 0 0 10px rgba(0,0,0,0.3);
         }
+
         .popup-btn {
             padding: 10px 20px; 
             border-radius: 6px; 
@@ -189,17 +254,21 @@
             cursor: pointer; 
             font-size: 14px;
         }
+
         .yes-btn { 
             background-color: #28a745; 
             color: #fff; 
         }
+
         .yes-btn:hover { 
             background-color: #218838; 
         }
+
         .no-btn { 
             background-color: #dc3545; 
             color: #fff; 
         }
+
         .no-btn:hover { 
             background-color: #c82333; 
         }
@@ -209,25 +278,54 @@
             .main-layout { 
                 flex-direction: column; 
             }
+            
             .sidebar {
+                width: 60px;
+                top: 50px;
+                flex-direction: row;
+                height: auto;
+                position: relative;
+                padding: 0;
+                background-color: #343a40;
+            }
+            
+            .sidebar.expanded {
                 width: 100%;
-                top: 60px;
-                transform: translateX(-100%);
+                flex-direction: column;
+                height: auto;
+                padding: 0;
             }
-            .sidebar.open { 
-                transform: translateX(0); 
+            
+            .hamburger-container {
+                height: 50px;
+                justify-content: center;
             }
+            
+            .sidebar.expanded .hamburger-container {
+                justify-content: flex-end;
+                padding-right: 10px;
+            }
+            
+            .sidebar-content {
+                width: 100%;
+                padding: 10px;
+                overflow-y: auto; /* ✅ Ensure mobile scrolling */
+            }
+            
             .sidebar .menu { 
                 flex-direction: column; 
+                padding: 0;
             }
-            .sidebar a, .sidebar .logout-btn { 
-                text-align: left; 
-            }
+            
             .content { 
                 margin: 10px; 
+                margin-left: 10px;
+                margin-top: 10px;
             }
-            .content.shifted { 
-                margin-left: 10px; 
+            
+            .sidebar.expanded + .content {
+                margin-left: 10px;
+                margin-top: 10px;
             }
         }
 
@@ -258,12 +356,13 @@
             from { top: 0; opacity: 0; }
             to { top: 20px; opacity: 1; }
         }
+
         @keyframes fadeout {
             from { top: 20px; opacity: 1; }
             to { top: 0; opacity: 0; }
         }
 
-        /* Custom accordion for departments */
+        /* Custom accordion for departments - FIXED arrow visibility */
         .departments-dropdown { 
             margin-top: 10px; 
         }
@@ -272,98 +371,82 @@
             all: unset;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between; /* ✅ FIXED: Ensure proper space for caret */
             width: 100%;
             cursor: pointer;
-            padding: 10px;
+            padding: 10px 15px;
             border-radius: 5px;
             background-color: #343a40;
             color: #fff;
             font-size: 14px;
             text-align: left;
             transition: background-color .2s ease;
+            box-sizing: border-box; /* ✅ FIXED: Include padding in width calculation */
         }
+
         .departments-toggle:hover { 
             background-color: #495057; 
         }
 
+        /* ✅ FIXED: Departments caret styling */
         .departments-caret {
-            display: inline-block;
+            display: inline-block !important; /* ✅ Force display */
             width: 0; 
             height: 0;
             border-top: 5px solid transparent;
             border-bottom: 5px solid transparent;
             border-left: 6px solid #ffffff;
             transition: transform .2s ease;
+            flex-shrink: 0; /* ✅ Prevent caret from shrinking */
+            margin-left: 8px; /* ✅ Add some space from text */
         }
+
         .departments-toggle.expanded .departments-caret { 
             transform: rotate(90deg); 
         }
 
-        /* .departments-panel { 
+        .departments-panel { 
             margin: 6px 0 0 0;
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease;
-        } */
-         
-        .departments-panel { 
-            margin: 6px 0 0 0;
-            max-height: 0; /* Start collapsed */
-            overflow: hidden; /* Hide content when collapsed */
-            transition: max-height 0.3s ease;
         }
 
         .departments-panel.expanded { 
-            max-height: 300px; /* Expand with scrolling */
-            overflow-y: auto; /* Enable scrolling only when expanded */
-            scrollbar-width: thin;
-            scrollbar-color: #888 #343a40;
+            max-height: 3000px;
         }
 
-        /* Webkit scrollbar styles - only apply when expanded */
-        .departments-panel.expanded::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .departments-panel.expanded::-webkit-scrollbar-track {
-            background: #343a40;
-        }
-
-        .departments-panel.expanded::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 3px;
-        }
-
-        .departments-panel.expanded::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
         .departments-list { 
             list-style: none; 
             padding-left: 10px;
             margin: 0; 
         }
+
         .departments-list li { 
             margin: 6px 0; 
         }
+
         .departments-list li.child { 
             margin-left: 0;
         }
+
         .departments-list a {
             display: block;
             color: #fff;
             text-decoration: none;
-            padding: 10px;
+            padding: 10px 15px;
             border-radius: 5px;
             font-size: 14px;
         }
+
         .departments-list a:hover { 
             background-color: #495057; 
         }
+
         .muted { 
             color: #b8b8b8; 
             font-size: 13px; 
-            padding: 10px; 
+            padding: 10px 15px; 
         }
 
         /* Responsive adjustments for dropdown */
@@ -376,6 +459,10 @@
                 font-size: 12px; 
                 padding: 6px 8px; 
             }
+            .departments-caret {
+                border-left: 4px solid #ffffff; /* Smaller arrow on mobile */
+                margin-left: 4px;
+            }
         }
     </style>
 </head>
@@ -383,89 +470,94 @@
 
 <header>
     <h1>HR Payroll System</h1>
-    <div class="hamburger" id="hamburger">
-        <span></span>
-        <span></span>
-        <span></span>
-    </div>
 </header>
 
 <div class="main-layout">
-    <div class="sidebar">
-        <div class="menu">
-            {% if perms.user.view_customuser %}
-            <a href="{% url 'view_users' %}">User Management</a>
-            {% endif %}
-
-            {% if perms.user.view_incrementdetailssummary %}
-            <a href="{% url 'hr_dashboard' %}">Summary</a>
-            {% endif %}
-
-            {% if perms.user.view_departmentteams %}
-            <a href="{% url 'department_team' %}">Group</a>
-            {% endif %}
-
-            {% if perms.user.view_departmentgroups %}
-            <a href="{% url 'view_departmentgroups' %}">Department</a>
-            {% endif %}
-
-            {% if perms.user.view_section %}
-            <a href="{% url 'view_section' %}">Section</a>
-            {% endif %}
-
-            {% comment %}{% if perms.user.view_hr_assigned_companies %}
-            <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
-            {% endif %}{% endcomment %}
-
-            {% if perms.user.view_vehiclebrand and perms.user.view_vehiclemodel %}
-            <a href="{% url 'view_vehicles' %}">Vehicle Information</a>
-            {% endif %}
-
-            {% if perms.user.view_formula %}
-            <a href="{% url 'view_formula' %}">Formulas</a>
-            {% endif %}
-
-            {% if perms.user.view_fieldformula %}
-            <a href="{% url 'view_field_formulas' %}">Formulas Manage</a>
-            {% endif %}
-
-            {% if perms.user.view_configurations %}
-            <a href="{% url 'manage_configurations' %}">Configurations</a>
-            {% endif %}
-
-            {% if perms.user.view_employee %}
-            <a href="{% url 'employees_view' %}">Employee</a>
-            {% endif %}
-
-            {% if perms.user.view_employee and company_data %}
-            <div class="departments-dropdown">
-                <button class="departments-toggle" type="button">
-                    <span class="label">Groups</span>
-                    <span class="departments-caret"></span>
-                </button>
-
-                <div id="departments-panel" class="departments-panel">
-                    <ul class="departments-list">
-                        {% for company in company_data %}
-                            {% for department in company.departments %}
-                            <li class="child">
-                                <a href="{% url 'department_table' department.id %}">
-                                {{ department.name }}
-                                </a>
-                            </li>
-                            {% empty %}
-                            <li class="muted">No departments</li>
-                            {% endfor %}
-                        {% endfor %}
-                    </ul>
-                </div>
+    <div class="sidebar" id="sidebar">
+        <div class="hamburger-container">
+            <div class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
             </div>
-            {% endif %}
         </div>
+        
+        <div class="sidebar-content">
+            <div class="menu">
+                {% if perms.user.view_customuser %}
+                <a href="{% url 'view_users' %}">User Management</a>
+                {% endif %}
 
-        <form method="get" action="{% url 'logout' %}">
-            <button type="submit" class="logout-btn">Logout</button>
-        </form>
+                {% if perms.user.view_incrementdetailssummary %}
+                <a href="{% url 'hr_dashboard' %}">Summary</a>
+                {% endif %}
+
+                {% if perms.user.view_departmentteams %}
+                <a href="{% url 'department_team' %}">Group</a>
+                {% endif %}
+
+                {% if perms.user.view_departmentgroups %}
+                <a href="{% url 'view_departmentgroups' %}">Department</a>
+                {% endif %}
+
+                {% if perms.user.view_section %}
+                <a href="{% url 'view_section' %}">Section</a>
+                {% endif %}
+
+                {% comment %}{% if perms.user.view_hr_assigned_companies %}
+                <a href="{% url 'view_hr_assigned_companies' %}">HR Assigned Companies</a>
+                {% endif %}{% endcomment %}
+
+                {% if perms.user.view_vehiclebrand and perms.user.view_vehiclemodel %}
+                <a href="{% url 'view_vehicles' %}">Vehicle Information</a>
+                {% endif %}
+
+                {% if perms.user.view_formula %}
+                <a href="{% url 'view_formula' %}">Formulas</a>
+                {% endif %}
+
+                {% if perms.user.view_fieldformula %}
+                <a href="{% url 'view_field_formulas' %}">Formulas Manage</a>
+                {% endif %}
+
+                {% if perms.user.view_configurations %}
+                <a href="{% url 'manage_configurations' %}">Configurations</a>
+                {% endif %}
+
+                {% if perms.user.view_employee %}
+                <a href="{% url 'employees_view' %}">Employee</a>
+                {% endif %}
+
+                {% if perms.user.view_employee and company_data %}
+                <div class="departments-dropdown">
+                    <button class="departments-toggle" type="button">
+                        <span class="label">Groups</span>
+                        <span class="departments-caret"></span>
+                    </button>
+
+                    <div id="departments-panel" class="departments-panel">
+                        <ul class="departments-list">
+                            {% for company in company_data %}
+                                {% for department in company.departments %}
+                                <li class="child">
+                                    <a href="{% url 'department_table' department.id %}">
+                                    {{ department.name }}
+                                    </a>
+                                </li>
+                                {% empty %}
+                                <li class="muted">No departments</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <form method="get" action="{% url 'logout' %}">
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+        </div>
     </div> 
 
     <div class="content">
@@ -523,43 +615,90 @@ function showSnackbar(message, bgColor = '#28a745') {
 function toggleDepartments() {
     const toggle = document.querySelector('.departments-toggle');
     const panel = document.getElementById('departments-panel');
-    const expanded = toggle.classList.contains('expanded');
-    
+    const sidebarContent = document.querySelector('.sidebar-content'); // ✅ FIXED: Scroll on content area
+
+    const isExpanding = !toggle.classList.contains('expanded');
+
     toggle.classList.toggle('expanded');
     panel.classList.toggle('expanded');
+
+    if (isExpanding) {
+        // ✅ FIXED: Scroll on sidebar-content instead of sidebar
+        setTimeout(() => {
+            sidebarContent.scrollTop = sidebarContent.scrollHeight;
+        }, 300);
+    }
 }
 
 function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    const content = document.querySelector('.content');
+    const sidebar = document.getElementById('sidebar');
     const hamburger = document.getElementById('hamburger');
+    const content = document.querySelector('.content');
     
-    sidebar.classList.toggle('open');
-    content.classList.toggle('shifted');
+    const isExpanding = !sidebar.classList.contains('expanded');
+    
+    sidebar.classList.toggle('expanded');
     hamburger.classList.toggle('open');
     
-    // Save sidebar state to localStorage
-    localStorage.setItem('sidebarState', sidebar.classList.contains('open') ? 'open' : 'closed');
+    if (isExpanding) {
+        content.style.marginLeft = '260px';
+    } else {
+        content.style.marginLeft = '100px';
+    }
+
+    localStorage.setItem('sidebarState', sidebar.classList.contains('expanded') ? 'open' : 'closed');
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.querySelector('.departments-toggle');
-    if (toggle) {
-        toggle.addEventListener('click', toggleDepartments);
-    }
+    if (toggle) toggle.addEventListener('click', toggleDepartments);
+
     const hamburger = document.getElementById('hamburger');
-    if (hamburger) {
-        hamburger.addEventListener('click', toggleSidebar);
+    if (hamburger) hamburger.addEventListener('click', toggleSidebar);
+
+    // Restore sidebar state
+    const sidebarState = localStorage.getItem('sidebarState');
+    const sidebar = document.getElementById('sidebar');
+    const content = document.querySelector('.content');
+    
+    if (sidebarState === 'open') {
+        sidebar.classList.add('expanded');
+        document.getElementById('hamburger').classList.add('open');
+        content.style.marginLeft = '260px';
+    } else {
+        content.style.marginLeft = '100px';
     }
 
-    // Restore sidebar state from localStorage
-    const sidebarState = localStorage.getItem('sidebarState');
-    if (sidebarState === 'open') {
-        document.querySelector('.sidebar').classList.add('open');
-        document.querySelector('.content').classList.add('shifted');
-        document.getElementById('hamburger').classList.add('open');
-    }
+    // ✅ FIXED: Auto-scroll observer for sidebar-content
+    const sidebarContent = document.querySelector('.sidebar-content');
+    const observer = new MutationObserver(() => {
+        // If content overflows, scroll to bottom
+        if (sidebarContent.scrollHeight > sidebarContent.clientHeight) {
+            sidebarContent.scrollTop = sidebarContent.scrollHeight;
+        }
+    });
+
+    observer.observe(sidebarContent, { childList: true, subtree: true });
+
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            sidebar.classList.remove('expanded');
+            hamburger.classList.remove('open');
+            content.style.marginLeft = '10px';
+        } else {
+            if (sidebarState === 'open') {
+                sidebar.classList.add('expanded');
+                hamburger.classList.add('open');
+                content.style.marginLeft = '260px';
+            } else {
+                content.style.marginLeft = '100px';
+            }
+        }
+    });
 });
+
 </script>
 
 </body>

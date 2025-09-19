@@ -16,18 +16,6 @@
 <form id="editFormulaForm" method="POST" action="{% url 'edit_formula' formula.id %}">
     {% csrf_token %}
 
-    <!-- Formula Model -->
-    <div class="form-field">
-        {{ form.target_model.label_tag }}
-        {{ form.target_model }}
-    </div>
-
-    <!-- Formula Field -->
-    <div class="form-field">
-        {{ form.target_field.label_tag }}
-        {{ form.target_field }}
-    </div>
-
     <!-- Formula Name -->
     <div class="form-field">
         {{ form.formula_name.label_tag }}
@@ -66,6 +54,18 @@
                 <option value="[{{ ref.model_name }}: {{ ref.display_name }}]">{{ ref }}</option>
             {% endfor %}
         </select>
+    </div>
+
+    <!-- Formula Model -->
+    <div class="form-field">
+        {{ form.target_model.label_tag }}
+        {{ form.target_model }}
+    </div>
+
+    <!-- Formula Field -->
+    <div class="form-field">
+        {{ form.target_field.label_tag }}
+        {{ form.target_field }}
     </div>
 
     <!-- Buttons -->

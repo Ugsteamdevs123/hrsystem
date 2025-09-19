@@ -31,7 +31,7 @@ class CustomUserManager(BaseUserManager):
         return ''.join(password_list)
 
 
-    def create_user(self,full_name,email,gender,contact,password=None,**extra_fields):
+    def create_user(self,full_name,email,gender,contact,group,password=None,**extra_fields):
 
         # create and save user with email and password
         if not email:
@@ -42,6 +42,8 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('Please Provide Gender')
         if not contact:
             raise ValueError('Please Provide Contact Number')
+        if not group:
+            raise ValueError('Please Assign a Group')
         
         # # Generate secure password if not provided
         # if password is None:

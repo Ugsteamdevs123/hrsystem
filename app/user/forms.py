@@ -261,6 +261,7 @@ class CustomUserForm(forms.ModelForm):
             gender=gender,
             contact=contact,
             password=password,   # pass password here
+            group=group,
         )
 
         if group:
