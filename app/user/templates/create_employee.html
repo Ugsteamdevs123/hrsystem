@@ -151,6 +151,8 @@
             <input type="hidden" name="employee_id" id="employee_id">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
             <input type="hidden" name="company_id" id="company_id" value="{{ company_id }}">
+            <input type="hidden" name="is_update" id="is_update" value="false">
+            <input type="hidden" name="original_emp_id" id="original_emp_id" value="">
 
             <div class="form-footer">
                 <button type="button" class="form-btn btn-back hidden" id="prevBtn">Previous</button>
@@ -364,7 +366,7 @@
             const select = document.getElementById('section_id');
             select.innerHTML = '<option value="">Select Section</option>';
             if (!window.departmentGroups) {
-                showSnackbar('Department groups not loaded', '#dc3545');
+                // showSnackbar('Department groups not loaded', '#dc3545');
                 return;
             }
             if (groupId) {
@@ -457,43 +459,526 @@
         }
 
         function showStep(stepIndex) {
-            document.querySelectorAll('.step').forEach((el, i) => {
-                el.classList.toggle('hidden', i !== stepIndex);
-            });
-            document.getElementById('step').value = steps[stepIndex];
-            document.getElementById('prevBtn').classList.toggle('hidden', stepIndex === 0);
-            document.getElementById('nextBtn').classList.toggle('hidden', stepIndex === steps.length - 1);
-            document.getElementById('submitBtn').classList.toggle('hidden', stepIndex !== steps.length - 1);
-            document.querySelector('.section-head h2').textContent = `Create New Employee — Step ${stepIndex + 1}`;
-            if (formDataStore[stepIndex]) {
-                const q = sel => form.querySelector(sel);
-                for (const [key, value] of Object.entries(formDataStore[stepIndex])) {
-                    const input = q(`#${key}`);
-                    if (input) {
-                        if (input.type === 'radio') {
-                            const radio = q(`input[name="${key}"][value="${value}"]`);
-                            if (radio) radio.checked = true;
-                        } else {
-                            input.value = value || '';
-                        }
-                        if (key === 'department_group_id' && value) populateSections(value);
-                        
-                        if (key === 'designation_id' || key === 'new_designation_title') updateDesignationFieldVisibility();
-                    }
+    document.querySelectorAll('.step').forEach((el, i) => {
+        el.classList.toggle('hidden', i !== stepIndex);
+    });
+    document.getElementById('step').value = steps[stepIndex];
+    document.getElementById('prevBtn').classList.toggle('hidden', stepIndex === 0);
+    document.getElementById('nextBtn').classList.toggle('hidden', stepIndex === steps.length - 1);
+    document.getElementById('submitBtn').classList.toggle('hidden', stepIndex !== steps.length - 1);
+    document.querySelector('.section-head h2').textContent = `Create New Employee — Step ${stepIndex + 1}`;
+    
+    // Restore data for the current step
+    if (formDataStore[stepIndex]) {
+        restoreStepData(stepIndex);
+    } else {
+        // Clear form if no stored data
+        clearStepData(stepIndex);
+    }
+}
+
+
+function clearStepData(stepIndex) {
+    // Clear form fields specific to the current step
+    const stepFields = [];
+    if (stepIndex === 0) { // Employee step
+        stepFields.push('#emp_id', '#fullname', '#department_team_id', '#department_group_id', 
+                       '#section_id', '#designation_id', '#location_id', '#date_of_joining',
+                       '#date_of_resignation', '#image', '#new_designation_title');
+    } else if (stepIndex === 1) { // Current package step
+        stepFields.push('#gross_salary', 'input[name="company_pickup"]', '#vehicle_id', 
+                       'input[name="mobile_provided"]', '#fuel_allowance', '#fuel_litre');
+    } else if (stepIndex === 2) { // Financial impact step
+        stepFields.push('#emp_status_id');
+    }
+    
+    stepFields.forEach(selector => {
+        const elements = form.querySelectorAll(selector);
+        elements.forEach(el => {
+            if (el.type === 'radio') {
+                el.checked = false;
+            } else if (el.type !== 'file') {
+                el.value = '';
+            }
+        });
+    });
+    
+    // Reset special states
+    if (stepIndex === 0) {
+        addNewDesignationCheckbox.checked = false;
+        updateDesignationFieldVisibility();
+        resignationContainer.style.display = 'none';
+        resignationInput.disabled = true;
+        populateSections('');
+    }
+}
+
+// Add this variable at the top with other variables
+let originalEmpId = '';
+
+// Update the storeFormData function to capture original emp_id
+function storeFormData(stepIndex) {
+    const formData = new FormData(form);
+    const data = {};
+    
+    for (const [key, value] of formData.entries()) {
+        if (!['step', 'csrfmiddlewaretoken', 'company_id'].includes(key)) {
+            // Handle radio buttons - only store the checked one
+            if (key === 'company_pickup' || key === 'mobile_provided') {
+                if (value === 'true' || value === 'false') {
+                    data[key] = value;
                 }
+            } else {
+                data[key] = value;
+            }
+        }
+    }
+    
+    // Ensure we capture radio button states
+    ['company_pickup', 'mobile_provided'].forEach(radioName => {
+        const checkedRadio = form.querySelector(`input[name="${radioName}"]:checked`);
+        if (checkedRadio) {
+            data[radioName] = checkedRadio.value;
+        }
+    });
+    
+    // Always store the CURRENT original_emp_id value
+    data.is_update = document.getElementById('is_update').value;
+    data.employee_id = document.getElementById('employee_id').value;
+    data.original_emp_id = document.getElementById('original_emp_id').value || originalEmpId;
+    data.emp_id = formData.get('emp_id') || ''; // Also store current emp_id for comparison
+    
+    // If this is employee step and no original set yet, capture it
+    if (stepIndex === 0 && !data.original_emp_id && data.emp_id) {
+        data.original_emp_id = data.emp_id;
+        document.getElementById('original_emp_id').value = data.emp_id;
+        originalEmpId = data.emp_id;
+    }
+    
+    formDataStore[stepIndex] = data;
+}
+
+function setupEmpIdChangeMonitoring() {
+    const empIdInput = document.getElementById('emp_id');
+    
+    // Function to check if emp_id has changed from stored original
+    function checkEmpIdChange() {
+        const currentValue = empIdInput.value.trim();
+        const hasChanged = originalEmpId && currentValue && currentValue !== originalEmpId;
+        
+        console.log('👀 Emp ID Change Check:', {
+            currentValue: currentValue,
+            originalEmpId: originalEmpId,
+            hasChanged: hasChanged
+        });
+        
+        if (hasChanged) {
+            empIdInput.style.borderColor = '#ffc107';
+            empIdInput.title = `Changed from: ${originalEmpId}`;
+            return true;
+        } else {
+            empIdInput.style.borderColor = '';
+            empIdInput.title = '';
+            return false;
+        }
+    }
+    
+    empIdInput.addEventListener('input', () => {
+        checkEmpIdChange();
+    });
+    
+    // Also check on form load/restore
+    empIdInput.addEventListener('focus', () => {
+        setTimeout(checkEmpIdChange, 100);
+    });
+    
+    // Check immediately when function is called
+    setTimeout(checkEmpIdChange, 50);
+}
+
+// Update the restoreStepData function to handle emp_id change indication
+function restoreStepData(stepIndex) {
+    const data = formDataStore[stepIndex];
+    const q = sel => form.querySelector(sel);
+    
+    console.log('📂 Restoring step data:', stepIndex, data);
+    
+    // Restore update flags and original emp_id FIRST
+    if (data && data.is_update) {
+        document.getElementById('is_update').value = data.is_update;
+        isUpdatingExisting = data.is_update === 'true';
+    }
+    
+    if (data && data.employee_id) {
+        document.getElementById('employee_id').value = data.employee_id;
+    }
+    
+    if (data && data.original_emp_id) {
+        const newOriginalEmpId = data.original_emp_id;
+        if (newOriginalEmpId !== originalEmpId) {
+            console.log('🔄 Restoring original_emp_id from stored data:', newOriginalEmpId);
+            originalEmpId = newOriginalEmpId;
+        }
+        document.getElementById('original_emp_id').value = newOriginalEmpId;
+    }
+    
+    // Clear all form fields first
+    form.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
+        if (['employee_id', 'step', 'csrfmiddlewaretoken', 'company_id', 'is_update', 'original_emp_id'].includes(input.id)) return;
+        if (input.type === 'radio') {
+            const radioGroup = form.querySelectorAll(`input[name="${input.name}"]`);
+            radioGroup.forEach(radio => radio.checked = false);
+        } else {
+            input.value = '';
+        }
+    });
+    
+    // Restore specific data
+    if (data) {
+        for (const [key, value] of Object.entries(data)) {
+            if (['is_update', 'employee_id', 'original_emp_id'].includes(key)) continue;
+            
+            const input = q(`#${key}`);
+            if (input) {
+                if (input.type === 'radio') {
+                    const radio = q(`input[name="${key}"][value="${value}"]`);
+                    if (radio) radio.checked = true;
+                } else if (input.type === 'file') {
+                    continue;
+                } else {
+                    input.value = value || '';
+                }
+            }
+            
+            // Handle dependent fields
+            if (key === 'department_group_id' && value) {
+                populateSections(value);
+            }
+            
+            if (key === 'designation_id' && value) {
+                addNewDesignationCheckbox.checked = false;
+                updateDesignationFieldVisibility();
+                designationSelect.value = value;
+            }
+            
+            if (key === 'new_designation_title' && value) {
+                addNewDesignationCheckbox.checked = true;
+                updateDesignationFieldVisibility();
+                newDesignationInput.value = value;
+            }
+            
+            if (key === 'date_of_resignation' && value) {
+                resignationContainer.style.display = 'block';
+                resignationInput.disabled = false;
+            }
+        }
+    }
+    
+    // After restoring, check if emp_id has changed from original (with delay)
+    if (stepIndex === 0) {
+        setTimeout(() => {
+            const empIdInput = document.getElementById('emp_id');
+            const currentValue = empIdInput ? empIdInput.value.trim() : '';
+            const hasChanged = originalEmpId && currentValue && currentValue !== originalEmpId;
+            
+            console.log('🔍 Post-restore emp_id check:', {
+                currentValue: currentValue,
+                originalEmpId: originalEmpId,
+                hasChanged: hasChanged
+            });
+            
+            if (hasChanged) {
+                empIdInput.style.borderColor = '#ffc107';
+                empIdInput.title = `Changed from: ${originalEmpId}`;
+            } else {
+                empIdInput.style.borderColor = '';
+                empIdInput.title = '';
+            }
+        }, 100);
+    }
+}
+
+// Add this variable at the top with other variables
+let isUpdatingExisting = false;
+
+// Update the handleNext function to track original emp_id
+// Update the handleNext function with explicit emp_id change detection
+async function handleNext() {
+    let formData = new FormData(form);
+    formData = await handleFormSubmission(formData, steps[currentStep]);
+    if (!formData) return;
+
+    // Set update flag if we're going back and then forward again
+    if (currentStep > 0 && formDataStore[currentStep]) {
+        isUpdatingExisting = true;
+        document.getElementById('is_update').value = 'true';
+    }
+
+    // If this is the employee step, capture the original emp_id (only if not set)
+    if (currentStep === 0 && !originalEmpId) {
+        const currentEmpId = formData.get('emp_id') || '';
+        if (currentEmpId) {
+            originalEmpId = currentEmpId;
+            document.getElementById('original_emp_id').value = currentEmpId;
+            console.log('🎯 Set initial original_emp_id:', originalEmpId);
+        }
+    }
+
+    // Get current values for comparison
+    const currentEmpId = formData.get('emp_id') || '';
+    const currentOriginalEmpId = document.getElementById('original_emp_id').value || originalEmpId;
+    
+    // Check if emp_id has actually changed from the stored original
+    const empIdChanged = currentEmpId && currentOriginalEmpId && currentEmpId.trim() !== currentOriginalEmpId.trim();
+    
+    console.log('🔍 Emp ID Debug Info:', {
+        step: currentStep,
+        currentEmpId: currentEmpId,
+        currentOriginalEmpId: currentOriginalEmpId,
+        empIdChanged: empIdChanged,
+        isUpdatingExisting: isUpdatingExisting
+    });
+
+    try {
+        const res = await fetch("{% url 'create_employee' %}", {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            body: formData
+        });
+        
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`HTTP ${res.status}: ${errorText}`);
+        }
+        
+        const result = await res.json();
+        
+        if (result.error) {
+            console.error('❌ Backend error:', result.error);
+            showSnackbar(result.error, '#dc3545');
+            return;
+        }
+        
+        console.log('✅ Backend response:', result);
+        
+        // SUCCESS - Update original_emp_id ONLY if it was changed AND backend confirms the change
+        if (result.success && empIdChanged && result.emp_id_changed === true) {
+            console.log('🔄 Updating original_emp_id from', currentOriginalEmpId, 'to', currentEmpId);
+            
+            // Update the global variable and hidden field
+            originalEmpId = currentEmpId;
+            document.getElementById('original_emp_id').value = currentEmpId;
+            
+            // Update ALL stored data to reflect the new original
+            Object.keys(formDataStore).forEach(stepIndex => {
+                if (formDataStore[stepIndex]) {
+                    formDataStore[stepIndex].original_emp_id = currentEmpId;
+                    formDataStore[stepIndex].emp_id = currentEmpId;
+                    console.log(`📝 Updated step ${stepIndex} original_emp_id to:`, currentEmpId);
+                }
+            });
+            
+            // Clear visual indicators
+            const empIdInput = document.getElementById('emp_id');
+            empIdInput.style.borderColor = '';
+            empIdInput.title = '';
+            
+            showSnackbar(`Employee ID successfully updated to "${currentEmpId}"`, '#28a745');
+        } else if (empIdChanged && !result.emp_id_changed) {
+            console.log('⚠️ Emp ID changed but backend didn\'t process it as a change');
+            // Keep the visual indicator since the change wasn't confirmed
+            const empIdInput = document.getElementById('emp_id');
+            empIdInput.style.borderColor = '#ffc107';
+            empIdInput.title = `Change pending (original: ${currentOriginalEmpId})`;
+        }
+        
+        if (result.employee_id) {
+            document.getElementById('employee_id').value = result.employee_id;
+            if (result.employee_id && !isUpdatingExisting) {
+                isUpdatingExisting = true;
+                document.getElementById('is_update').value = 'true';
             }
         }
 
-        function storeFormData(stepIndex) {
-            const formData = new FormData(form);
-            const data = {};
-            for (const [key, value] of formData.entries()) {
-                if (!['step', 'employee_id', 'csrfmiddlewaretoken', 'company_id'].includes(key)) {
-                    data[key] = value;
-                }
-            }
-            formDataStore[stepIndex] = data;
+        // Store data BEFORE moving to next step
+        storeFormData(currentStep);
+        
+        currentStep++;
+        if (currentStep < steps.length) {
+            showStep(currentStep);
         }
+        
+    } catch (e) {
+        console.error('💥 Network/Server Error:', e);
+        showSnackbar('Error saving step: ' + e.message, '#dc3545');
+        
+        // ERROR - Keep original_emp_id UNCHANGED
+        document.getElementById('original_emp_id').value = currentOriginalEmpId;
+        originalEmpId = currentOriginalEmpId;
+        
+        // Keep visual indicator if emp_id was changed
+        if (empIdChanged) {
+            const empIdInput = document.getElementById('emp_id');
+            empIdInput.style.borderColor = '#ffc107';
+            empIdInput.title = `Change pending (original: ${currentOriginalEmpId})`;
+        }
+    }
+}
+
+// Update the back button handler
+document.getElementById('prevBtn').addEventListener('click', () => {
+    if (currentStep > 0) {
+        // Store current step data before going back
+        storeFormData(currentStep);
+        
+        // When going back, remember we're in update mode if we have an employee_id
+        const employeeId = document.getElementById('employee_id').value;
+        if (employeeId) {
+            isUpdatingExisting = true;
+            document.getElementById('is_update').value = 'true';
+        }
+        
+        currentStep--;
+        showStep(currentStep);
+    }
+});
+
+// Update the handleSubmit function
+async function handleSubmit() {
+    // Ensure update flag is set if we have an employee_id
+    const employeeId = document.getElementById('employee_id').value;
+    if (employeeId) {
+        document.getElementById('is_update').value = 'true';
+        isUpdatingExisting = true;
+    }
+    
+    // Ensure we have the original emp_id for updates
+    if (isUpdatingExisting && !originalEmpId) {
+        const currentEmpId = document.getElementById('emp_id').value;
+        if (currentEmpId) {
+            originalEmpId = currentEmpId;
+            document.getElementById('original_emp_id').value = currentEmpId;
+        }
+    }
+    
+    let formData = new FormData(form);
+    formData = await handleFormSubmission(formData, steps[currentStep]);
+    if (!formData) return;
+
+    // Get current values for comparison
+    const currentEmpId = formData.get('emp_id') || '';
+    const currentOriginalEmpId = document.getElementById('original_emp_id').value || originalEmpId;
+    const empIdChanged = currentEmpId && currentOriginalEmpId && currentEmpId.trim() !== currentOriginalEmpId.trim();
+    
+    console.log('🔍 Submit Debug Info:', {
+        currentEmpId: currentEmpId,
+        currentOriginalEmpId: currentOriginalEmpId,
+        empIdChanged: empIdChanged,
+        isUpdatingExisting: isUpdatingExisting
+    });
+
+    try {
+        const res = await fetch("{% url 'create_employee' %}", {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            body: formData
+        });
+        
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`HTTP ${res.status}: ${errorText}`);
+        }
+        
+        const result = await res.json();
+        
+        if (result.error) {
+            console.error('❌ Backend error on submit:', result.error);
+            showSnackbar(result.error, '#dc3545');
+            
+            // ERROR - Keep visual indicator if emp_id was changed
+            if (empIdChanged) {
+                const empIdInput = document.getElementById('emp_id');
+                empIdInput.style.borderColor = '#ffc107';
+                empIdInput.title = `Change pending (original: ${currentOriginalEmpId})`;
+            }
+            return;
+        }
+        
+        console.log('✅ Submit response:', result);
+        
+        // SUCCESS - Update original_emp_id ONLY if it was changed AND backend confirms
+        if (result.success && empIdChanged && result.emp_id_changed === true) {
+            console.log('🔄 Updating original_emp_id on submit from', currentOriginalEmpId, 'to', currentEmpId);
+            
+            // Update the global variable and hidden field
+            originalEmpId = currentEmpId;
+            document.getElementById('original_emp_id').value = currentEmpId;
+            
+            // Update ALL stored data to reflect the new original
+            Object.keys(formDataStore).forEach(stepIndex => {
+                if (formDataStore[stepIndex]) {
+                    formDataStore[stepIndex].original_emp_id = currentEmpId;
+                    formDataStore[stepIndex].emp_id = currentEmpId;
+                }
+            });
+            
+            // Clear visual indicators
+            const empIdInput = document.getElementById('emp_id');
+            empIdInput.style.borderColor = '';
+            empIdInput.title = '';
+        }
+        
+        showSpinner();
+        const action = isUpdatingExisting ? 'updated' : 'created';
+        showSnackbar(`Employee ${action} successfully`, '#28a745');
+        window.location.href = "{% url 'employees_view' %}";
+        
+    } catch (e) {
+        console.error('💥 Submit Error:', e);
+        showSnackbar('Error saving final step: ' + e.message, '#dc3545');
+        
+        // ERROR - Keep original_emp_id UNCHANGED
+        document.getElementById('original_emp_id').value = currentOriginalEmpId;
+        originalEmpId = currentOriginalEmpId;
+        
+        if (empIdChanged) {
+            const empIdInput = document.getElementById('emp_id');
+            empIdInput.style.borderColor = '#ffc107';
+            empIdInput.title = `Change pending (original: ${currentOriginalEmpId})`;
+        }
+    }
+}
+
+// Update the resetForm function
+function resetForm() {
+    isUpdatingExisting = false;
+    originalEmpId = '';
+    document.getElementById('is_update').value = 'false';
+    document.getElementById('employee_id').value = '';
+    document.getElementById('original_emp_id').value = '';
+    currentStep = 0;
+    formDataStore = {};
+    form.reset();
+    clearStepData(0);
+    showStep(0);
+}
+
+// Update the DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', () => {
+    fetchDropdownData();
+    updateDesignationFieldVisibility();
+    showStep(currentStep);
+    
+    // Update the back button handler
+    document.getElementById('prevBtn').addEventListener('click', () => {
+        if (currentStep > 0) {
+            // Store current step data before going back
+            storeFormData(currentStep);
+            currentStep--;
+            showStep(currentStep);
+        }
+    });
+});
 
         async function confirmNext() {
             if (currentStep === 0) {
@@ -538,71 +1023,6 @@
                 }
             }
             return formData;
-        }
-
-        async function handleNext() {
-            let formData = new FormData(form);
-            formData = await handleFormSubmission(formData, steps[currentStep]);
-            if (!formData) return;
-
-            try {
-                const res = await fetch("{% url 'create_employee' %}", {
-                    method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                    body: formData
-                });
-                if (!res.ok) throw new Error('Failed to save step');
-                const result = await res.json();
-                if (result.error) {
-                    showSnackbar(result.error, '#dc3545');
-                    return;
-                }
-                if (result.employee_id) document.getElementById('employee_id').value = result.employee_id;
-
-                storeFormData(currentStep);
-                currentStep++;
-                if (currentStep < steps.length) {
-                    showStep(currentStep);
-                    form.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(input => {
-                        if (['employee_id', 'step', 'csrfmiddlewaretoken', 'company_id'].includes(input.id)) return;
-                        if (input.type === 'radio') {
-                            const radioGroup = form.querySelectorAll(`input[name="${input.name}"]`);
-                            radioGroup.forEach(radio => radio.checked = radio.value === 'false');
-                        } else {
-                            input.value = '';
-                        }
-                    });
-                    addNewDesignationCheckbox.checked = false;
-                    updateDesignationFieldVisibility();
-                }
-            } catch (e) {
-                showSnackbar('Error saving step', '#dc3545');
-            }
-        }
-
-        async function handleSubmit() {
-            let formData = new FormData(form);
-            formData = await handleFormSubmission(formData, steps[currentStep]);
-            if (!formData) return;
-
-            try {
-                const res = await fetch("{% url 'create_employee' %}", {
-                    method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                    body: formData
-                });
-                if (!res.ok) throw new Error('Failed to save final step');
-                const result = await res.json();
-                if (result.error) {
-                    showSnackbar(result.error, '#dc3545');
-                } else {
-                    showSpinner();
-                    showSnackbar('Employee created successfully', '#28a745');
-                    window.location.href = "{% url 'employees_view' %}";
-                }
-            } catch (e) {
-                showSnackbar('Error saving final step', '#dc3545');
-            }
         }
 
         function showSnackbar(message, bgColor) {

@@ -987,11 +987,78 @@ class DepartmentTeamView(View):
                 department_id = data.get('id')
                 if not department_id:
                     return JsonResponse({'error': 'Department ID is required'}, status=400)
-                department = DepartmentTeams.objects.get(
+                department = DepartmentTeams.objects.filter(
                     id=department_id,
                     company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-                )
-                department.delete()  # Cascades to IncrementDetailsSummary due to on_delete=models.CASCADE
+                ).prefetch_related('incrementdetailssummary_set', 'employee_set', 'employeedraft_set', 'incrementdetailssummarydraft_set').first()
+                # department.delete()  # Cascades to IncrementDetailsSummary due to on_delete=models.CASCADE
+                department.is_deleted = True
+                department.save()
+                
+                for incrementdetailssummary_draft in department.incrementdetailssummarydraft_set.all():
+                    incrementdetailssummary_draft.is_deleted = True
+                    incrementdetailssummary_draft.save()
+
+                for incrementdetailssummary in department.incrementdetailssummary_set.all():
+                    incrementdetailssummary.is_deleted = True
+                    incrementdetailssummary.save()
+                
+                for employee in department.employee_set.all():
+                    employee.is_deleted = True
+                    employee.save()
+
+                    # Soft delete CurrentPackageDetails
+                    try:
+                        current_package = employee.currentpackagedetails
+                        current_package.is_deleted = True
+                        current_package.save()
+                    except CurrentPackageDetails.DoesNotExist:
+                        pass
+
+                    # Soft delete ProposedPackageDetails
+                    try:
+                        proposed_package = employee.proposedpackagedetails
+                        proposed_package.is_deleted = True
+                        proposed_package.save()
+                    except ProposedPackageDetails.DoesNotExist:
+                        pass
+
+                    # Soft delete FinancialImpactPerMonth
+                    try:
+                        impact = employee.financialimpactpermonth
+                        impact.is_deleted = True
+                        impact.save()
+                    except FinancialImpactPerMonth.DoesNotExist:
+                        pass
+                
+                for employee_draft in department.employeedraft_set.all():
+                    employee_draft.is_deleted = True
+                    employee_draft.save()
+                
+                    # Soft delete CurrentPackageDetailsDraft
+                    try:
+                        current_package_draft = employee_draft.currentpackagedetailsdraft
+                        current_package_draft.is_deleted = True
+                        current_package_draft.save()
+                    except CurrentPackageDetailsDraft.DoesNotExist:
+                        pass
+
+                    # Soft delete ProposedPackageDetailsDraft
+                    try:
+                        proposed_package_draft = employee_draft.proposedpackagedetailsdraft
+                        proposed_package_draft.is_deleted = True
+                        proposed_package_draft.save()
+                    except ProposedPackageDetailsDraft.DoesNotExist:
+                        pass
+
+                    # Soft delete FinancialImpactPerMonthDraft
+                    try:
+                        impact_draft = employee_draft.financialimpactpermonthdraft
+                        impact_draft.is_deleted = True
+                        impact_draft.save()
+                    except FinancialImpactPerMonthDraft.DoesNotExist:
+                        pass
+
                 return JsonResponse({'message': 'Department deleted successfully'})
             except (DepartmentTeams.DoesNotExist, ValueError):
                 return JsonResponse({'error': 'Invalid department'}, status=400)
@@ -1389,6 +1456,11 @@ class CreateEmployeeView(View):
         try:
             with transaction.atomic():
                 step = request.POST.get('step')
+
+                is_update = request.POST.get('is_update') == 'true'
+                original_emp_id = request.POST.get('original_emp_id', '').strip()
+                print('original_emp_id: ', original_emp_id)
+
                 company_id = hr_assigned_companies.objects.filter(hr=request.user).values_list('company', flat=True).first()
                 if not company_id:
                     return JsonResponse({'error': 'No company assigned to this user'}, status=403)
@@ -1426,23 +1498,38 @@ class CreateEmployeeView(View):
                             pass
 
                     emp_id = request.POST.get('emp_id')
+                    print("emp_id: ", emp_id)
 
+                    employee = None
                     # Get or create employee by emp_id
-                    employee, created = Employee.objects.get_or_create(emp_id=emp_id, defaults={
-                        'fullname': request.POST.get('fullname'),
-                        'company_id': company_id,
-                        'department_team': department,
-                        'department_group_id': request.POST.get('department_group_id') or None,
-                        'section_id': request.POST.get('section_id') or None,
-                        'designation_id': request.POST.get('designation_id') or None,
-                        'location_id': request.POST.get('location_id') or None,
-                        'date_of_joining': request.POST.get('date_of_joining') or None,
-                        'resign': request.POST.get('resign') == 'true',
-                        'date_of_resignation': request.POST.get('date_of_resignation') or None,
-                        'remarks': request.POST.get('remarks') or '',
-                        'image': request.FILES.get('image') if 'image' in request.FILES else None,
-                        'eligible_for_increment': eligible_for_increment,
-                    })
+                    if is_update:
+                        print('updating')
+                        employee = Employee.objects.filter(emp_id=emp_id).first()
+                        created = False
+                        if not employee:
+                            print("assigining emp_id: ", emp_id)
+                            employee = Employee.objects.get(emp_id=original_emp_id)
+                            employee.emp_id = emp_id
+                            print("new emp id assigined")
+
+                    else:
+                        print('creating')
+                        # basically just creates a new one according to happy flow
+                        employee, created = Employee.objects.get_or_create(emp_id=emp_id, defaults={
+                            'fullname': request.POST.get('fullname'),
+                            'company_id': company_id,
+                            'department_team': department,
+                            'department_group_id': request.POST.get('department_group_id') or None,
+                            'section_id': request.POST.get('section_id') or None,
+                            'designation_id': request.POST.get('designation_id') or None,
+                            'location_id': request.POST.get('location_id') or None,
+                            'date_of_joining': request.POST.get('date_of_joining') or None,
+                            'resign': request.POST.get('resign') == 'true',
+                            'date_of_resignation': request.POST.get('date_of_resignation') or None,
+                            'remarks': request.POST.get('remarks') or '',
+                            'image': request.FILES.get('image') if 'image' in request.FILES else None,
+                            'eligible_for_increment': eligible_for_increment,
+                        })
 
                     designation_id_str = request.POST.get('designation_id')
                     if designation_id_str:
@@ -1497,7 +1584,7 @@ class CreateEmployeeView(View):
                     update_increment_summary_employee(sender=Employee, instance=employee, created=True)
 
                     logger.debug(f"Employee created: {employee.emp_id}")
-                    return JsonResponse({'message': 'Employee created', 'employee_id': employee.id})  # Return ID, not emp_id
+                    return JsonResponse({'message': 'Employee created', 'employee_id': employee.id, 'original_emp_id': employee.emp_id})  # Return ID, not emp_id
 
                 # STEP 2: Update Current Package
                 elif step == 'current_package':
