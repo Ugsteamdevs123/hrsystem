@@ -635,6 +635,8 @@ function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const hamburger = document.getElementById('hamburger');
     const content = document.querySelector('.content');
+    const logout_button = document.querySelector('.logout-btn');
+    const menu = document.querySelector('.menu');
     
     const isExpanding = !sidebar.classList.contains('expanded');
     
@@ -642,8 +644,12 @@ function toggleSidebar() {
     hamburger.classList.toggle('open');
     
     if (isExpanding) {
+        menu.style.display = 'inline-block';
+        logout_button.style.display = 'inline-block';
         content.style.marginLeft = '260px';
     } else {
+        menu.style.display = 'none';
+        logout_button.style.display = 'none';
         content.style.marginLeft = '100px';
     }
 
@@ -651,6 +657,8 @@ function toggleSidebar() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    const logout_button = document.querySelector('.logout-btn');
+    const menu = document.querySelector('.menu');
     const toggle = document.querySelector('.departments-toggle');
     if (toggle) toggle.addEventListener('click', toggleDepartments);
 
@@ -663,10 +671,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const content = document.querySelector('.content');
     
     if (sidebarState === 'open') {
+        menu.style.display = 'inline-block';
+        logout_button.style.display = 'inline-block';
         sidebar.classList.add('expanded');
+        
         document.getElementById('hamburger').classList.add('open');
         content.style.marginLeft = '260px';
     } else {
+        menu.style.display = 'none';
+        logout_button.style.display = 'none';
         content.style.marginLeft = '100px';
     }
 
