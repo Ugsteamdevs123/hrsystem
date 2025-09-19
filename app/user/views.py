@@ -1759,7 +1759,8 @@ class DeleteEmployeeView(View):
 
         try:
             employee = get_object_or_404(Employee, emp_id=employee_id)
-            employee.delete()
+            employee.is_deleted = True
+            employee.save()
             
             logger.debug(f"Employee deleted: {employee_id}")
             return JsonResponse({'message': 'Employee deleted successfully'})
