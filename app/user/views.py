@@ -183,7 +183,6 @@ class AddUserView(PermissionRequiredMixin, View):
         return render(request, self.template_name, {"form": form})
 
     def post(self, request):
-        print("request.POST: ", request.POST)
         form = CustomUserForm(request.POST)
         
         if form.is_valid():
@@ -198,7 +197,7 @@ class AddUserView(PermissionRequiredMixin, View):
             except ValueError as e:
                 # Handle validation errors from manager
                 error_message = str(e)
-                messages.error(request, f"Validation Error: {error_message}")
+                messages.error(request, f"Error: {error_message}")
                 # Add field-specific errors
                 if "Contact" in error_message:
                     form.add_error('contact', error_message)
