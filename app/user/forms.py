@@ -405,6 +405,7 @@ class CompanyForm(forms.ModelForm):
 
         
 class SectionForm(forms.ModelForm):
+    department_group = forms.ModelChoiceField(queryset=DepartmentGroups.objects.filter(is_deleted=False))
     class Meta:
         model = Section
         fields = ['name', 'department_group']

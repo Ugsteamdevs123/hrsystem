@@ -477,9 +477,6 @@ class DeleteDepartmentGroupView(PermissionRequiredMixin, View):
     def get(self, request, pk):
         # group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
         group = DepartmentGroups.objects.filter(pk=pk, is_deleted=False).prefetch_related('section_set').first()
-        
-        print(group.__dict__)
-        print(group.section_set)
 
         for section in group.section_set.all():
             section.is_deleted = True
@@ -696,8 +693,7 @@ class HrDashboardView(PermissionRequiredMixin, View):
                 data_draft = IncrementDetailsSummaryDraftSerializer(increment_details_summary_draft, many=True).data
             else:
                 data_draft = []
-            
-            print(data_draft)
+                
             # Get confirmed data (exclude ones already covered by draft)
             draft_department_team_ids = increment_details_summary_draft.values_list("department_team_id", flat=True)
 
@@ -735,7 +731,6 @@ class HrDashboardView(PermissionRequiredMixin, View):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)
-                print(data)
                 summary_id = data.get('id')
                 eligible_for_increment = data.get('eligible_for_increment')
                 if not summary_id or not eligible_for_increment:
@@ -776,7 +771,6 @@ class HrUpdateApprovedView(PermissionRequiredMixin, View):
         if request.method == "PATCH" and request.headers.get("X-Requested-With") == "XMLHttpRequest":
             try:
                 data = json.loads(request.body)
-                print(data)
                 obj = IncrementDetailsSummaryDraft.objects.get(id=data["id"])
                 obj.approved = data["approved"]
                 obj.save(update_fields=["approved"])
@@ -1783,7 +1777,7 @@ class DeleteEmployeeView(View):
 class GetFormulasView(View):
     def get(self, request):
         department_team_id = request.GET.get('department_team_id')
-        print(department_team_id)
+        
         if department_team_id:
             configurations_data = Configurations.objects.values('fuel_rate', 'bonus_constant_multiplier').first()
             formulas = FieldFormula.objects.filter(department_team_id=department_team_id).exclude(formula__target_model='IncrementDetailsSummary').select_related('formula')
@@ -1802,7 +1796,7 @@ class GetFormulasView(View):
 
             # Serialize the sorted queryset
             field_formulas_data = FieldFormulaSerializer(instance=formulas_sorted, many=True).data
-            print("field_formulas_data:", field_formulas_data)
+            
             return JsonResponse({'field_formulas_data': list(field_formulas_data), 'configurations_data': configurations_data})
         return JsonResponse({'field_formulas_data': []})
 
@@ -1823,7 +1817,7 @@ class GetDataView(View):
         try:
             if table == 'employee':
                 logger.debug(f"Fetching employee with emp_id: {id}")
-
+                
                 employee = Employee.objects.filter(
                     emp_id=id,
                     department_team__company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
@@ -1890,7 +1884,7 @@ class GetDataView(View):
 class DepartmentGroupsSectionsView(View):
     def get(self, request):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            data = DepartmentGroupsSerializer(DepartmentGroups.objects.all(), many=True).data
+            data = DepartmentGroupsSerializer(DepartmentGroups.objects.filter(is_deleted=False), many=True).data
             return JsonResponse({'data': data})
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
@@ -1901,7 +1895,7 @@ class DesignationsView(View):
             company_id = request.GET.get('company_id')
             if not company_id:
                 return JsonResponse({'error': 'company_id required'}, status=400)
-            print(company_id)
+            
             data = DesignationSerializer(Designation.objects.filter(company_id=company_id), many=True).data
             return JsonResponse({'data': data})
         return JsonResponse({'error': 'Invalid request'}, status=400)
@@ -1980,7 +1974,7 @@ class FormulaListView(PermissionRequiredMixin, View):
 
     def get(self, request):
         formulas = Formula.objects.all().order_by('-id')  # latest first
-        print([formula.__dict__ for formula in formulas])
+        
         return render(request, self.template_name, {
             'formulas': formulas,
             'company_data': get_companies_and_department_teams(request.user)
@@ -2116,8 +2110,6 @@ class EditFieldFormulaView(PermissionRequiredMixin, View):
     def post(self, request, pk):
         # Make a mutable copy of POST data
         post_data = request.POST.copy()
-
-        print("pk: ", pk)
 
         # Modify or add fields
         post_data['company'] = Company.objects.values_list('id', flat=True).first()
