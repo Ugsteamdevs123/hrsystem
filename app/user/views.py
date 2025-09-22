@@ -682,13 +682,20 @@ class HrDashboardView(PermissionRequiredMixin, View):
         # Fetch companies assigned to the logged-in HR
 
         company_data = get_companies_and_department_teams(request.user)
+
+        print(company_data , 'Company')
             
         company_id = Company.objects.values_list('id', flat=True).first()
+
+        print(company_id , 'Compan Id')
+
         if not company_id:
             return JsonResponse({'error': 'No company ID provided'}, status=400)
         try:
             # Get draft data
             increment_details_summary_draft = IncrementDetailsSummaryDraft.objects.filter(company__id=company_id)
+            print(increment_details_summary_draft , 'Draft Summary')
+
             if increment_details_summary_draft.exists():
                 data_draft = IncrementDetailsSummaryDraftSerializer(increment_details_summary_draft, many=True).data
             else:
@@ -696,10 +703,16 @@ class HrDashboardView(PermissionRequiredMixin, View):
                 
             # Get confirmed data (exclude ones already covered by draft)
             draft_department_team_ids = increment_details_summary_draft.values_list("department_team_id", flat=True)
+            print(draft_department_team_ids , 'Dept Teams Id')
 
-            increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id).exclude(
+            increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id ).exclude(
                 department_team__in=draft_department_team_ids
             )
+
+            # increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id , department_team__is_deleted=False).exclude(
+            #     department_team__in=draft_department_team_ids
+            # )
+            print(increment_details_summary , 'Incre Detail Summary')
 
             if increment_details_summary.exists():
                 data = IncrementDetailsSummarySerializer(increment_details_summary, many=True).data
@@ -1304,7 +1317,13 @@ class EmployeesView(View):
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
 
         company_data = get_companies_and_department_teams(request.user)
-        employees = Employee.objects.all().select_related(
+        # employees = Employee.objects.all().select_related(
+        #     'company', 'department_team', 'department_group', 'section', 'designation', 'location'
+        # ).prefetch_related(
+        #     'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts'
+        # )
+
+        employees = Employee.objects.filter(is_deleted=False).select_related(
             'company', 'department_team', 'department_group', 'section', 'designation', 'location'
         ).prefetch_related(
             'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts'

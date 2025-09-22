@@ -288,6 +288,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerRows = table.querySelectorAll('thead tr');
     const bodyRows = table.querySelectorAll('tbody tr');
 
+    const firstRow = document.querySelector('thead tr:first-child');
+        const subHeaders = document.querySelectorAll('th.sticky-subheader');
+        if (firstRow && subHeaders.length) {
+            const firstRowHeight = firstRow.getBoundingClientRect().height;
+            subHeaders.forEach(subHeader => {
+                subHeader.style.top = `${firstRowHeight}px`;
+            });
+        }
+
     const setStickyOffsets = () => {
         const stickyColumns = [1, 2, 3, 4, 5, 6, 7, 8, 9];
         let cumulativeLeft = 0;
