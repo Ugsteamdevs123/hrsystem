@@ -705,13 +705,13 @@ class HrDashboardView(PermissionRequiredMixin, View):
             draft_department_team_ids = increment_details_summary_draft.values_list("department_team_id", flat=True)
             print(draft_department_team_ids , 'Dept Teams Id')
 
-            increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id ).exclude(
-                department_team__in=draft_department_team_ids
-            )
-
-            # increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id , department_team__is_deleted=False).exclude(
+            # increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id ).exclude(
             #     department_team__in=draft_department_team_ids
             # )
+
+            increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id , department_team__is_deleted=False).exclude(
+                department_team__in=draft_department_team_ids
+            )
             print(increment_details_summary , 'Incre Detail Summary')
 
             if increment_details_summary.exists():
