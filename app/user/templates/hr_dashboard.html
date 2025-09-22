@@ -150,16 +150,21 @@
     position: sticky;
     top: 0;
     z-index: 40;
+    border: none !important;
     background-color: #f2f2f2 !important;
+    box-shadow: inset 0 -1px 0 #dee2e6;
 }
 .sticky-col {
     position: sticky;
     z-index: 30;
     background-color: #ffffff !important;
+    border: none !important;
+    box-shadow: inset 0 -1px 0 #dee2e6;
 }
 .sticky-col.sticky-header {
     z-index: 50;
     background-color: #f2f2f2 !important;
+    border: none !important;
 }
 .non-sticky-header {
     position: sticky;
@@ -220,7 +225,7 @@ td.approved-cell {
 .status-col, .status-cell {
     width: 2px;
     padding: 0;
-    border: none;
+    box-shadow: inset 0 -1px 0 #dee2e6;
 }
 .status-cell.draft {
     background-color: #ffc107 !important;
@@ -244,7 +249,7 @@ td.approved-cell {
 .sticky-col-7.sticky-header {
     white-space: normal;
     line-height: 1.2;
-    padding: 8px 5px;
+    padding: 8px;
     text-align: center;
 }
 .sticky-col-1 { width: 2px; }
@@ -253,6 +258,27 @@ td.approved-cell {
 .sticky-col-5 { width: 120px; }
 .sticky-col-8 { width: 100px; }
 .sticky-col-9 { width: 100px; }
+
+/* Fake right border */
+.sticky-col-1::after,
+.sticky-col-2::after,
+.sticky-col-3::after,
+.sticky-col-4::after,
+.sticky-col-5::after,
+.sticky-col-6::after,
+.sticky-col-7::after,
+.sticky-col-8::after,
+.sticky-col-9::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0; /* use left: 0 if you want a left border instead */
+    width: 1px;
+    height: 100%;
+    background-color: #ccc; /* the color of your border line */
+    z-index: 20; /* ensure it's above other content */
+}
+
 </style>
 
 <script>
@@ -261,6 +287,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const table = document.querySelector('.custom-table');
     const headerRows = table.querySelectorAll('thead tr');
     const bodyRows = table.querySelectorAll('tbody tr');
+
+    const firstRow = document.querySelector('thead tr:first-child');
+        const subHeaders = document.querySelectorAll('th.sticky-subheader');
+        if (firstRow && subHeaders.length) {
+            const firstRowHeight = firstRow.getBoundingClientRect().height;
+            subHeaders.forEach(subHeader => {
+                subHeader.style.top = `${firstRowHeight}px`;
+            });
+        }
 
     const setStickyOffsets = () => {
         const stickyColumns = [1, 2, 3, 4, 5, 6, 7, 8, 9];
