@@ -2,8 +2,39 @@ from django.apps import AppConfig
 from django.db.models.signals import post_migrate
 from django.db import transaction
 
+
+LOCAL_APPS = ['user']
+                
 def populate_default_formulas(sender, **kwargs):
-    from .models import Formula, DepartmentTeams, FieldFormula, Company
+    from .models import Formula, DepartmentTeams, FieldFormula, Company, FieldReference
+    from django.apps import apps
+
+    for app_config in apps.get_app_configs():
+        all_models = apps.get_models()
+
+        models = ["CurrentPackageDetails", "ProposedPackageDetails", "FinancialImpactPerMonth", "IncrementDetailsSummary", "Employee", "Configurations"]
+        not_allowed_fields = ["mobile_provided", "vehicle", "resign", "approved", "is_deleted", "is_intern", "auto_mark_eligibility"]
+        allowed_field_types = ["IntegerField", "DecimalField", "BooleanField", "FloatField"]
+        for model in all_models:
+
+            if model._meta.app_label in LOCAL_APPS and model.__name__ in models:
+
+                # Get all field objects for the model
+                fields = model._meta.get_fields()
+                
+                for field in fields:
+                    if field.get_internal_type() not in allowed_field_types or field.name in not_allowed_fields:
+                        continue
+                    path = f'employee__{model.__name__.lower()}__{field.name}'
+
+                    FieldReference.objects.update_or_create(
+                        path=path,
+                        defaults={
+                            "model_name": model.__name__,
+                            "field_name": field.name,
+                            "display_name": field.name.replace('_', ' ').title(),
+                        }
+                    )
     
     # Default formula data
     default_formulas = [
