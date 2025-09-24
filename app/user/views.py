@@ -693,7 +693,7 @@ class HrDashboardView(PermissionRequiredMixin, View):
             return JsonResponse({'error': 'No company ID provided'}, status=400)
         try:
             # Get draft data
-            increment_details_summary_draft = IncrementDetailsSummaryDraft.objects.filter(company__id=company_id)
+            increment_details_summary_draft = IncrementDetailsSummaryDraft.objects.filter(company__id=company_id, is_deleted= False)
             print(increment_details_summary_draft , 'Draft Summary')
 
             if increment_details_summary_draft.exists():
@@ -2482,15 +2482,17 @@ class SaveDraftView(View):
                     proposed_package_details = employee_draft.employee.proposedpackagedetails
                     print("proposed_package_details: ", proposed_package_details)
                     draft, _ = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-                    # if _:
-                    #     draft.increment_percentage = proposed_package_details.increment_percentage
-                    #     draft.increased_fuel_amount = proposed_package_details.increased_fuel_amount
-                    #     draft.vehicle = proposed_package_details.vehicle
-                    #     draft.mobile_provided = proposed_package_details.mobile_provided
-                    #     draft.fuel_litre = proposed_package_details.fuel_litre
-                    #     draft.vehicle_allowance = proposed_package_details.vehicle_allowance
-                    #     draft.company_pickup = proposed_package_details.company_pickup
-                    #     draft.is_deleted = proposed_package_details.is_deleted
+                    if _:
+                        draft.increment_percentage = proposed_package_details.increment_percentage
+                        # draft.increased_amount = proposed_package_details.increased_amount
+                        # draft.revised_salary = proposed_package_details.revised_salary
+                        draft.increased_fuel_amount = proposed_package_details.increased_fuel_amount
+                        draft.vehicle = proposed_package_details.vehicle
+                        draft.mobile_provided = proposed_package_details.mobile_provided
+                        draft.fuel_litre = proposed_package_details.fuel_litre
+                        draft.vehicle_allowance = proposed_package_details.vehicle_allowance
+                        draft.company_pickup = proposed_package_details.company_pickup
+                        # draft.is_deleted = proposed_package_details.is_deleted
 
                     proposed_package = tabs.get('ProposedPackageDetails', {})
                     fuel_litre = float(proposed_package.get('increased_fuel_litre', 0))

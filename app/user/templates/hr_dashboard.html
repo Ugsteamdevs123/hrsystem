@@ -279,11 +279,39 @@ td.approved-cell {
     z-index: 20; /* ensure it's above other content */
 }
 
+
+
+
+{% comment %} css by grok to fix align issue  {% endcomment %}
+
+/* Remove or comment out fixed top values */
+th.group-header,
+th.sticky-subheader {
+    /* top: 40px; /* Remove this */
+    position: sticky; /* Handled by JS */
+    z-index: 45; /* Default z-index, overridden by JS */
+    background-color: #f2f2f2 !important;
+    border: none !important;
+    box-shadow: inset 0 -1px 0 #dee2e6;
+}
+
+.sticky-col {
+    position: sticky; /* Handled by JS */
+    z-index: 46; /* Default, overridden by JS */
+    background-color: #ffffff !important;
+    border: none !important;
+    box-shadow: inset 0 -1px 0 #dee2e6;
+}
+
+
+
+
+
 </style>
 
 <script>
 // Existing JavaScript remains unchanged
-document.addEventListener('DOMContentLoaded', () => {
+{% comment %} document.addEventListener('DOMContentLoaded', () => {
     const table = document.querySelector('.custom-table');
     const headerRows = table.querySelectorAll('thead tr');
     const bodyRows = table.querySelectorAll('tbody tr');
@@ -316,7 +344,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setStickyOffsets();
     window.addEventListener('resize', setStickyOffsets);
+}); {% endcomment %}
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    const table = document.querySelector('.custom-table');
+    const headerRows = table.querySelectorAll('thead tr');
+    const bodyRows = table.querySelectorAll('tbody tr');
+
+    // Function to update sticky header positions dynamically
+    const updateStickyHeaders = () => {
+        // Calculate the cumulative height of all header rows above each row
+        headerRows.forEach((row, rowIndex) => {
+            const cells = row.querySelectorAll('th');
+            const offsetTop = Array.from(headerRows)
+                .slice(0, rowIndex)
+                .reduce((sum, prevRow) => sum + prevRow.getBoundingClientRect().height, 0);
+
+            cells.forEach(cell => {
+                // Apply sticky positioning with dynamic top offset
+                cell.style.position = 'sticky';
+                cell.style.top = `${offsetTop}px`;
+                cell.style.zIndex = rowIndex === 0 ? 50 : 45; // Higher z-index for top row
+                cell.style.backgroundColor = '#f2f2f2'; // Ensure background for readability
+                cell.style.borderBottom = '1px solid #dee2e6'; // Maintain separation
+
+                // Handle sticky columns
+                if (cell.classList.contains('sticky-col')) {
+                    cell.style.zIndex = rowIndex === 0 ? 55 : 46; // Higher z-index for sticky cols
+                    cell.style.backgroundColor = '#ffffff'; // Distinct background for sticky cols
+                }
+            });
+        });
+
+        // Set sticky column offsets dynamically
+        const stickyColumns = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let cumulativeLeft = 0;
+
+        stickyColumns.forEach((colIndex) => {
+            const headerCell = headerRows[headerRows.length - 1].querySelector(`th.sticky-col-${colIndex}`) ||
+                              headerRows[0].querySelector(`th.sticky-col-${colIndex}`);
+            if (headerCell) {
+                const width = headerCell.offsetWidth;
+                const className = `.sticky-col-${colIndex}`;
+                document.querySelectorAll(className).forEach(cell => {
+                    cell.style.left = `${cumulativeLeft}px`;
+                    // Ensure sub-headers align with their columns
+                    if (cell.parentElement.rowIndex > 0) {
+                        const parentRowOffset = Array.from(headerRows)
+                            .slice(0, cell.parentElement.rowIndex)
+                            .reduce((sum, prevRow) => sum + prevRow.getBoundingClientRect().height, 0);
+                        cell.style.top = `${parentRowOffset}px`;
+                    }
+                });
+                cumulativeLeft += width;
+            }
+        });
+    };
+
+    // Initial setup and event listeners
+    updateStickyHeaders();
+    window.addEventListener('resize', updateStickyHeaders);
+    window.addEventListener('scroll', updateStickyHeaders); // Update on scroll if needed
+
+    // Ensure the table recalculates on content change (e.g., data load)
+    const observer = new MutationObserver(updateStickyHeaders);
+    observer.observe(table, { childList: true, subtree: true });
 });
+
+
 
 async function submitEdit() {
     const formData = new FormData(document.getElementById('editForm'));

@@ -27,7 +27,6 @@
             <table border="1" cellpadding="8" cellspacing="0" class="custom-table">
                 <thead>
                     <tr>
-                        <th rowspan="2" class="sticky-col sticky-col-0 sticky-header employee-color"> </th>
                         <th rowspan="2" class="sticky-col sticky-col-1 sticky-header employee-color">SR.No</th>
                         <th rowspan="2" class="sticky-col sticky-col-2 sticky-header employee-color">Emp ID</th>
                         <th rowspan="2" class="sticky-col sticky-col-3 sticky-header employee-color">Full Name</th>
@@ -77,14 +76,13 @@
                         <th class="non-sticky-header financial-impact-color">Bonus</th>
                         <th class="non-sticky-header financial-impact-color">Leave Encashment</th>
                         <th class="non-sticky-header financial-impact-color">Fuel</th>
-                        <th class="non-sticky-header financial-impact-color">Vehicle</th>
+                        {% comment %} <th class="non-sticky-header financial-impact-color">Vehicle</th> {% endcomment %}
                         <th class="non-sticky-header financial-impact-color">Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for employee in employees %}
-                        <tr data-employee-id="{{ employee.emp_id }}" data-past-six-months="{{ employee.past_six_months|yesno:'true,false' }}">
-                            <td class="{% if employee.is_draft %}draft-row{% else %}non-draft-row{% endif %} sticky-col sticky-col-0"> </td>
+                        <tr data-employee-id="{{ employee.emp_id }}" data-past-six-months="{{ employee.past_six_months|yesno:'true,false' }}" class="{% if employee.is_draft %}draft-row{% endif %}">
                             <td class="sticky-col sticky-col-1">{{ forloop.counter }}</td>
                             <td class="sticky-col sticky-col-2">{{ employee.emp_id|default:"-" }}</td>
                             <td class="sticky-col sticky-col-3">{{ employee.fullname|default:"-" }}</td>
@@ -129,7 +127,7 @@
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="bonus">{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="leave_encashment">{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="fuel">{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky">{{ financial_impact.vehicle|default:"-" }}</td>
+                                {% comment %} <td class="non-sticky">{{ financial_impact.vehicle|default:"-" }}</td> {% endcomment %}
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="total">{{ financial_impact.total|floatformat:2|default:"-" }}</td>
                             {% endwith %}
                         </tr>
@@ -144,7 +142,6 @@
     </div>
 
     <style>
-        /* Zebra for sticky cells */
         .employee-color {
             background-color: #6495ed;
         }
@@ -185,7 +182,7 @@
             overflow-x: auto;
             overflow-y: auto;
             max-height: 500px;
-            /* border: 1px solid #dee2e6; */
+            border: 1px solid #dee2e6;
             border-radius: 8px;
             -webkit-clip-path: inset(0);
             clip-path: inset(0);
@@ -218,10 +215,7 @@
         .sticky-col {
             position: sticky;
             z-index: 30;
-            border: none;
             background-color: #ffffff !important;
-            /* Add bottom border manually */
-            box-shadow: inset 0 -1px 0 #dee2e6;
         }
         .sticky-col.sticky-header {
             z-index: 50;
@@ -244,14 +238,8 @@
         tr:hover {
             background-color: #f1f3f5;
         }
-        /* .draft-row {
-            border-left: 4px solid #ffc107;
-        } */
         .draft-row {
-            background-color:#ffc107  !important;
-        }
-        .non-draft-row {
-            background-color:#ffffff  !important;
+            border-left: 4px solid #ffc107;
         }
         .editable.eligible {
             background-color: #e6ffe6 !important; /* Light green for editable cells */
@@ -342,32 +330,10 @@
         .confirm-popup .form-btn {
             min-width: 100px;
         }
-        .sticky-col-0 { width: 8px; }
         .sticky-col-1 { width: 60px; }
         .sticky-col-2 { width: 100px; }
         .sticky-col-3 { width: 150px; }
         .sticky-col-4 { width: 120px; }
-        /* Fake right border */
-        .sticky-col-0::after,
-        .sticky-col-1::after,
-        .sticky-col-2::after,
-        .sticky-col-3::after,
-        .sticky-col-4::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            right: 0; /* use left: 0 if you want a left border instead */
-            width: 1px;
-            height: 100%;
-            background-color: #ccc; /* the color of your border line */
-            z-index: 20; /* ensure it's above other content */
-        }
-        tbody tr:nth-child(even) .sticky-col {
-            background-color: #f9f9f9 !important;
-        }
-        tbody tr:nth-child(odd) .sticky-col {
-            background-color: #ffffff !important;
-        }
         .non-sticky {
             min-width: 100px;
         }
@@ -463,26 +429,11 @@
         return pastSixMonths === 'true';
     }
 
-    function isNotInternDesignation(row, employeeId) {
-        const isIntern = row.querySelector('[data-tab="employee"][data-field="designation_id"]');
-        let internValue = isIntern.dataset.original || isIntern.textContent;
-        console.log("internValue: ", internValue);
-        console.log("isIntern.textContent: ", isIntern.textContent);
-
-        if (isIntern.textContent.toLowerCase() == 'intern') return false;
-        else return true;
-    }
-
     function updateRowEditability(row) {
         const employeeId = row.dataset.employeeId;
         const isEligible = isEligibleForIncrement(row, employeeId);
-        const isNotIntern = isNotInternDesignation(row, employeeId);
         row.querySelectorAll('.editable').forEach(cell => {
-            if (cell.dataset.field == 'eligible_for_increment') {
-                cell.classList.toggle('eligible', isNotIntern);
-                if (!(isNotIntern)) cell.textContent = 'No';
-            }
-            else if (cell.dataset.field !== 'eligible_for_increment' && cell.dataset.field !== 'designation_id') {
+            if (cell.dataset.field !== 'eligible_for_increment' && cell.dataset.field !== 'designation_id') {
                 cell.classList.toggle('eligible', isEligible);
             } else {
                 cell.classList.add('eligible'); // Always allow editing eligible_for_increment
@@ -628,16 +579,13 @@
             const row = cell.parentElement;
             const hasEdits = Object.keys(editedCells[employeeId] || {}).some(tab => Object.keys(editedCells[employeeId][tab]).length > 0);
             row.classList.toggle('edited-row', hasEdits);
-            console.log('Updated editedCells xoxox:', JSON.stringify(editedCells));
-            
-            if (field === 'designation_id') {
-                updateRowEditability(row);
-            }
-            else if (field === 'eligible_for_increment') {
+            console.log('Updated editedCells:', JSON.stringify(editedCells));
+
+            if (field === 'eligible_for_increment') {
                 updateRowEditability(row);
             }
 
-            if (field === 'increment_percentage' || field === 'increased_fuel_allowance' || field === 'increased_fuel_litre' || field === 'vehicle_id') {
+            if (field === 'increment_percentage' || field === 'increased_fuel_allowance' || field === 'increased_fuel_litre' || field === 'vehicle_id' || field === "revised_salary") {
                 recalcValues(row);
             }
         });
@@ -654,6 +602,9 @@
             return;
         }
         Object.keys(editedCells).forEach(empId => {
+                      console.log("ffff");
+            console.log(editedCells[empId].proposed_package);
+
             if (editedCells[empId].employee && editedCells[empId].employee.designation_id) {
                 editedCells[empId].employee.designation_id = parseInt(editedCells[empId].employee.designation_id, 10);
             }
@@ -666,20 +617,26 @@
             if (editedCells[empId].employee && editedCells[empId].employee.location_id) {
                 editedCells[empId].employee.location_id = parseInt(editedCells[empId].employee.location_id, 10);
             }
-            if (editedCells[empId].CurrentPackageDetails && editedCells[empId].CurrentPackageDetails.vehicle_id) {
-                editedCells[empId].CurrentPackageDetails.vehicle_id = parseInt(editedCells[empId].CurrentPackageDetails.vehicle_id, 10);
+            if (editedCells[empId].current_package && editedCells[empId].current_package.vehicle_id) {
+                editedCells[empId].current_package.vehicle_id = parseInt(editedCells[empId].current_package.vehicle_id, 10);
             }
-            if (editedCells[empId].ProposedPackageDetails && editedCells[empId].ProposedPackageDetails.vehicle_id) {
-                editedCells[empId].ProposedPackageDetails.vehicle_id = parseInt(editedCells[empId].ProposedPackageDetails.vehicle_id, 10);
+            if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_id) {
+                editedCells[empId].proposed_package.vehicle_id = parseInt(editedCells[empId].proposed_package.vehicle_id, 10);
             }
-            if (editedCells[empId].FinancialImpactPerMonth && editedCells[empId].FinancialImpactPerMonth.emp_status_id) {
-                editedCells[empId].FinancialImpactPerMonth.emp_status_id = parseInt(editedCells[empId].FinancialImpactPerMonth.emp_status_id, 10);
+
+            if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.revised_salary) {
+                editedCells[empId].proposed_package.revised_salary = parseInt(editedCells[empId].proposed_package.revised_salary, 10);
             }
-            if (editedCells[empId].CurrentPackageDetails && editedCells[empId].CurrentPackageDetails.company_pickup) {
-                editedCells[empId].CurrentPackageDetails.company_pickup = editedCells[empId].CurrentPackageDetails.company_pickup === 'true';
+
+
+            if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
+                editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
             }
-            if (editedCells[empId].ProposedPackageDetails && editedCells[empId].ProposedPackageDetails.company_pickup) {
-                editedCells[empId].ProposedPackageDetails.company_pickup = editedCells[empId].ProposedPackageDetails.company_pickup === 'true';
+            if (editedCells[empId].current_package && editedCells[empId].current_package.company_pickup) {
+                editedCells[empId].current_package.company_pickup = editedCells[empId].current_package.company_pickup === 'true';
+            }
+            if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.company_pickup) {
+                editedCells[empId].proposed_package.company_pickup = editedCells[empId].proposed_package.company_pickup === 'true';
             }
         });
         try {
@@ -901,22 +858,22 @@
         const bodyRows = table.querySelectorAll('tbody tr');
 
         const setStickyOffsets = () => {
-            const stickyColumns = [0, 1, 2, 3, 4];
+            const stickyColumns = [1, 2, 3, 4];
             let cumulativeLeft = 0;
 
             stickyColumns.forEach((colIndex) => {
                 const headerCell = headerRows[0].querySelector(`th.sticky-col-${colIndex}`);
                 if (headerCell) {
                     const width = headerCell.offsetWidth;
-                    console.log("width: ", width)
                     const className = `.sticky-col-${colIndex}`;
                     document.querySelectorAll(className).forEach(cell => {
-                        console.log("cell: ", cell);
                         cell.style.left = `${cumulativeLeft}px`;
                     });
                     cumulativeLeft += width;
                 }
             });
+
+            console.log('Table scrollWidth:', table.scrollWidth);
         };
 
         setStickyOffsets();
@@ -962,11 +919,10 @@
         });
 
         Object.keys(draftData).forEach(empId => {
-            console.log("draftData: ", draftData);
             editedCells[empId] = JSON.parse(JSON.stringify(draftData[empId]));
             const row = document.querySelector(`tr[data-employee-id="${empId}"]`);
             if (row) {
-                ['employee', 'CurrentPackageDetails', 'ProposedPackageDetails', 'FinancialImpactPerMonth'].forEach(tab => {
+                ['employee', 'current_package', 'proposed_package', 'financial_impact'].forEach(tab => {
                     const draftDataTab = draftData?.[empId]?.[tab] || {};
                     Object.keys(draftDataTab).forEach(field => {
                         const cell = row.querySelector(`[data-tab="${tab}"][data-field="${field}"]`);
