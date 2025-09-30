@@ -57,6 +57,8 @@ def update_draft_department_team_increment_summary(sender, instance, company, de
                 years = configuration.as_of_date.year - instance.employee_draft.employee.date_of_joining.year
                 if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee_draft.employee.date_of_joining.month, instance.employee_draft.employee.date_of_joining.day):
                     years -= 1
+                    if years < 0:
+                        years = 0
 
                 FinancialImpactPerMonthDraft.objects.filter(id=instance.id).update(serving_years = years)
            
@@ -106,7 +108,7 @@ def get_companies_and_department_teams(hr_id):
             .prefetch_related(
                 Prefetch(
                     "company__departmentteams_set",  # reverse relation from Company → DepartmentTeams
-                    queryset=DepartmentTeams.objects.all(),
+                    queryset=DepartmentTeams.objects.filter(is_deleted=False),
                     to_attr="prefetched_departments"
                 )
             )
@@ -445,10 +447,12 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                     
                     if target_model_name == 'EmployeeDraft':
                         filter_kwargs["eligible_for_increment"] = True
+                        filter_kwargs["resign"] = False
                         draft_rows = Model.objects.filter(**filter_kwargs).values('employee_id', field_name)
                     
                     else:
                         filter_kwargs["employee_draft__eligible_for_increment"] = True
+                        filter_kwargs["employee_draft__resign"] = False
                         draft_rows = Model.objects.filter(**filter_kwargs).values('employee_draft__employee_id', field_name)
                     
                     # draft_rows = DraftModel.objects.filter(
@@ -472,10 +476,12 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                     if Model._meta.model_name == 'employeedraft':
                         # non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_id__in=draft_employee_ids).values(field_name)
                         filter_kwargs_non_draft["eligible_for_increment"] = True
+                        filter_kwargs_non_draft["resign"] = False
                         non_draft_employees = non_draft_model.objects.filter(**filter_kwargs_non_draft).exclude(id__in=draft_employee_ids).values(field_name)
                     else:
                         # non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_draft__employee_id__in=draft_employee_ids).values(field_name)
                         filter_kwargs_non_draft["employee__eligible_for_increment"] = True
+                        filter_kwargs_non_draft["employee__resign"] = False
                         non_draft_employees = non_draft_model.objects.filter(**filter_kwargs_non_draft).exclude(employee_id__in=draft_employee_ids).values(field_name)
                     # non_draft_employees = Model.objects.filter(
                     #     employee__company=instance.employee_draft.employee.company
@@ -491,8 +497,10 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                 else:
                     if target_model_name=="Employee":
                         filter_kwargs["eligible_for_increment"] = True
+                        filter_kwargs["resign"] = False
                     else:
                         filter_kwargs["employee__eligible_for_increment"] = True
+                        filter_kwargs["employee__resign"] = False
                     # No draft model or not in draft mode, use original model
                     rows = Model.objects.filter(**filter_kwargs).values(field_name)
                     for row in rows:

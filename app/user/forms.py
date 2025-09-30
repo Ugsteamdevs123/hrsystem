@@ -107,13 +107,10 @@ class FieldFormulaForm(forms.ModelForm):
         company = cleaned_data.get('company')
         print("checking: ", department_team, company, cleaned_data)
         if not company:
-            print("1")
             raise forms.ValidationError("A company must be selected.")
         if not department_team:
-            print("2")
             raise forms.ValidationError("A department must be selected.")
         if department_team and department_team.company != company:
-            print("4")
             raise forms.ValidationError("Selected department team must belong to the selected company.")
         return cleaned_data
     
@@ -228,7 +225,7 @@ class FieldReferenceAdminForm(forms.ModelForm):
 
 
 class CustomUserForm(forms.ModelForm):
-    # password = forms.CharField(widget=forms.PasswordInput)
+    password = forms.CharField(widget=forms.PasswordInput)
     groups = forms.ModelChoiceField(
         queryset=Group.objects.exclude(name='Super Admin'),
         required=False,
@@ -241,7 +238,7 @@ class CustomUserForm(forms.ModelForm):
         fields = [
             "full_name", 
             "email", 
-            # "password", 
+            "password", 
             "gender", 
             "contact", 
             "groups"
@@ -253,6 +250,7 @@ class CustomUserForm(forms.ModelForm):
         gender = self.cleaned_data["gender"]
         contact = self.cleaned_data["contact"]
         group = self.cleaned_data.get("groups")
+        password = self.cleaned_data["password"]
 
         # ✅ Call manager method instead of model.save()
         user = CustomUser.objects.create_user(
@@ -260,6 +258,8 @@ class CustomUserForm(forms.ModelForm):
             email=email,
             gender=gender,
             contact=contact,
+            password=password,   # pass password here
+            group=group,
         )
 
         if group:
@@ -278,16 +278,12 @@ class CustomUserForm(forms.ModelForm):
 
 
 class CustomUserUpdateForm(forms.ModelForm):
-    # password = forms.CharField(
-    #     widget=forms.PasswordInput,
-    #     label="Password",
-    #     required=False  # ✅ optional here
-    # )
-
+    # For single group selection, use ModelChoiceField with Select widget
     groups = forms.ModelChoiceField(
-        queryset=Group.objects.all(),
-        required=False,
+        queryset=Group.objects.exclude(name='Super Admin'),
+        required=True,  # Changed to required
         empty_label="Select Group",
+        widget=forms.Select(attrs={'class': 'form-control'}),
         label="Assign Group"
     )
 
@@ -296,9 +292,8 @@ class CustomUserUpdateForm(forms.ModelForm):
         fields = [
             'full_name', 
             'email', 
-            # 'password', 
             'gender', 
-            'contact' , 
+            'contact', 
             'groups'
         ]
         widgets = {
@@ -307,29 +302,56 @@ class CustomUserUpdateForm(forms.ModelForm):
             'contact': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact Number'}),
             'gender': forms.Select(attrs={'class': 'form-control'}),
         }
+        # Make all fields required
+        error_messages = {
+            'full_name': {'required': 'Full name is required.'},
+            'email': {'required': 'Email is required.'},
+            'gender': {'required': 'Gender selection is required.'},
+            'contact': {'required': 'Contact number is required.'},
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Pre-select the current group if user has one
+        
+        # Make all fields required
+        for field_name in self.fields:
+            self.fields[field_name].required = True
+        
+        # Debug
         if self.instance and self.instance.pk:
-            user_groups = self.instance.groups.first()  # assuming one group per user
-            if user_groups:
-                self.fields['groups'].initial = user_groups
+            current_groups = list(self.instance.groups.all())
+            print(f"Current user groups: {current_groups}")
+            
+            # For single selection, get the first group
+            if current_groups:
+                self.fields['groups'].initial = current_groups[0]
+                self.initial['groups'] = current_groups[0]
+                print(f"Set initial group: {current_groups[0]}")
+
+    # def clean(self):
+    #     """Custom validation to ensure all required fields are filled."""
+    #     cleaned_data = super().clean()
+        
+    #     # Check each field
+    #     for field_name in ['full_name', 'email', 'gender', 'contact', 'groups']:
+    #         value = cleaned_data.get(field_name)
+    #         if not value:
+    #             self.add_error(field_name, f'{self.fields[field_name].label} is required.')
+        
+    #     return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
 
-        print("DEBUG: Entered save() for user:", user.email)
-        print("Selected group:", self.cleaned_data.get("groups"))
-
-        # if self.cleaned_data.get("password"):
-        #     user.set_password(self.cleaned_data["password"])
-
         if commit:
-            user.save()  # ensure user is in DB
-            user.groups.set([])  # clears old groups safely
-            if self.cleaned_data.get("groups"):
-                user.groups.add(self.cleaned_data["groups"])
+            user.save()
+            
+            # Clear existing groups and set the new one
+            user.groups.clear()
+            selected_group = self.cleaned_data.get("groups")
+            if selected_group:
+                user.groups.add(selected_group)
+            
             print("Groups after save:", list(user.groups.all()))
 
         return user
@@ -384,6 +406,7 @@ class CompanyForm(forms.ModelForm):
 
         
 class SectionForm(forms.ModelForm):
+    department_group = forms.ModelChoiceField(queryset=DepartmentGroups.objects.filter(is_deleted=False))
     class Meta:
         model = Section
         fields = ['name', 'department_group']

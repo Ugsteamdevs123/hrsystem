@@ -7,6 +7,7 @@ from django.conf import settings
 
 class CustomUserManager(BaseUserManager):
 
+    # For Auto Generate Password
     def generate_password(self):
         """
         Generate an 8-character password with:
@@ -30,9 +31,7 @@ class CustomUserManager(BaseUserManager):
         return ''.join(password_list)
 
 
-
-
-    def create_user(self,full_name,email,gender,contact,password=None,**extra_fields):
+    def create_user(self,full_name,email,gender,contact,group,password=None,**extra_fields):
 
         # create and save user with email and password
         if not email:
@@ -43,12 +42,14 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('Please Provide Gender')
         if not contact:
             raise ValueError('Please Provide Contact Number')
+        if not group:
+            raise ValueError('Please Assign a Group')
         
-        # Generate secure password if not provided
-        if password is None:
-            password = self.generate_password()
+        # # Generate secure password if not provided
+        # if password is None:
+        #     password = self.generate_password()
 
-            print(password , 'password')
+        #     print(password , 'password')
         
         
         email = self.normalize_email(email)
@@ -56,7 +57,7 @@ class CustomUserManager(BaseUserManager):
             email=email , 
             full_name=full_name , 
             gender=gender , 
-            # password=password , 
+            password=password , 
             contact=contact ,
             **extra_fields
         )
@@ -82,7 +83,7 @@ class CustomUserManager(BaseUserManager):
         user.is_active = True
         user.set_password(password)
 
-        designation = self.model.group_check('Admin')
+        designation = self.model.group_check('Super Admin')
         user.designation = designation
         
         user.save()

@@ -185,18 +185,37 @@ class AddUserView(PermissionRequiredMixin, View):
         return render(request, self.template_name, {"form": form})
 
     def post(self, request):
-        print("request.POST: ", request.POST)
         form = CustomUserForm(request.POST)
+        
         if form.is_valid():
-            user = form.save()
-            user.is_staff = True
-            user.is_superuser = False
-            user.save()
-            hr_assigned_companies.objects.create(hr=user, company=Company.objects.all().first())
-            messages.success(request, "User added successfully!")
-            return redirect("view_users")
+            try:
+                user = form.save()
+                user.is_staff = True
+                user.is_superuser = False
+                user.save()
+                hr_assigned_companies.objects.create(hr=user, company=Company.objects.all().first())
+                messages.success(request, "User added successfully!")
+                return redirect("view_users")
+            except ValueError as e:
+                # Handle validation errors from manager
+                error_message = str(e)
+                messages.error(request, f"Error: {error_message}")
+                # Add field-specific errors
+                if "Contact" in error_message:
+                    form.add_error('contact', error_message)
+                elif "Email" in error_message:
+                    form.add_error('email', error_message)
+                elif "Fullname" in error_message:
+                    form.add_error('full_name', error_message)
+                elif "Gender" in error_message:
+                    form.add_error('gender', error_message)
         else:
             print(form.errors)
+            # Convert form errors to messages for better UX
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{dict(form.fields).get(field).label}: {error}")
+        
         return render(request, self.template_name, {"form": form})
 
 
@@ -213,7 +232,9 @@ class UpdateUserView(PermissionRequiredMixin, View):
             is_staff=True,
             is_superuser=False,
         )
+
         form = CustomUserUpdateForm(instance=user)
+        
         return render(request, self.template_name, {"form": form, "user": user})
 
     def post(self, request, pk):
@@ -339,8 +360,9 @@ class ViewSectionsView(PermissionRequiredMixin, View):
     template_name = "view_section.html"
 
     def get(self, request):
+        company_data = get_companies_and_department_teams(request.user)
         sections = Section.objects.filter(is_deleted=False)
-        return render(request, self.template_name, {"sections": sections})
+        return render(request, self.template_name, {"sections": sections, "company_data": company_data})
 
 
 # --- ADD SECTION ---
@@ -349,8 +371,9 @@ class AddSectionView(PermissionRequiredMixin, View):
     template_name = "add_section.html"
 
     def get(self, request):
+        company_data = get_companies_and_department_teams(request.user)
         form = SectionForm()
-        return render(request, self.template_name, {"form": form})
+        return render(request, self.template_name, {"form": form, "company_data": company_data})
 
     def post(self, request):
         form = SectionForm(request.POST)
@@ -369,9 +392,10 @@ class UpdateSectionView(PermissionRequiredMixin, View):
     template_name = "update_section.html"
 
     def get(self, request, pk):
+        company_data = get_companies_and_department_teams(request.user)
         section = get_object_or_404(Section, pk=pk, is_deleted=False)
         form = SectionForm(instance=section)
-        return render(request, self.template_name, {"form": form, "section": section})
+        return render(request, self.template_name, {"form": form, "section": section, "company_data": company_data})
 
     def post(self, request, pk):
         section = get_object_or_404(Section, pk=pk, is_deleted=False)
@@ -401,8 +425,9 @@ class ViewDepartmentGroupsView(PermissionRequiredMixin, View):
     template_name = "view_departmentgroups.html"
 
     def get(self, request):
+        company_data = get_companies_and_department_teams(request.user)
         groups = DepartmentGroups.objects.filter(is_deleted=False)
-        return render(request, self.template_name, {"groups": groups})
+        return render(request, self.template_name, {"groups": groups, "company_data": company_data})
 
 
 # --- ADD DEPARTMENT GROUP ---
@@ -411,8 +436,9 @@ class AddDepartmentGroupView(PermissionRequiredMixin, View):
     template_name = "add_departmentgroups.html"
 
     def get(self, request):
+        company_data = get_companies_and_department_teams(request.user)
         form = DepartmentGroupsForm()
-        return render(request, self.template_name, {"form": form})
+        return render(request, self.template_name, {"form": form, "company_data": company_data})
 
     def post(self, request):
         form = DepartmentGroupsForm(request.POST)
@@ -431,9 +457,10 @@ class UpdateDepartmentGroupView(PermissionRequiredMixin, View):
     template_name = "update_departmentgroups.html"
 
     def get(self, request, pk):
+        company_data = get_companies_and_department_teams(request.user)
         group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
         form = DepartmentGroupsForm(instance=group)
-        return render(request, self.template_name, {"form": form, "group": group})
+        return render(request, self.template_name, {"form": form, "group": group, "company_data": company_data})
 
     def post(self, request, pk):
         group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
@@ -450,7 +477,13 @@ class DeleteDepartmentGroupView(PermissionRequiredMixin, View):
     permission_required = "user.delete_departmentgroups"
 
     def get(self, request, pk):
-        group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
+        # group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
+        group = DepartmentGroups.objects.filter(pk=pk, is_deleted=False).prefetch_related('section_set').first()
+
+        for section in group.section_set.all():
+            section.is_deleted = True
+            section.save()
+
         group.is_deleted = True  # soft delete
         group.save()
         messages.success(request, "Department Group deleted successfully!")
@@ -651,25 +684,37 @@ class HrDashboardView(PermissionRequiredMixin, View):
         # Fetch companies assigned to the logged-in HR
 
         company_data = get_companies_and_department_teams(request.user)
+
+        print(company_data , 'Company')
             
         company_id = Company.objects.values_list('id', flat=True).first()
+
+        print(company_id , 'Compan Id')
+
         if not company_id:
             return JsonResponse({'error': 'No company ID provided'}, status=400)
         try:
             # Get draft data
-            increment_details_summary_draft = IncrementDetailsSummaryDraft.objects.filter(company__id=company_id)
+            increment_details_summary_draft = IncrementDetailsSummaryDraft.objects.filter(company__id=company_id, is_deleted= False)
+            print(increment_details_summary_draft , 'Draft Summary')
+
             if increment_details_summary_draft.exists():
                 data_draft = IncrementDetailsSummaryDraftSerializer(increment_details_summary_draft, many=True).data
             else:
                 data_draft = []
-            
-            print(data_draft)
+                
             # Get confirmed data (exclude ones already covered by draft)
             draft_department_team_ids = increment_details_summary_draft.values_list("department_team_id", flat=True)
+            print(draft_department_team_ids , 'Dept Teams Id')
 
-            increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id).exclude(
+            # increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id ).exclude(
+            #     department_team__in=draft_department_team_ids
+            # )
+
+            increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id , department_team__is_deleted=False).exclude(
                 department_team__in=draft_department_team_ids
             )
+            print(increment_details_summary , 'Incre Detail Summary')
 
             if increment_details_summary.exists():
                 data = IncrementDetailsSummarySerializer(increment_details_summary, many=True).data
@@ -701,7 +746,6 @@ class HrDashboardView(PermissionRequiredMixin, View):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)
-                print(data)
                 summary_id = data.get('id')
                 eligible_for_increment = data.get('eligible_for_increment')
                 if not summary_id or not eligible_for_increment:
@@ -742,7 +786,6 @@ class HrUpdateApprovedView(PermissionRequiredMixin, View):
         if request.method == "PATCH" and request.headers.get("X-Requested-With") == "XMLHttpRequest":
             try:
                 data = json.loads(request.body)
-                print(data)
                 obj = IncrementDetailsSummaryDraft.objects.get(id=data["id"])
                 obj.approved = data["approved"]
                 obj.save(update_fields=["approved"])
@@ -959,11 +1002,78 @@ class DepartmentTeamView(View):
                 department_id = data.get('id')
                 if not department_id:
                     return JsonResponse({'error': 'Department ID is required'}, status=400)
-                department = DepartmentTeams.objects.get(
+                department = DepartmentTeams.objects.filter(
                     id=department_id,
                     company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-                )
-                department.delete()  # Cascades to IncrementDetailsSummary due to on_delete=models.CASCADE
+                ).prefetch_related('incrementdetailssummary_set', 'employee_set', 'employeedraft_set', 'incrementdetailssummarydraft_set').first()
+                # department.delete()  # Cascades to IncrementDetailsSummary due to on_delete=models.CASCADE
+                department.is_deleted = True
+                department.save()
+                
+                for incrementdetailssummary_draft in department.incrementdetailssummarydraft_set.all():
+                    incrementdetailssummary_draft.is_deleted = True
+                    incrementdetailssummary_draft.save()
+
+                for incrementdetailssummary in department.incrementdetailssummary_set.all():
+                    incrementdetailssummary.is_deleted = True
+                    incrementdetailssummary.save()
+                
+                for employee in department.employee_set.all():
+                    employee.is_deleted = True
+                    employee.save()
+
+                    # Soft delete CurrentPackageDetails
+                    try:
+                        current_package = employee.currentpackagedetails
+                        current_package.is_deleted = True
+                        current_package.save()
+                    except CurrentPackageDetails.DoesNotExist:
+                        pass
+
+                    # Soft delete ProposedPackageDetails
+                    try:
+                        proposed_package = employee.proposedpackagedetails
+                        proposed_package.is_deleted = True
+                        proposed_package.save()
+                    except ProposedPackageDetails.DoesNotExist:
+                        pass
+
+                    # Soft delete FinancialImpactPerMonth
+                    try:
+                        impact = employee.financialimpactpermonth
+                        impact.is_deleted = True
+                        impact.save()
+                    except FinancialImpactPerMonth.DoesNotExist:
+                        pass
+                
+                for employee_draft in department.employeedraft_set.all():
+                    employee_draft.is_deleted = True
+                    employee_draft.save()
+                
+                    # Soft delete CurrentPackageDetailsDraft
+                    try:
+                        current_package_draft = employee_draft.currentpackagedetailsdraft
+                        current_package_draft.is_deleted = True
+                        current_package_draft.save()
+                    except CurrentPackageDetailsDraft.DoesNotExist:
+                        pass
+
+                    # Soft delete ProposedPackageDetailsDraft
+                    try:
+                        proposed_package_draft = employee_draft.proposedpackagedetailsdraft
+                        proposed_package_draft.is_deleted = True
+                        proposed_package_draft.save()
+                    except ProposedPackageDetailsDraft.DoesNotExist:
+                        pass
+
+                    # Soft delete FinancialImpactPerMonthDraft
+                    try:
+                        impact_draft = employee_draft.financialimpactpermonthdraft
+                        impact_draft.is_deleted = True
+                        impact_draft.save()
+                    except FinancialImpactPerMonthDraft.DoesNotExist:
+                        pass
+
                 return JsonResponse({'message': 'Department deleted successfully'})
             except (DepartmentTeams.DoesNotExist, ValueError):
                 return JsonResponse({'error': 'Invalid department'}, status=400)
@@ -1077,7 +1187,7 @@ class DepartmentTableView(View):
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
 
         company_data = get_companies_and_department_teams(request.user)
-        employees = Employee.objects.filter(department_team=department).select_related(
+        employees = Employee.objects.filter(department_team=department, resign=False).select_related(
             'company', 'department_team', 'department_group', 'section', 'designation', 'location'
         ).prefetch_related(
             'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts', 'dynamic_attribute'
@@ -1143,7 +1253,8 @@ class DepartmentTableView(View):
             } for attr in emp.dynamic_attribute.all()]
 
             print("data: ", data)
-            draft_data[emp.emp_id] = {'employee': {}, 'current_package': {}, 'proposed_package': {}, 'financial_impact': {}}
+            # draft_data[emp.emp_id] = {'employee': {}, 'current_package': {}, 'proposed_package': {}, 'financial_impact': {}}
+            draft_data[emp.emp_id] = {'employee': {}, 'CurrentPackageDetails': {}, 'ProposedPackageDetails': {}, 'FinancialImpactPerMonth': {}}
 
             # ✅ Handle current package
             current_draft = getattr(emp_draft, "currentpackagedetailsdraft", None) if is_draft else None
@@ -1315,7 +1426,13 @@ class EmployeesView(View):
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
 
         company_data = get_companies_and_department_teams(request.user)
-        employees = Employee.objects.all().select_related(
+        # employees = Employee.objects.all().select_related(
+        #     'company', 'department_team', 'department_group', 'section', 'designation', 'location'
+        # ).prefetch_related(
+        #     'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts'
+        # )
+
+        employees = Employee.objects.filter(is_deleted=False).select_related(
             'company', 'department_team', 'department_group', 'section', 'designation', 'location'
         ).prefetch_related(
             'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts'
@@ -1467,6 +1584,11 @@ class CreateEmployeeView(View):
         try:
             with transaction.atomic():
                 step = request.POST.get('step')
+
+                is_update = request.POST.get('is_update') == 'true'
+                original_emp_id = request.POST.get('original_emp_id', '').strip()
+                print('original_emp_id: ', original_emp_id)
+
                 company_id = hr_assigned_companies.objects.filter(hr=request.user).values_list('company', flat=True).first()
                 if not company_id:
                     return JsonResponse({'error': 'No company assigned to this user'}, status=403)
@@ -1504,23 +1626,38 @@ class CreateEmployeeView(View):
                             pass
 
                     emp_id = request.POST.get('emp_id')
+                    print("emp_id: ", emp_id)
 
+                    employee = None
                     # Get or create employee by emp_id
-                    employee, created = Employee.objects.get_or_create(emp_id=emp_id, defaults={
-                        'fullname': request.POST.get('fullname'),
-                        'company_id': company_id,
-                        'department_team': department,
-                        'department_group_id': request.POST.get('department_group_id') or None,
-                        'section_id': request.POST.get('section_id') or None,
-                        'designation_id': request.POST.get('designation_id') or None,
-                        'location_id': request.POST.get('location_id') or None,
-                        'date_of_joining': request.POST.get('date_of_joining') or None,
-                        'resign': request.POST.get('resign') == 'true',
-                        'date_of_resignation': request.POST.get('date_of_resignation') or None,
-                        'remarks': request.POST.get('remarks') or '',
-                        'image': request.FILES.get('image') if 'image' in request.FILES else None,
-                        'eligible_for_increment': eligible_for_increment,
-                    })
+                    if is_update:
+                        print('updating')
+                        employee = Employee.objects.filter(emp_id=emp_id).first()
+                        created = False
+                        if not employee:
+                            print("assigining emp_id: ", emp_id)
+                            employee = Employee.objects.get(emp_id=original_emp_id)
+                            employee.emp_id = emp_id
+                            print("new emp id assigined")
+
+                    else:
+                        print('creating')
+                        # basically just creates a new one according to happy flow
+                        employee, created = Employee.objects.get_or_create(emp_id=emp_id, defaults={
+                            'fullname': request.POST.get('fullname'),
+                            'company_id': company_id,
+                            'department_team': department,
+                            'department_group_id': request.POST.get('department_group_id') or None,
+                            'section_id': request.POST.get('section_id') or None,
+                            'designation_id': request.POST.get('designation_id') or None,
+                            'location_id': request.POST.get('location_id') or None,
+                            'date_of_joining': request.POST.get('date_of_joining') or None,
+                            'resign': request.POST.get('resign') == 'true',
+                            'date_of_resignation': request.POST.get('date_of_resignation') or None,
+                            'remarks': request.POST.get('remarks') or '',
+                            'image': request.FILES.get('image') if 'image' in request.FILES else None,
+                            'eligible_for_increment': eligible_for_increment,
+                        })
 
                     designation_id_str = request.POST.get('designation_id')
                     if designation_id_str:
@@ -1575,7 +1712,7 @@ class CreateEmployeeView(View):
                     update_increment_summary_employee(sender=Employee, instance=employee, created=True)
 
                     logger.debug(f"Employee created: {employee.emp_id}")
-                    return JsonResponse({'message': 'Employee created', 'employee_id': employee.id})  # Return ID, not emp_id
+                    return JsonResponse({'message': 'Employee created', 'employee_id': employee.id, 'original_emp_id': employee.emp_id})  # Return ID, not emp_id
 
                 # STEP 2: Update Current Package
                 elif step == 'current_package':
@@ -1841,7 +1978,8 @@ class DeleteEmployeeView(View):
 
         try:
             employee = get_object_or_404(Employee, emp_id=employee_id)
-            employee.delete()
+            employee.is_deleted = True
+            employee.save()
             
             logger.debug(f"Employee deleted: {employee_id}")
             return JsonResponse({'message': 'Employee deleted successfully'})
@@ -1854,7 +1992,7 @@ class DeleteEmployeeView(View):
 class GetFormulasView(View):
     def get(self, request):
         department_team_id = request.GET.get('department_team_id')
-        print(department_team_id)
+        
         if department_team_id:
             configurations_data = Configurations.objects.values('fuel_rate', 'bonus_constant_multiplier').first()
             formulas = FieldFormula.objects.filter(department_team_id=department_team_id).exclude(formula__target_model='IncrementDetailsSummary').select_related('formula')
@@ -1894,7 +2032,7 @@ class GetDataView(View):
         try:
             if table == 'employee':
                 logger.debug(f"Fetching employee with emp_id: {id}")
-
+                
                 employee = Employee.objects.filter(
                     emp_id=id,
                     department_team__company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
@@ -1961,7 +2099,7 @@ class GetDataView(View):
 class DepartmentGroupsSectionsView(View):
     def get(self, request):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            data = DepartmentGroupsSerializer(DepartmentGroups.objects.all(), many=True).data
+            data = DepartmentGroupsSerializer(DepartmentGroups.objects.filter(is_deleted=False), many=True).data
             return JsonResponse({'data': data})
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
@@ -1972,7 +2110,7 @@ class DesignationsView(View):
             company_id = request.GET.get('company_id')
             if not company_id:
                 return JsonResponse({'error': 'company_id required'}, status=400)
-            print(company_id)
+            
             data = DesignationSerializer(Designation.objects.filter(company_id=company_id), many=True).data
             return JsonResponse({'data': data})
         return JsonResponse({'error': 'Invalid request'}, status=400)
@@ -2051,7 +2189,7 @@ class FormulaListView(PermissionRequiredMixin, View):
 
     def get(self, request):
         formulas = Formula.objects.all().order_by('-id')  # latest first
-        print([formula.__dict__ for formula in formulas])
+        
         return render(request, self.template_name, {
             'formulas': formulas,
             'company_data': get_companies_and_department_teams(request.user)
@@ -2188,8 +2326,6 @@ class EditFieldFormulaView(PermissionRequiredMixin, View):
         # Make a mutable copy of POST data
         post_data = request.POST.copy()
 
-        print("pk: ", pk)
-
         # Modify or add fields
         post_data['company'] = Company.objects.values_list('id', flat=True).first()
 
@@ -2324,7 +2460,7 @@ class SaveDraftView(View):
                             has_changes = True
                             employee_draft_edited[field] = True
 
-                    elif tab == 'current_package':
+                    elif tab == 'CurrentPackageDetails':
                         current_package = CurrentPackageDetails.objects.filter(employee=employee).first()
                         print("current_package: ", current_package)
                         for field, value in fields.items():
@@ -2340,7 +2476,7 @@ class SaveDraftView(View):
                             has_changes = True
                             current_package_edited[field] = True
 
-                    elif tab == 'proposed_package':
+                    elif tab == 'ProposedPackageDetails':
                         proposed_package = ProposedPackageDetails.objects.filter(employee=employee).first()
                         print("proposed_package: ", proposed_package)
                         for field, value in fields.items():
@@ -2356,7 +2492,7 @@ class SaveDraftView(View):
                             has_changes = True
                             proposed_package_edited[field] = True
 
-                    elif tab == 'financial_impact':
+                    elif tab == 'FinancialImpactPerMonth':
                         financial_impact = FinancialImpactPerMonth.objects.filter(employee=employee).first()
                         print("financial_impact: ", financial_impact)
                         for field, value in fields.items():
@@ -2428,7 +2564,7 @@ class SaveDraftView(View):
                         else:
                             setattr(employee_draft, field, value or None)
                             
-                setattr(employee_draft, 'promoted_from_intern_date', int(promoted_from_intern_date) if promoted_from_intern_date else None)
+                setattr(employee_draft, 'promoted_from_intern_date', promoted_from_intern_date if promoted_from_intern_date else None)
                 setattr(employee_draft, 'is_intern', int(is_intern) if is_intern else None)
                 # employee_draft.edited_fields = employee_draft_edited
                 if employee_draft_edited:
@@ -2457,7 +2593,7 @@ class SaveDraftView(View):
                 if current_package_edited:
                     print("if current_package_edited")
                     draft, _ = CurrentPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-                    for field, value in tabs.get('current_package', {}).items():
+                    for field, value in tabs.get('CurrentPackageDetails', {}).items():
                         if current_package_edited.get(field):
                             if field.endswith('_id'):
                                 setattr(draft, field, int(value) if value else None)
@@ -2475,24 +2611,26 @@ class SaveDraftView(View):
                     proposed_package_details = employee_draft.employee.proposedpackagedetails
                     print("proposed_package_details: ", proposed_package_details)
                     draft, _ = ProposedPackageDetailsDraft.objects.get_or_create(employee_draft=employee_draft)
-                    # if _:
-                    #     draft.increment_percentage = proposed_package_details.increment_percentage
-                    #     draft.increased_fuel_amount = proposed_package_details.increased_fuel_amount
-                    #     draft.vehicle = proposed_package_details.vehicle
-                    #     draft.mobile_provided = proposed_package_details.mobile_provided
-                    #     draft.fuel_litre = proposed_package_details.fuel_litre
-                    #     draft.vehicle_allowance = proposed_package_details.vehicle_allowance
-                    #     draft.company_pickup = proposed_package_details.company_pickup
-                    #     draft.is_deleted = proposed_package_details.is_deleted
+                    if _:
+                        draft.increment_percentage = proposed_package_details.increment_percentage
+                        # draft.increased_amount = proposed_package_details.increased_amount
+                        # draft.revised_salary = proposed_package_details.revised_salary
+                        draft.increased_fuel_amount = proposed_package_details.increased_fuel_amount
+                        draft.vehicle = proposed_package_details.vehicle
+                        draft.mobile_provided = proposed_package_details.mobile_provided
+                        draft.fuel_litre = proposed_package_details.fuel_litre
+                        draft.vehicle_allowance = proposed_package_details.vehicle_allowance
+                        draft.company_pickup = proposed_package_details.company_pickup
+                        # draft.is_deleted = proposed_package_details.is_deleted
 
-                    proposed_package = tabs.get('proposed_package', {})
+                    proposed_package = tabs.get('ProposedPackageDetails', {})
                     fuel_litre = float(proposed_package.get('increased_fuel_litre', 0))
                     if fuel_litre > 0 and 'increased_fuel_allowance' in proposed_package:
                         print("Removing increased_fuel_allowance because fuel_litre > 0")
                         del proposed_package['increased_fuel_allowance']
                             
                     print("draft: ", draft)
-                    for field, value in tabs.get('proposed_package', {}).items():
+                    for field, value in tabs.get('ProposedPackageDetails', {}).items():
                         print("field, value: ", field, value, type(value))
                         if proposed_package_edited.get(field):
                             if field == 'increased_fuel_litre':
@@ -2532,7 +2670,7 @@ class SaveDraftView(View):
                 if financial_impact_edited:
                     print("if financial_impact_edited")
                     draft, _ = FinancialImpactPerMonthDraft.objects.get_or_create(employee_draft=employee_draft)
-                    for field, value in tabs.get('financial_impact', {}).items():
+                    for field, value in tabs.get('FinancialImpactPerMonth', {}).items():
                         if financial_impact_edited.get(field):
                             if field.endswith('_id'):
                                 setattr(draft, field, int(value) if value else None)

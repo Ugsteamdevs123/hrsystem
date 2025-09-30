@@ -78,7 +78,7 @@
                         <th class="non-sticky-header financial-impact-color">Bonus</th>
                         <th class="non-sticky-header financial-impact-color">Leave Encashment</th>
                         <th class="non-sticky-header financial-impact-color">Fuel</th>
-                        <th class="non-sticky-header financial-impact-color">Vehicle</th>
+                        {% comment %} <th class="non-sticky-header financial-impact-color">Vehicle</th> {% endcomment %}
                         <th class="non-sticky-header financial-impact-color">Total</th>
                         <!-- Dynamic Attributes Subheaders -->
                         {% for attr in employees.0.dynamic_attributes %}
@@ -133,7 +133,7 @@
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="bonus">{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="leave_encashment">{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="fuel">{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
-                                <td class="non-sticky">{{ financial_impact.vehicle|default:"-" }}</td>
+                                {% comment %} <td class="non-sticky">{{ financial_impact.vehicle|default:"-" }}</td> {% endcomment %}
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="total">{{ financial_impact.total|floatformat:2|default:"-" }}</td>
                             {% endwith %}
 
@@ -213,7 +213,7 @@
             clip-path: inset(0);
         }
         .custom-table {
-            border-collapse: collapse;
+            {% comment %} border-collapse: collapse; {% endcomment %}
             width: 100%;
             min-width: 2000px;
             table-layout: auto;
@@ -610,7 +610,7 @@
                 updateRowEditability(row);
             }
 
-            if (field === 'increment_percentage' || field === 'increased_fuel_allowance' || field === 'increased_fuel_litre' || field === 'vehicle_id') {
+            if (field === 'increment_percentage' || field === 'increased_fuel_allowance' || field === 'increased_fuel_litre' || field === 'vehicle_id' || field === "revised_salary") {
                 recalcValues(row);
             }
         });
@@ -627,6 +627,9 @@
             return;
         }
         Object.keys(editedCells).forEach(empId => {
+                      console.log("ffff");
+            console.log(editedCells[empId].proposed_package);
+
             if (editedCells[empId].employee && editedCells[empId].employee.designation_id) {
                 editedCells[empId].employee.designation_id = parseInt(editedCells[empId].employee.designation_id, 10);
             }
@@ -645,6 +648,12 @@
             if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_id) {
                 editedCells[empId].proposed_package.vehicle_id = parseInt(editedCells[empId].proposed_package.vehicle_id, 10);
             }
+
+            if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.revised_salary) {
+                editedCells[empId].proposed_package.revised_salary = parseInt(editedCells[empId].proposed_package.revised_salary, 10);
+            }
+
+
             if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
                 editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
             }

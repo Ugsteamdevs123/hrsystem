@@ -94,7 +94,7 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
                 if employee_status.exists():
                     employee_status = employee_status.first()
                     employee_status = employee_status.emp_status
-                    if employee_status and employee_status.emp_status != 'P':
+                    if employee_status and employee_status.status != 'P':
                         continue
 
             # print("target_instance._meta.model_name: ", target_instance._meta.model_name)
@@ -201,7 +201,7 @@ def update_increment_summary(sender, instance, created, **kwargs):
                 if employee_status.exists():
                     employee_status = employee_status.first()
                     employee_status = employee_status.emp_status
-                    if employee_status and employee_status.emp_status != 'P':
+                    if employee_status and employee_status.status != 'P':
                         continue
 
             # print("target_instance._meta.model_name: ", target_instance._meta.model_name)
@@ -396,7 +396,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                 if employee_status.exists():
                     employee_status = employee_status.first()
                     employee_status = employee_status.emp_status
-                    if employee_status and employee_status.emp_status != 'P':
+                    if employee_status and employee_status.status != 'P':
                         continue
 
             # print("target_instance._meta.model_name: ", target_instance._meta.model_name)
@@ -577,7 +577,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
                 if employee_status.exists():
                     employee_status = employee_status.first()
                     employee_status = employee_status.emp_status
-                    if employee_status and employee_status.emp_status != 'P':
+                    if employee_status and employee_status.status != 'P':
                         continue
 
             # print("target_instance._meta.model_name: ", target_instance._meta.model_name)
