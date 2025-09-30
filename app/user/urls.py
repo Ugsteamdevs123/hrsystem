@@ -101,4 +101,6 @@ urlpatterns = [
     path('vehicles-dropdown/', views.VehiclesDropdownView.as_view(), name='vehicles-dropdown'),
 
     path('configurations/', views.ManageConfigurationsView.as_view(), name='manage_configurations'),
+
+    path('create-dynamic-attribute/', views.CreateDynamicAttributeView.as_view(), name='create_dynamic_attribute')
 ]

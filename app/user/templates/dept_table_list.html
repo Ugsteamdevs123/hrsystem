@@ -39,6 +39,8 @@
                         <th colspan="9" class="group-header non-sticky-header proposed-package-color">Proposed Package</th>
                         <!-- Financial Impact -->
                         <th colspan="9" class="group-header non-sticky-header financial-impact-color">Financial Impact</th>
+                        <!-- Dynamic Attributes group header -->
+                         <th colspan="{{ employees.0.dynamic_attributes|length }}" class="group-header non-sticky-header dynamic-attributes-color">Dynamic Attributes</th>
                     </tr>
                     <tr>
                         <!-- Employee Details Subheaders -->
@@ -78,6 +80,10 @@
                         <th class="non-sticky-header financial-impact-color">Fuel</th>
                         <th class="non-sticky-header financial-impact-color">Vehicle</th>
                         <th class="non-sticky-header financial-impact-color">Total</th>
+                        <!-- Dynamic Attributes Subheaders -->
+                        {% for attr in employees.0.dynamic_attributes %}
+                            <th class="group-header non-sticky-header dynamic-attributes-color">{{ attr.display_name }}</th>
+                        {% endfor %}
                     </tr>
                 </thead>
                 <tbody>
@@ -130,6 +136,22 @@
                                 <td class="non-sticky">{{ financial_impact.vehicle|default:"-" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="total">{{ financial_impact.total|floatformat:2|default:"-" }}</td>
                             {% endwith %}
+
+                            <!-- Dynamic Attributes -->
+                            {% for attr in employee.dynamic_attributes %}
+                                <td class="non-sticky {% if attr.inline_editable %} editable {% endif %}" 
+                                    data-tab="employee" 
+                                    data-field="{{ attr.key }}">
+                                    
+                                    {% if attr.data_type == 'number' %}
+                                        {{ attr.value|floatformat:2|default:"-" }}
+                                    {% elif attr.data_type == 'date' %}
+                                        {{ attr.value|date:"Y-m-d"|default:"-" }}
+                                    {% else %}
+                                        {{ attr.value|default:"-" }}
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
                         </tr>
                     {% empty %}
                         <tr>
@@ -142,6 +164,9 @@
     </div>
 
     <style>
+        .dynamic-attributes-color {
+            background-color: #01d6f3;
+        }
         .employee-color {
             background-color: #6495ed;
         }

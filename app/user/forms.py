@@ -42,6 +42,7 @@ class FormulaForm(forms.ModelForm):
             'target_model': forms.Select(
                 choices=[
                     ('', 'Select a model'),
+                    ('Employee', 'Employee'),
                     ('CurrentPackageDetails', 'Current Package Details'),
                     ('ProposedPackageDetails', 'Proposed Package Details'),
                     ('FinancialImpactPerMonth', 'Financial Impact Per Month'),

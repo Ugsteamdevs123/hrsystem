@@ -1,24 +1,37 @@
 from datetime import datetime
 from decimal import Decimal
 from collections import defaultdict, deque
+import re
 
-from .models import (CurrentPackageDetails, 
-ProposedPackageDetails, 
-FinancialImpactPerMonth, 
-IncrementDetailsSummary, 
-Configurations, 
-Employee, 
-hr_assigned_companies, 
-DepartmentTeams,
-EmployeeDraft, 
-CurrentPackageDetailsDraft, 
-ProposedPackageDetailsDraft, 
-FinancialImpactPerMonthDraft, 
-IncrementDetailsSummaryDraft
+from .models import (
+    CurrentPackageDetails, 
+    ProposedPackageDetails, 
+    FinancialImpactPerMonth, 
+    IncrementDetailsSummary, 
+    Configurations, 
+    Employee, 
+    hr_assigned_companies, 
+    DepartmentTeams,
+    EmployeeDraft, 
+    CurrentPackageDetailsDraft, 
+    ProposedPackageDetailsDraft, 
+    FinancialImpactPerMonthDraft, 
+    IncrementDetailsSummaryDraft,
+    FieldReference
 )
 
 from django.apps import apps
-from django.db.models import Sum, Prefetch, Avg
+from django.db.models import Prefetch
+
+
+def normalize_field_name(name):
+    # Lowercase, remove extra spaces, replace spaces with underscores
+    print(name)
+    print(type(name))
+    name = name.strip()
+    refined_name = re.sub(r'\s+', ' ', name)       # Collapse multiple spaces
+    name = refined_name.lower().replace(' ', '_')  # Replace space with underscore
+    return refined_name, name
 
 
 def update_draft_department_team_increment_summary(sender, instance, company, department_team):
@@ -306,15 +319,6 @@ def list_fields(model):
 # #         print("obj: ", obj)
 # #     return obj
 
-
-
-import re
-from decimal import Decimal
-from django.apps import apps
-from django.db.models import Sum, Avg
-from django.core.exceptions import ObjectDoesNotExist
-from .models import FieldReference, FieldFormula
-
 def get_variables_from_expression(expression):
     """Extract field references with optional aggregates like SUM[Model: Field]."""
     pattern = r'(SUM|AVG|COUNT)?\[([^:]+): ([^\]]+)\]'
@@ -351,7 +355,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
         parts[-2] = "employeedraft"
     elif parts[-2] != 'configurations':
         parts[-2] = parts[-2]+'draft' if is_draft else parts[-2]
-    # print("parts: ", parts)
+    print("parts: ", parts)
     model_mapping = {
         'employee': 'Employee',
         'currentpackagedetails': 'CurrentPackageDetails',
