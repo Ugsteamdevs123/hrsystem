@@ -14,7 +14,6 @@
             <h2>Group - {{ department.name }}</h2>
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="font-weight: bold; margin-right: 20px;">Fuel Rate: {{ fuel_rate }}</span>
-                <button type="button" class="form-btn btn-add-dynamic" id="addDynamicAttributeBtn" title="Add Dynamic Attribute">+</button>
             </div>
         </div>
 
@@ -43,7 +42,8 @@
                         <!-- Financial Impact -->
                         <th colspan="8" class="group-header non-sticky-header financial-impact-color">Financial Impact</th>
                         <!-- Dynamic Attributes group header -->
-                        <th colspan="{{ employees.0.dynamic_attributes|length }}" class="group-header non-sticky-header dynamic-attributes-color">Dynamic Attributes</th>
+                        <th colspan="{{ employees.0.dynamic_attributes|length }}" class="group-header non-sticky-header dynamic-attributes-color">Dynamic Attributes<button type="button" class="form-btn btn-add-dynamic" id="addDynamicAttributeBtn" title="Add Dynamic Attribute">+</button>
+                        </th>
                     </tr>
                     <tr>
                         <!-- Employee Details Subheaders -->
@@ -287,6 +287,7 @@
             clip-path: inset(0);
         }
         .custom-table {
+            border-collapse: collapse;
             width: 100%;
             min-width: 2000px;
             table-layout: auto;
@@ -369,12 +370,14 @@
             background-color: #17a2b8;
             color: #fff;
             font-size: 18px;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin-left: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            vertical-align: middle;
         }
         .btn-add-dynamic:hover {
             background-color: #138496;

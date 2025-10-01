@@ -1335,7 +1335,7 @@ class CreateDynamicAttributeView(View):
                     department_team_id = request.POST.get('department_team_id')
                     raw_name = request.POST.get('attribute_name')
                     data_type = request.POST.get('data_type')
-                    inline_editable = request.POST.get('inline_editable')
+                    inline_editable = request.POST.get('inline_editable') == 'true'
 
                     refined_name, attribute_name = normalize_field_name(raw_name)
                     
@@ -1401,6 +1401,72 @@ class CreateDynamicAttributeView(View):
             except Exception as e:
                 print(e)
                 return JsonResponse({'error': e}, status=400)
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+
+class EditDynamicAttributeView(View):
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
+        return view
+
+    def post(self, request):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                with transaction.atomic():
+                    company_id = request.POST.get('company_id')
+                    department_team_id = request.POST.get('department_team_id')
+                    old_key = request.POST.get('key')
+                    raw_name = request.POST.get('attribute_name')
+                    data_type = request.POST.get('data_type')
+                    inline_editable = request.POST.get('inline_editable') == 'true'
+
+                    refined_name, new_key = normalize_field_name(raw_name)
+                    
+                    fields = [field.name for field in Employee._meta.fields]
+                    if new_key in fields and new_key != old_key:
+                        raise ValueError(f"Attribute '{new_key}' already exists as a permanent field.")
+                    
+                    existing_attr = DynamicAttributeDefinition.objects.filter(
+                        company_id=company_id,
+                        department_team_id=department_team_id,
+                        key=new_key
+                    ).exclude(key=old_key)
+                    if existing_attr.exists():
+                        raise ValueError(f"Attribute '{new_key}' already exists for this department.")
+                    
+                    attr = DynamicAttributeDefinition.objects.get(
+                        company_id=company_id,
+                        department_team_id=department_team_id,
+                        key=old_key
+                    )
+                    
+                    attr.key = new_key
+                    attr.display_name = refined_name.title()
+                    attr.data_type = data_type
+                    attr.inline_editable = inline_editable
+                    attr.save()
+
+                    FieldReference.objects.filter(
+                        model_name='Employee',
+                        field_name=old_key,
+                        path=f'employee__dynamic_attribute__{old_key}'
+                    ).update(
+                        field_name=new_key,
+                        display_name=refined_name.title(),
+                        path=f'employee__dynamic_attribute__{new_key}'
+                    )
+
+                    return JsonResponse({'message': 'Dynamic Field Updated Successfully'})
+            except DynamicAttributeDefinition.DoesNotExist:
+                return JsonResponse({'error': 'Attribute not found'}, status=404)
+            except ValueError as e:
+                return JsonResponse({'error': str(e)}, status=400)
+            except Exception as e:
+                return JsonResponse({'error': str(e)}, status=400)
         return JsonResponse({'error': 'Invalid request'}, status=400)
     
 
@@ -2471,7 +2537,9 @@ class SaveDraftView(View):
             return_saved_message = False
             for employee_id, tabs in data.items():
                 print("tabs: ", tabs)
-                employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).first()
+                employee = Employee.objects.filter(emp_id=employee_id, department_team_id=department_id).prefetch_related(
+                    'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts', 'dynamic_attribute'
+                ).first()
                 print("employee: ", employee)
                 if not employee:
                     logger.error(f"Employee {employee_id} not found for department {department_id}")
@@ -2600,6 +2668,12 @@ class SaveDraftView(View):
                         department_team=employee.department_team, department_group=employee.department_group, section=employee.section, designation=employee.designation, location=employee.location)
                     print("NEW employee_draft: ", employee_draft)
                     employee_draft.save()   # <-- save immediately
+                    
+                    for emp in employee.dynamic_attribute.all().order_by('definition__id'):
+                        employee_draft.set_dynamic_attribute(
+                            key=emp.definition.key,
+                            value=emp.value,
+                        )
 
                 # Save employee fields
                 for field, value in tabs.get('employee', {}).items():
