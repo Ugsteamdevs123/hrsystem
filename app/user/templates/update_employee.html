@@ -201,7 +201,6 @@
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
             try {
-                console.log("url: ", url);
                 const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, signal: controller.signal, ...opts });
                 clearTimeout(timeoutId);
                 if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
@@ -255,6 +254,32 @@
             // const eligibleValue = data.employee.eligible_for_increment ? 'true' : 'false';
             // q(`input[name="eligible_for_increment"][value="${eligibleValue}"]`).checked = true;
             q('#remarks').value = data.employee.remarks || '';
+
+            employee_div = q('#step-employee');
+            data.employee.dynamic_attributes.forEach(dynamic_attr => {
+                div_obj = document.createElement('div');
+                div_obj.className = "form-field";
+                
+                label = document.createElement('label');
+                label.setAttribute('for', dynamic_attr.key);
+                label.textContent = dynamic_attr.display_name;
+
+                input_field = document.createElement('input');
+                if (dynamic_attr.data_type == 'number') input_field.type = 'number';
+                else if (dynamic_attr.data_type == 'date') input_field.type = 'date';
+                else input_field.type = 'text';
+
+                input_field.value = dynamic_attr.value  || '';
+                input_field.name = "dynamic_attribute__"+dynamic_attr.key;
+                input_field.setAttribute('data-dynamic', 'true');
+
+                div_obj.appendChild(label);
+                div_obj.appendChild(input_field);
+
+                employee_div.appendChild(div_obj);
+                
+            });
+
             q('#gross_salary').value = data.current_package?.gross_salary || '';
             
             const companyPickupCurrentValue = data.current_package?.company_pickup ? 'true' : 'false';
@@ -268,6 +293,12 @@
             q('#fuel_litre').value = data.current_package?.fuel_litre || '';
             q('#emp_status_id').value = data.financial_impact?.emp_status_id || '';
             formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_team_id: q('#department_team_id').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, date_of_resignation: q('#date_of_resignation').value, remarks: q('#remarks').value };
+            // Add dynamic attributes with prefix
+            document.querySelectorAll('input[data-dynamic="true"]').forEach(input => {
+                const key = `dynamic_attribute__${input.name}`;
+                formDataStore[0][key] = input.value;
+            });
+            console.log(formDataStore);
             formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, company_pickup_current: companyPickupCurrentValue, vehicle_id: q('#vehicle_id').value, fuel_allowance: q('#fuel_allowance').value, mobile_provided: mobileProvidedValue, fuel_litre: q('#fuel_litre').value };
             formDataStore[2] = { ...formDataStore[2], emp_status_id: q('#emp_status_id').value };
         }
@@ -505,6 +536,7 @@
         }
 
         function showStep(stepIndex) {
+            console.log("showStep");
             document.querySelectorAll('.step').forEach((el, i) => {
                 el.classList.toggle('hidden', i !== stepIndex);
             });
@@ -532,6 +564,7 @@
         }
 
         function storeFormData(stepIndex) {
+            console.log("storeFormData");
             const formData = new FormData(form);
             const data = {};
             for (const [key, value] of formData.entries()) {
@@ -575,6 +608,7 @@
         }
 
         async function handleNext() {
+            console.log("handleNext");
             let formData = new FormData(form);
             formData = await handleFormSubmission(formData, steps[currentStep]);
             if (!formData) return;

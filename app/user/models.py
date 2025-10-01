@@ -342,13 +342,13 @@ class Employee(models.Model):
     def dynamic_fields(self):
         return {attr.definition.key: attr.value for attr in self.dynamic_attribute.all()}
     
-    def set_dynamic_attribute(self, key, value, data_type, inline_editable):
+    def set_dynamic_attribute(self, key, value):
         attr, created = DynamicAttribute.objects.update_or_create(
             content_type = ContentType.objects.get_for_model(self),
-            definition = DynamicAttributeDefinition.objects.get(Company = self.company, department_team=self.department_team, key=key),
+            definition = DynamicAttributeDefinition.objects.get(company = self.company, department_team=self.department_team, key=key),
             object_id = self.pk,
-            key = key,
-            value = value,
+            # key = key,
+            defaults={'value': str(value)}  # ✅ Correct place to update value
         )
 
         return attr, created
@@ -514,13 +514,13 @@ class EmployeeDraft(models.Model):
     def dynamic_fields(self):
         return {attr.key: attr.value for attr in self.dynamic_attribute.all()}
     
-    def set_dynamic_attribute(self, key, value, data_type):
+    def set_dynamic_attribute(self, key, value):
         attr, created = DynamicAttribute.objects.update_or_create(
             content_type = ContentType.objects.get_for_model(self),
-            data_type = data_type,
+            definition = DynamicAttributeDefinition.objects.get(company = self.company, department_team=self.department_team, key=key),
+            # key=key,
             object_id = self.pk,
-            key = key,
-            value = value,
+            defaults={'value': str(value)}  # ✅ Correct place to update value
         )
 
         return attr, created

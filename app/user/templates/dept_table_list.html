@@ -11,8 +11,11 @@
 
         <!-- Page Heading -->
         <div class="section-head">
-            <h2>Group {# — #}- {{ department.name }}</h2>
-            <span style="font-weight: bold; margin-right: 20px;">Fuel Rate: {{ fuel_rate }}</span>
+            <h2>Group - {{ department.name }}</h2>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: bold; margin-right: 20px;">Fuel Rate: {{ fuel_rate }}</span>
+                <button type="button" class="form-btn btn-add-dynamic" id="addDynamicAttributeBtn" title="Add Dynamic Attribute">+</button>
+            </div>
         </div>
 
         <!-- Buttons -->
@@ -38,9 +41,9 @@
                         <!-- Proposed Package -->
                         <th colspan="9" class="group-header non-sticky-header proposed-package-color">Proposed Package</th>
                         <!-- Financial Impact -->
-                        <th colspan="9" class="group-header non-sticky-header financial-impact-color">Financial Impact</th>
+                        <th colspan="8" class="group-header non-sticky-header financial-impact-color">Financial Impact</th>
                         <!-- Dynamic Attributes group header -->
-                         <th colspan="{{ employees.0.dynamic_attributes|length }}" class="group-header non-sticky-header dynamic-attributes-color">Dynamic Attributes</th>
+                        <th colspan="{{ employees.0.dynamic_attributes|length }}" class="group-header non-sticky-header dynamic-attributes-color">Dynamic Attributes</th>
                     </tr>
                     <tr>
                         <!-- Employee Details Subheaders -->
@@ -78,11 +81,13 @@
                         <th class="non-sticky-header financial-impact-color">Bonus</th>
                         <th class="non-sticky-header financial-impact-color">Leave Encashment</th>
                         <th class="non-sticky-header financial-impact-color">Fuel</th>
-                        {% comment %} <th class="non-sticky-header financial-impact-color">Vehicle</th> {% endcomment %}
                         <th class="non-sticky-header financial-impact-color">Total</th>
                         <!-- Dynamic Attributes Subheaders -->
                         {% for attr in employees.0.dynamic_attributes %}
-                            <th class="group-header non-sticky-header dynamic-attributes-color">{{ attr.display_name }}</th>
+                            <th class="group-header non-sticky-header dynamic-attributes-color">
+                                {{ attr.display_name }}
+                                <button class="edit-dynamic-btn" data-key="{{ attr.key }}" data-display-name="{{ attr.display_name }}" data-type="{{ attr.data_type }}" data-editable="{{ attr.inline_editable }}" title="Edit Dynamic Attribute">✎</button>
+                            </th>
                         {% endfor %}
                     </tr>
                 </thead>
@@ -133,24 +138,22 @@
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="bonus">{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="leave_encashment">{{ financial_impact.leave_encashment|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="fuel">{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
-                                {% comment %} <td class="non-sticky">{{ financial_impact.vehicle|default:"-" }}</td> {% endcomment %}
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="total">{{ financial_impact.total|floatformat:2|default:"-" }}</td>
                             {% endwith %}
-
                             <!-- Dynamic Attributes -->
                             {% for attr in employee.dynamic_attributes %}
-                                <td class="non-sticky {% if attr.inline_editable %} editable {% endif %}" 
-                                    data-tab="employee" 
-                                    data-field="{{ attr.key }}">
-                                    
+                                <td class="non-sticky {% if attr.inline_editable %}editable{% endif %}"
+                                    data-dynamic="true"
+                                    data-tab="employee"
+                                    data-field="{{ attr.key }}"
                                     {% if attr.data_type == 'number' %}
-                                        {{ attr.value|floatformat:2|default:"-" }}
+                                        data-type="number"
+                                        >{{ attr.value|default_if_none:"-"|floatformat:2 }}</td>
                                     {% elif attr.data_type == 'date' %}
-                                        {{ attr.value|date:"Y-m-d"|default:"-" }}
+                                        >{{ attr.value|default_if_none:"-"|date:"Y-m-d" }}</td>
                                     {% else %}
-                                        {{ attr.value|default:"-" }}
+                                        >{{ attr.value|default:"-" }}</td>
                                     {% endif %}
-                                </td>
                             {% endfor %}
                         </tr>
                     {% empty %}
@@ -160,6 +163,77 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+
+        <!-- Add Dynamic Attribute Modal -->
+        <div id="addDynamicAttributeModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Add New Dynamic Attribute</h3>
+                <form id="addDynamicAttributeForm">
+                    <input type="hidden" name="company_id" value="{{ department.company.id }}">
+                    <input type="hidden" name="department_team_id" value="{{ department_id }}">
+                    <div class="form-group">
+                        <label for="attribute_name">Attribute Name:</label>
+                        <input type="text" id="attribute_name" name="attribute_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="data_type">Data Type:</label>
+                        <select id="data_type" name="data_type" required>
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="date">Date</option>
+                            <option value="boolean">Boolean</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="inline_editable">Inline Editable:</label>
+                        <select id="inline_editable" name="inline_editable" required>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" class="form-btn btn-submit">Add Attribute</button>
+                        <button type="button" class="form-btn btn-back" onclick="document.getElementById('addDynamicAttributeModal').style.display='none';">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Dynamic Attribute Modal -->
+        <div id="editDynamicAttributeModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Edit Dynamic Attribute</h3>
+                <form id="editDynamicAttributeForm">
+                    <input type="hidden" name="key" id="edit_attribute_key">
+                    <input type="hidden" name="company_id" value="{{ department.company.id }}">
+                    <input type="hidden" name="department_team_id" value="{{ department_id }}">
+                    <div class="form-group">
+                        <label for="edit_attribute_name">Attribute Name:</label>
+                        <input type="text" id="edit_attribute_name" name="attribute_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_data_type">Data Type:</label>
+                        <select id="edit_data_type" name="data_type" required>
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="date">Date</option>
+                            <option value="boolean">Boolean</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_inline_editable">Inline Editable:</label>
+                        <select id="edit_inline_editable" name="inline_editable" required>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" class="form-btn btn-submit">Update Attribute</button>
+                        <button type="button" class="form-btn btn-back" onclick="document.getElementById('editDynamicAttributeModal').style.display='none';">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -213,7 +287,6 @@
             clip-path: inset(0);
         }
         .custom-table {
-            {% comment %} border-collapse: collapse; {% endcomment %}
             width: 100%;
             min-width: 2000px;
             table-layout: auto;
@@ -256,6 +329,7 @@
         }
         th.group-header {
             text-align: center;
+            position: relative;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;
@@ -267,10 +341,10 @@
             border-left: 4px solid #ffc107;
         }
         .editable.eligible {
-            background-color: #e6ffe6 !important; /* Light green for editable cells */
+            background-color: #e6ffe6 !important;
         }
         .editable.edited {
-            background-color: #fff3cd !important; /* Yellow for edited cells */
+            background-color: #fff3cd !important;
         }
         .edited-row {
             background-color: #fff3cd !important;
@@ -291,38 +365,72 @@
         .btn-submit:hover {
             background-color: #218838;
         }
-        .action-btn {
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-size: 14px;
+        .btn-add-dynamic {
+            background-color: #17a2b8;
             color: #fff;
-            text-decoration: none;
-            cursor: pointer;
-            display: inline-block;
-            margin-right: 5px;
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
         }
-        .edit-btn {
+        .btn-add-dynamic:hover {
+            background-color: #138496;
+        }
+        .edit-dynamic-btn {
             background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin-left: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            vertical-align: middle;
         }
-        .edit-btn:hover {
+        .edit-dynamic-btn:hover {
             background-color: #0056b3;
         }
-        .delete-btn {
-            background-color: #dc3545;
-            border: none;
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
         }
-        .delete-btn:hover {
-            background-color: #c82333;
+        .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            width: min(500px, 90vw);
+            max-height: 80vh;
+            overflow-y: auto;
         }
-        .editable.eligible:hover {
-            cursor: pointer;
-            background-color: #d4f2d4 !important; /* Slightly darker green on hover */
+        .form-group {
+            margin-bottom: 15px;
         }
-        .editable:not(.eligible):hover {
-            cursor: not-allowed;
-            background-color: inherit;
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
         }
         .editable select, .editable input, .editable textarea {
+							
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
@@ -370,7 +478,7 @@
                 font-size: 14px;
                 padding: 6px;
             }
-            .form-btn, .action-btn {
+            .form-btn, .edit-dynamic-btn {
                 font-size: 12px;
                 padding: 8px 12px;
             }
@@ -384,9 +492,8 @@
                 font-size: 12px;
                 padding: 10px;
             }
-            .confirm-popup {
+            .modal-content {
                 width: 90vw;
-                max-width: 400px;
             }
         }
     </style>
@@ -438,7 +545,6 @@
         if (editedCells[employeeId]?.employee?.eligible_for_increment) {
             eligibleValue = editedCells[employeeId].employee.eligible_for_increment;
         }
-        console.log(`Checking eligibility for employee ${employeeId}: ${eligibleValue}`);
         return eligibleValue === 'true' || eligibleValue === 'Yes';
     }
 
@@ -450,7 +556,6 @@
         if (editedCells[employeeId]?.employee?.past_six_months) {
             pastSixMonths = editedCells[employeeId].employee.past_six_months;
         }
-        console.log(`Checking past_six_months for employee ${employeeId}: ${pastSixMonths}`);
         return pastSixMonths === 'true';
     }
 
@@ -461,18 +566,15 @@
             if (cell.dataset.field !== 'eligible_for_increment' && cell.dataset.field !== 'designation_id') {
                 cell.classList.toggle('eligible', isEligible);
             } else {
-                cell.classList.add('eligible'); // Always allow editing eligible_for_increment
+                cell.classList.add('eligible');
             }
         });
-        console.log(`Updated editability for row ${employeeId}: eligible=${isEligible}`);
     }
 
     async function makeEditable(cell) {
         if (!cell.classList.contains('editable') || !cell.classList.contains('eligible')) {
-            console.log(`Cannot edit cell: editable=${cell.classList.contains('editable')}, eligible=${cell.classList.contains('eligible')}`);
             return;
         }
-        console.log(`Editing cell: ${cell.dataset.field}`);
         const field = cell.dataset.field;
         const type = cell.dataset.type;
         const employeeId = cell.parentElement.dataset.employeeId;
@@ -483,7 +585,6 @@
         const step = cell.dataset.step || 'any';
 
         if (cell.querySelector('input, select, textarea')) {
-            console.log(`Cell already contains input: ${cell.dataset.field}`);
             return;
         }
 
@@ -491,7 +592,6 @@
         if (type === 'select') {
             input = document.createElement('select');
             if (options) {
-                // Restrict options for eligible_for_increment if past_six_months is true
                 if (field === 'eligible_for_increment' && hasPastSixMonths(cell.parentElement, employeeId)) {
                     input.innerHTML = '<option value="true">Yes</option>';
                 } else {
@@ -541,13 +641,12 @@
                         });
                     }
                 } catch (e) {
-                    console.error('Error loading dropdown:', e);
                     showSnackbar('Failed to load dropdown options', '#dc3545');
                     return;
                 }
             }
             input.value = cell.dataset.originalId || cell.dataset.original || '';
-        } else if (type === 'textarea') {
+        } else if (type === 'textarea') { 
             input = document.createElement('textarea');
             input.value = cell.textContent !== '-' ? cell.textContent : '';
         } else {
@@ -556,7 +655,7 @@
             if (type === 'number') input.step = step;
             input.value = cell.textContent !== '-' ? cell.textContent : '';
         }
-
+        
         cell.textContent = '';
         cell.appendChild(input);
         input.focus();
@@ -564,8 +663,12 @@
         input.addEventListener('blur', () => {
             let displayText = input.value.trim() || '-';
             let value = input.value.trim();
+            let effectiveField = field;
+
+            if (cell.dataset.dynamic === 'true') {
+                effectiveField = `dynamic_attribute__${field}`;
+            }
             
-            // Prevent setting eligible_for_increment to false if past_six_months is true
             if (field === 'eligible_for_increment' && hasPastSixMonths(cell.parentElement, employeeId) && value === 'false') {
                 showSnackbar('Cannot set Eligible for Increment to No when Past Six Months is true', '#dc3545');
                 value = 'true';
@@ -589,10 +692,10 @@
             if (!editedCells[employeeId][tab]) editedCells[employeeId][tab] = {};
             
             if (value && value !== '-') {
-                editedCells[employeeId][tab][field] = value;
+                editedCells[employeeId][tab][effectiveField] = value;
             } else {
                 if (cell.dataset.hasDraft !== 'true') {
-                    delete editedCells[employeeId][tab][field];
+                    delete editedCells[employeeId][tab][effectiveField];
                     if (Object.keys(editedCells[employeeId][tab]).length === 0) {
                         delete editedCells[employeeId][tab];
                     }
@@ -604,7 +707,6 @@
             const row = cell.parentElement;
             const hasEdits = Object.keys(editedCells[employeeId] || {}).some(tab => Object.keys(editedCells[employeeId][tab]).length > 0);
             row.classList.toggle('edited-row', hasEdits);
-            console.log('Updated editedCells:', JSON.stringify(editedCells));
 
             if (field === 'eligible_for_increment') {
                 updateRowEditability(row);
@@ -621,15 +723,11 @@
     }
 
     async function saveDraft() {
-        console.log('editedCells before saveDraft:', JSON.stringify(editedCells));
         if (Object.keys(editedCells).length === 0) {
             showSnackbar('No changes to save', '#dc3545');
             return;
         }
         Object.keys(editedCells).forEach(empId => {
-                      console.log("ffff");
-            console.log(editedCells[empId].proposed_package);
-
             if (editedCells[empId].employee && editedCells[empId].employee.designation_id) {
                 editedCells[empId].employee.designation_id = parseInt(editedCells[empId].employee.designation_id, 10);
             }
@@ -648,12 +746,9 @@
             if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.vehicle_id) {
                 editedCells[empId].proposed_package.vehicle_id = parseInt(editedCells[empId].proposed_package.vehicle_id, 10);
             }
-
             if (editedCells[empId].proposed_package && editedCells[empId].proposed_package.revised_salary) {
                 editedCells[empId].proposed_package.revised_salary = parseInt(editedCells[empId].proposed_package.revised_salary, 10);
             }
-
-
             if (editedCells[empId].financial_impact && editedCells[empId].financial_impact.emp_status_id) {
                 editedCells[empId].financial_impact.emp_status_id = parseInt(editedCells[empId].financial_impact.emp_status_id, 10);
             }
@@ -668,11 +763,8 @@
             const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
             if (!csrfInput || !csrfInput.value) {
                 showSnackbar('CSRF token missing or invalid', '#dc3545');
-                console.error('CSRF token not found or empty');
                 throw new Error('CSRF token missing or invalid');
             }
-            console.log('CSRF token:', csrfInput.value);
-            console.log('Saving draft with payload:', JSON.stringify(editedCells));
             const res = await fetch(`/payroll/save-draft/{{ department_id }}/`, {
                 method: 'POST',
                 headers: {
@@ -708,13 +800,10 @@
                     });
                 });
                 document.querySelectorAll('tr.edited-row').forEach(row => row.classList.remove('edited-row'));
-                // Reapply editability after saving draft
                 document.querySelectorAll('tr[data-employee-id]').forEach(row => updateRowEditability(row));
-                console.log('editedCells after draft save:', JSON.stringify(editedCells));
             }
         } catch (e) {
             showSnackbar(`Error saving draft: ${e.message}`, '#dc3545');
-            console.error('Save draft error:', e);
         }
     }
 
@@ -732,19 +821,6 @@
         snackbar.style.zIndex = '1000';
         document.body.appendChild(snackbar);
         setTimeout(() => snackbar.remove(), 3000);
-    }
-
-    function showConfirmPopup(message, callback) {
-        const popup = document.createElement('div');
-        popup.className = 'confirm-popup';
-        popup.innerHTML = `
-            <p>${message}</p>
-            <div class="button-group">
-                <button class="form-btn btn-submit" onclick="this.closest('.confirm-popup').remove(); (${callback.toString()})();">Confirm</button>
-                <button class="form-btn btn-back" onclick="this.closest('.confirm-popup').remove();">Cancel</button>
-            </div>
-        `;
-        document.body.appendChild(popup);
     }
 
     function showSpinner() {
@@ -765,14 +841,12 @@
     }
 
     function getValueFromRow(row, model, field) {
-        // console.log("model: ", model, "\nfield: ", field.trim().toLowerCase().replaceAll(' ', '_'));
-
-        if (model == "Configurations") {return configurations[field.trim().toLowerCase().replaceAll(' ', '_')];}
-        else {
+        if (model == "Configurations") {
+            return configurations[field.trim().toLowerCase().replaceAll(' ', '_')];
+        } else {
             const selector = `[data-tab="${model}"][data-field="${field.trim().toLowerCase().replaceAll(' ', '_')}"]`;
             const cell = row.querySelector(selector);
             if (!cell) return 0;
-
             const val = cell.textContent?.trim() || cell.value || '0';
             return parseFloat(val) || 0;
         }
@@ -790,91 +864,37 @@
         
         fieldFormulas.forEach((formula) => {
             if (FinancialEmployeeStatus.textContent != 'P' && formula.target_field.trim().toLowerCase().replaceAll(' ', '_') == 'gratuity') {
-                return; // Equivalent to 'continue' in .forEach
+                return;
             }
             let expression = formula.formula_expression;
-
-            // Replace [Model: Field] with actual values from the row
-            const regex = /\[([^\]:]+):\s*([^\]]+)\]/g; // matches [Model: Field]
+            const regex = /\[([^\]:]+):\s*([^\]]+)\]/g;
             expression = expression.replace(regex, (_, model, field) => {
-            const value = getValueFromRow(row, model, field);
-            return value;
+                const value = getValueFromRow(row, model, field);
+                return value;
             });
-
-            // console.log(`Evaluating: ${expression}`);
-
             let result = 0;
             try {
-            result = eval(expression); // ⚠️ Consider using a safe eval later
+                result = eval(expression);
             } catch (e) {
-            console.error("Failed to evaluate formula:", formula.formula_name, e);
+                console.error("Failed to evaluate formula:", formula.formula_name, e);
             }
-
-            // Apply result to target field
             const targetSelector = `[data-tab="${formula.target_model}"][data-field="${formula.target_field.trim().toLowerCase().replaceAll(' ', '_')}"]`;
             const targetCell = row.querySelector(targetSelector);
-
             if (targetCell) {
-            targetCell.textContent = result.toFixed(2); // Round to 2 decimal places
+                targetCell.textContent = result.toFixed(2);
             } else {
-            console.warn("Target cell not found for formula:", formula.formula_name);
+                console.warn("Target cell not found for formula:", formula.formula_name);
             }
         });
-
-        // console.log("row: ", row);
-        // const grossSalary = parseFloat(row.querySelector('[data-tab="CurrentPackageDetails"][data-field="gross_salary"]')?.textContent) || 0;
-        // console.log("grossSalary: ", grossSalary);
-        // const incrementCell = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="increment_percentage"]');
-        // console.log("incrementCell: ", incrementCell.textContent);
-        // const increasedAmountCell = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="increased_amount"]');
-        // console.log("increasedAmountCell: ", increasedAmountCell.textContent);
-        // const revisedSalaryCell = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="revised_salary"]');
-        // console.log("revisedSalaryCell: ", revisedSalaryCell.textContent);
-        // const CurrentFuelAllowance = row.querySelector('[data-tab="CurrentPackageDetails"][data-field="fuel_allowance"]');
-        // console.log("CurrentFuelAllowance: ", CurrentFuelAllowance.textContent);
-        // const RevisedFuelAllowance = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="revised_fuel_allowance"]');
-        // console.log("RevisedFuelAllowance: ", RevisedFuelAllowance.textContent);
-        // const FinancialEmployeeStatus = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="emp_status"]');
-        // console.log("FinancialEmployeeStatus: ", FinancialEmployeeStatus.textContent);
-        // const FinancialSalary = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="salary"]');
-        // console.log("FinancialSalary: ", FinancialSalary.textContent);
-        // const FinancialGratuity = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="gratuity"]');
-        // console.log("FinancialGratuity: ", FinancialGratuity.textContent);
-        // const FinancialBonus = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="bonus"]');
-        // console.log("FinancialBonus: ", FinancialBonus.textContent);
-        // const LeaveEncashment = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="leave_encashment"]');
-        // console.log("LeaveEncashment: ", LeaveEncashment.textContent);
-        // const FinancialFuel = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="fuel"]');
-        // console.log("FinancialFuel: ", FinancialFuel.textContent);
-        // const FinancialTotal = row.querySelector('[data-tab="FinancialImpactPerMonth"][data-field="total"]');
-        // console.log("FinancialTotal: ", FinancialTotal.textContent);
-
-        // if (!incrementCell || !increasedAmountCell || !revisedSalaryCell) return;
-
-        // const incPercent = parseFloat(incrementCell.textContent) || 0;
-        // const increasedAmount = (grossSalary * incPercent) / 100;
-        // const revisedSalary = grossSalary + increasedAmount;
-
-        // increasedAmountCell.textContent = increasedAmount.toFixed(2);
-        // revisedSalaryCell.textContent = revisedSalary.toFixed(2);
-
-        
-        // RevisedFuelAllowance.textContent = (parseFloat(IncreasedFuelAllowance.textContent) + parseFloat(CurrentFuelAllowance.textContent)).toFixed(2);
-        // FinancialSalary.textContent = parseFloat(increasedAmountCell.textContent).toFixed(2);
-        // if (FinancialEmployeeStatus.textContent == 'P') FinancialGratuity.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
-        // FinancialBonus.textContent = (1.7*parseFloat(FinancialSalary.textContent)/12).toFixed(2);
-        // LeaveEncashment.textContent = (parseFloat(FinancialSalary.textContent)/12).toFixed(2);
-        // FinancialFuel.textContent = parseFloat(IncreasedFuelAllowance.textContent).toFixed(2);
-        // FinancialTotal.textContent = (parseFloat(FinancialFuel.textContent)+parseFloat(LeaveEncashment.textContent)+parseFloat(FinancialBonus.textContent)+parseFloat(FinancialSalary.textContent)+parseFloat(FinancialGratuity.textContent)).toFixed(2);
     }
 
-    let fieldFormulas = [];  // Global array to hold formula data
-    let configurations = [];  // Global array to hold formula data
+    let fieldFormulas = [];
+    let configurations = [];
     document.addEventListener('DOMContentLoaded', () => {
         fetch(`/payroll/get-formulas/?department_team_id={{department_id}}`)
             .then(res => res.json())
             .then(data => {
-                fieldFormulas = data.field_formulas_data.map(item => item.formula); // flatten out structure
+                fieldFormulas = data.field_formulas_data.map(item => item.formula);
                 configurations = data.configurations_data;
             });
 
@@ -885,7 +905,6 @@
         const setStickyOffsets = () => {
             const stickyColumns = [1, 2, 3, 4];
             let cumulativeLeft = 0;
-
             stickyColumns.forEach((colIndex) => {
                 const headerCell = headerRows[0].querySelector(`th.sticky-col-${colIndex}`);
                 if (headerCell) {
@@ -897,33 +916,107 @@
                     cumulativeLeft += width;
                 }
             });
-
-            console.log('Table scrollWidth:', table.scrollWidth);
         };
 
         setStickyOffsets();
         window.addEventListener('resize', setStickyOffsets);
 
-        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
-        if (csrfInput) {
-            console.log('CSRF token on load:', csrfInput.value);
-        } else {
-            console.error('CSRF token input not found on page load');
-        }
-
         document.getElementById('saveDraftBtn').addEventListener('click', saveDraft);
+
+        // Add Dynamic Attribute
+        document.getElementById('addDynamicAttributeBtn').addEventListener('click', () => {
+            document.getElementById('addDynamicAttributeModal').style.display = 'flex';
+        });
+
+        document.getElementById('addDynamicAttributeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            try {
+                const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                if (!csrfInput || !csrfInput.value) {
+                    showSnackbar('CSRF token missing or invalid', '#dc3545');
+                    throw new Error('CSRF token missing or invalid');
+                }
+                const res = await fetch('/payroll/create-dynamic-attribute/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfInput.value,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: formData,
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showSnackbar('Dynamic attribute added successfully', '#28a745');
+                    showSpinner();
+                    setTimeout(() => window.location.reload(), 1000); // Reload to reflect new column
+                } else {
+                    showSnackbar(result.error || 'Failed to add dynamic attribute', '#dc3545');
+                }
+            } catch (e) {
+                showSnackbar(`Error: ${e.message}`, '#dc3545');
+            }
+            form.reset();
+            document.getElementById('addDynamicAttributeModal').style.display = 'none';
+        });
+
+        // Edit Dynamic Attribute
+        document.querySelectorAll('.edit-dynamic-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = document.getElementById('editDynamicAttributeModal');
+                const form = document.getElementById('editDynamicAttributeForm');
+                form.querySelector('#edit_attribute_key').value = btn.dataset.key;
+                form.querySelector('#edit_attribute_name').value = btn.dataset.displayName;
+                form.querySelector('#edit_data_type').value = btn.dataset.type;
+                form.querySelector('#edit_inline_editable').value = btn.dataset.editable;
+                modal.style.display = 'flex';
+            });
+        });
+
+        document.getElementById('editDynamicAttributeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            try {
+                const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                if (!csrfInput || !csrfInput.value) {
+                    showSnackbar('CSRF token missing or invalid', '#dc3545');
+                    throw new Error('CSRF token missing or invalid');
+                }
+                const res = await fetch('/payroll/edit-dynamic-attribute/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfInput.value,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: formData,
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showSnackbar('Dynamic attribute updated successfully', '#28a745');
+                    showSpinner();
+                    setTimeout(() => window.location.reload(), 1000); // Reload to reflect changes
+                } else {
+                    showSnackbar(result.error || 'Failed to update dynamic attribute', '#dc3545');
+                }
+            } catch (e) {
+                showSnackbar(`Error: ${e.message}`, '#dc3545');
+            }
+            form.reset();
+            document.getElementById('editDynamicAttributeModal').style.display = 'none';
+        });
+
         bodyRows.forEach(row => {
             updateRowEditability(row);
             row.querySelectorAll('.editable').forEach(cell => {
                 cell.dataset.original = cell.textContent;
-
                 if (cell.dataset.type === 'select') {
                     const employeeId = cell.parentElement.dataset.employeeId;
                     const tab = cell.dataset.tab;
                     const field = cell.dataset.field;
                     const draftValue = draftData[employeeId]?.[tab]?.[field];
                     cell.dataset.originalId = draftValue || (field === 'designation_id' ? '{{ employee.designation.id|default:"" }}' : '');
-
                     if (draftValue && cell.dataset.endpoint) {
                         fetchJSON(cell.dataset.endpoint).then(data => {
                             const items = asArray(data);
@@ -931,13 +1024,11 @@
                             if (item) {
                                 cell.textContent = field === 'vehicle_id' ? item.label : (item.title || item.location || item.status || item.name);
                             }
-                            updateRowEditability(row); // Reapply editability after draft data is loaded
+                            updateRowEditability(row);
                         });
                     }
                 }
-
                 cell.addEventListener('click', () => {
-                    console.log(`Click detected on cell: ${cell.dataset.field}, eligible=${cell.classList.contains('eligible')}`);
                     makeEditable(cell);
                 });
             });
