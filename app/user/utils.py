@@ -1,24 +1,37 @@
 from datetime import datetime
 from decimal import Decimal
 from collections import defaultdict, deque
+import re
 
-from .models import (CurrentPackageDetails, 
-ProposedPackageDetails, 
-FinancialImpactPerMonth, 
-IncrementDetailsSummary, 
-Configurations, 
-Employee, 
-hr_assigned_companies, 
-DepartmentTeams,
-EmployeeDraft, 
-CurrentPackageDetailsDraft, 
-ProposedPackageDetailsDraft, 
-FinancialImpactPerMonthDraft, 
-IncrementDetailsSummaryDraft
+from .models import (
+    CurrentPackageDetails, 
+    ProposedPackageDetails, 
+    FinancialImpactPerMonth, 
+    IncrementDetailsSummary, 
+    Configurations, 
+    Employee, 
+    hr_assigned_companies, 
+    DepartmentTeams,
+    EmployeeDraft, 
+    CurrentPackageDetailsDraft, 
+    ProposedPackageDetailsDraft, 
+    FinancialImpactPerMonthDraft, 
+    IncrementDetailsSummaryDraft,
+    FieldReference
 )
 
 from django.apps import apps
-from django.db.models import Sum, Prefetch, Avg
+from django.db.models import Prefetch
+
+
+def normalize_field_name(name):
+    # Lowercase, remove extra spaces, replace spaces with underscores
+    print(name)
+    print(type(name))
+    name = name.strip()
+    refined_name = re.sub(r'\s+', ' ', name)       # Collapse multiple spaces
+    name = refined_name.lower().replace(' ', '_')  # Replace space with underscore
+    return refined_name, name
 
 
 def update_draft_department_team_increment_summary(sender, instance, company, department_team):
@@ -308,15 +321,6 @@ def list_fields(model):
 # #         print("obj: ", obj)
 # #     return obj
 
-
-
-import re
-from decimal import Decimal
-from django.apps import apps
-from django.db.models import Sum, Avg
-from django.core.exceptions import ObjectDoesNotExist
-from .models import FieldReference, FieldFormula
-
 def get_variables_from_expression(expression):
     """Extract field references with optional aggregates like SUM[Model: Field]."""
     pattern = r'(SUM|AVG|COUNT)?\[([^:]+): ([^\]]+)\]'
@@ -344,6 +348,7 @@ def get_field_path(model_name, display_name):
 def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employee_draft=None):
     """Fetch value via Django-style path, applying aggregate if specified, prioritizing draft tables."""
     # print("PATH: is draft?", path, is_draft)
+    print("path: ", path)
     if 'employee__employee' in path:
         path = path.replace('employee__employee', 'employee')
     # print("PATH: is draft?", path, is_draft)
@@ -351,9 +356,12 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
     parts = path.split('__')
     if parts[-2] == "employee_draft":
         parts[-2] = "employeedraft"
-    elif parts[-2] != 'configurations':
+    elif parts[-2] not in ['configurations', 'dynamic_attribute']:
         parts[-2] = parts[-2]+'draft' if is_draft else parts[-2]
-    # print("parts: ", parts)
+    elif parts[-2] == 'dynamic_attribute' and instance._meta.object_name == 'EmployeeDraft':
+        parts.pop(0)
+    print("parts: ", parts)
+    print("instance: ", instance._meta.object_name)
     model_mapping = {
         'employee': 'Employee',
         'currentpackagedetails': 'CurrentPackageDetails',
@@ -371,7 +379,10 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
     }
 
     if len(parts) > 1:  # External model field
-        model_name = parts[-2]
+        if len(parts) == 2:
+            model_name = parts[-2].replace('_', '')
+        else:
+            model_name = parts[-2]
         field_name = parts[-1]
         # print("model name: ", model_name)
         target_model_name = model_mapping_draft.get(model_name, model_name) if is_draft else model_mapping.get(model_name, model_name)
@@ -531,23 +542,87 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                 return Model.objects.filter(**filter_kwargs).count()
         else:
             # Non-aggregate field access
+            # obj = instance
+            # previous_part = ''
+            # for part in parts:
+            #     if part == 'configurations' or previous_part == 'configurations':
+            #         previous_part = 'configurations'
+            #         if part == 'configurations':
+            #             continue
+            #         ConfigurationModel = apps.get_model('user', 'Configurations').objects.first()  # or filter by relation
+            #         print("1")
+            #         obj = getattr(ConfigurationModel, part)
+            #     else:
+            #         print("2")
+            #         if obj._meta.object_name in ['IncrementDetailsSummary', 'IncrementDetailsSummaryDraft'] and part in ['employee', 'employee_draft', 'incrementdetailssummary', 'incrementdetailssummarydraft']:
+            #             continue
+            #         # if is_draft and part == 'employee' and hasattr(obj, 'employee_draft'):
+            #         #     obj = getattr(obj, 'employee_draft').employee
+            #         else:
+            #             print("3")
+            #             obj = getattr(obj, part)
+            # return obj
             obj = instance
             previous_part = ''
-            for part in parts:
+            i = 0
+
+            while i < len(parts):
+                part = parts[i]
+
                 if part == 'configurations' or previous_part == 'configurations':
                     previous_part = 'configurations'
                     if part == 'configurations':
+                        i += 1
                         continue
-                    ConfigurationModel = apps.get_model('user', 'Configurations').objects.first()  # or filter by relation
+                    ConfigurationModel = apps.get_model('user', 'Configurations').objects.first()
+                    print("1")
                     obj = getattr(ConfigurationModel, part)
-                else:
-                    if obj._meta.object_name in ['IncrementDetailsSummary', 'IncrementDetailsSummaryDraft'] and part in ['employee', 'employee_draft', 'incrementdetailssummary', 'incrementdetailssummarydraft']:
-                        continue
-                    # if is_draft and part == 'employee' and hasattr(obj, 'employee_draft'):
-                    #     obj = getattr(obj, 'employee_draft').employee
+                    i += 1
+                    continue
+
+                print("2")
+
+                # Handle dynamic_attribute + next key in parts
+                if part == 'dynamic_attribute':
+                    dynamic_attrs = getattr(obj, part, None)
+                    key_to_find = None
+
+                    # Check if next part exists as key
+                    if i + 1 < len(parts):
+                        key_to_find = parts[i + 1]
+                        i += 1  # Consume the key part as well
+
+                    if dynamic_attrs is not None:
+                        attr = None
+                        if key_to_find:
+                            attr = dynamic_attrs.filter(definition__key=key_to_find).first()
+                        if not attr:
+                            attr = dynamic_attrs.last()
+                        obj = (attr.value, attr.definition.data_type) if attr else None
                     else:
+                        obj = None
+
+                    i += 1
+                    continue
+
+                else:
+                    # Defensive: if obj is a manager/queryset, get first instance
+                    if hasattr(obj, 'all'):
+                        obj = obj.first()
+
+                    if obj is None:
+                        break
+
+                    if obj._meta.object_name in ['IncrementDetailsSummary', 'IncrementDetailsSummaryDraft'] and part in ['employee', 'employee_draft', 'incrementdetailssummary', 'incrementdetailssummarydraft']:
+                        i += 1
+                        continue
+                    else:
+                        print("3")
                         obj = getattr(obj, part)
+                        i += 1
+
             return obj
+
     else:
         return getattr(instance, path)
 
@@ -570,7 +645,7 @@ def evaluate_formula(instance, expression, target_model, is_draft=False, employe
         'FinancialImpactPerMonth': 'FinancialImpactPerMonthDraft',
         'IncrementDetailsSummary': 'IncrementDetailsSummaryDraft'
     }
-
+    print(instance)
     for aggregate_type, model_name, display_name in get_variables_from_expression(expression):
         # target_model_name = model_mapping.get(model_name, model_name) if is_draft else model_name
         target_model_name = model_name
@@ -583,7 +658,14 @@ def evaluate_formula(instance, expression, target_model, is_draft=False, employe
             is_draft=is_draft,
             employee_draft=employee_draft
         )
-        if isinstance(value, Decimal):
+        print("value: ", value)
+        if isinstance(value, tuple):
+            data_type = value[1]
+            if data_type == 'number':
+                value = float(value[0])
+            else:
+                value = value[0]
+        elif isinstance(value, Decimal):
             value = float(value)
         context[f'{aggregate_type or ""}[{model_name}: {display_name}]'] = value
 
@@ -673,7 +755,6 @@ def build_dependency_graph(formulas, company=None, employee=None, department_tea
         formula_targets.add(target)
         expression = formula.formula.formula_expression
 
-        # print("target: ", target)
         if target not in indegree:
             indegree[target] = 0
             # print(f"indegree for target '{target}' set to 0: ", indegree)

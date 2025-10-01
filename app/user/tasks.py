@@ -3,6 +3,7 @@ from dateutil.relativedelta import relativedelta
 from celery import shared_task
 from django.utils.timezone import now
 import logging
+from .models import Employee, EmployeeDraft
 
 logger = logging.getLogger(__name__)
 

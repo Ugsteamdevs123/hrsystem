@@ -5,9 +5,31 @@ from django.dispatch import receiver
 from django.apps import apps
 
 from .utils import update_department_team_increment_summary, topological_sort, evaluate_formula
-from .models import Employee, SummaryStatus, CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, DepartmentTeams, Formula, FieldFormula, CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft, IncrementDetailsSummaryDraft
+from .models import DynamicAttribute, Employee, SummaryStatus, CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, DepartmentTeams, Formula, FieldFormula, CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft, IncrementDetailsSummaryDraft
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=DynamicAttribute)
+def update_increment_summary_dynamic_attribute(sender, instance, created, **kwargs):
+    """
+    Signal to check the driver wallet amount when a DriverAdditional is saved.
+    """
+    try:
+        # if sender == DynamicAttribute:
+        #     employee = instance.content_object
+        # else:
+        #     employee = instance
+        # check_inst = instance.content_object
+        if str(instance.content_object._meta) == 'user.employeedraft':
+            print("calling draft")
+            update_draft_increment_summary_employee(sender=EmployeeDraft, instance=instance.content_object, created=False)
+        elif str(instance.content_object._meta) == 'user.employee':
+            print("calling")
+            update_increment_summary_employee(sender=Employee, instance=instance.content_object, created=False)
+
+    except Exception as e:
+        print(f"Error in updating increment summary employee: {e}")
 
 
 @receiver(post_save, sender=Employee)
@@ -16,19 +38,24 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
     Signal to check the driver wallet amount when a DriverAdditional is saved.
     """
     try:
-        increment_details_summary = IncrementDetailsSummary.objects.filter(company = instance.company, department_team = instance.department_team)
+        # if sender == DynamicAttribute:
+        #     employee = instance.content_object
+        # else:
+        #     employee = instance
+        employee = instance
+        increment_details_summary = IncrementDetailsSummary.objects.filter(company = employee.company, department_team = employee.department_team)
 
         if not increment_details_summary.exists():
-            IncrementDetailsSummary.objects.create(company = instance.company, department_team = instance.department_team)
+            IncrementDetailsSummary.objects.create(company = employee.company, department_team = employee.department_team)
 
-        update_department_team_increment_summary(sender, instance, instance.company, instance.department_team)
+        update_department_team_increment_summary(sender, employee, employee.company, employee.department_team)
         
 
         # target_models = [ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary]
 
         # Determine context
-        company = instance.company
-        department_team = instance.department_team
+        company = employee.company
+        department_team = employee.department_team
 
         # Get all formulas for the company
         # formulas = FieldFormula.objects.filter(company=company).select_related('formula')
@@ -51,12 +78,12 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
         # print("formulas: ", formulas)
 
         if not formulas:
-            print(f"No formulas found for company={company}, department_team={department_team}, employee={instance}")
+            print(f"No formulas found for company={company}, department_team={department_team}, employee={employee}")
             return
 
         # Topological sort with context
         print(formulas)
-        ordered = topological_sort(formulas, company=company, employee=instance, department_team=department_team)
+        ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
         # print("ordered: ", ordered)
 
         for model_name, field in ordered:
@@ -79,18 +106,18 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
                     department_team=department_team
                 ).first()
             elif model_name == "Employee":
-                instance.refresh_from_db()
-                target_instance = instance
+                employee.refresh_from_db()
+                target_instance = employee
             else:
                 model_class = apps.get_model('user', model_name)
-                target_instance = model_class.objects.filter(employee=instance).first()
+                target_instance = model_class.objects.filter(employee=employee).first()
 
             if not target_instance:
                 print(f"No instance found for {model_name} with company={company}, department_team={department_team}")
                 continue
 
             if model_name == 'FinancialImpactPerMonth' and field == 'gratuity':
-                employee_status = FinancialImpactPerMonth.objects.filter(employee=instance.id)
+                employee_status = FinancialImpactPerMonth.objects.filter(employee=employee.id)
                 if employee_status.exists():
                     employee_status = employee_status.first()
                     employee_status = employee_status.emp_status
@@ -258,7 +285,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
     Signal to update increment summary when a draft model is saved.
     """
     try:
-
+        print("djdjdj")
         increment_details_summary_draft = IncrementDetailsSummaryDraft.objects.filter(company = instance.company, department_team = instance.department_team)
 
         if not increment_details_summary_draft.exists():
@@ -327,6 +354,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
 
         # Map sender to corresponding non-draft model for reference
         model_mapping = {
+            'EmployeeDraft': 'Employee',
             'CurrentPackageDetailsDraft': 'CurrentPackageDetails',
             'ProposedPackageDetailsDraft': 'ProposedPackageDetails',
             'FinancialImpactPerMonthDraft': 'FinancialImpactPerMonth',
@@ -344,6 +372,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
         department_formulas = formulas.filter(department_team=department_team)
         # formula_ids = list(employee_formulas.values_list('id', flat=True))
         # formula_ids += list(department_formulas.exclude(id__in=employee_formulas).values_list('id', flat=True))
+
         formula_ids = list(department_formulas.values_list('id', flat=True))
         formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
 
@@ -352,17 +381,17 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
             return
 
         # Perform topological sort with context
-        print(formulas)
         ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
-        # print("ordered: ", ordered)
 
         for model_name, field in ordered:
-            # print("model_name, field: ", model_name, field)
+            print("model_name, field: ", model_name, field)
             # Map model to draft version if sender is a draft model
             target_model_name = model_name + 'Draft' if is_draft and model_name in model_mapping.values() else model_name
+            # print("target_model_name: ", target_model_name)
             if not target_model_name.endswith('Draft') and is_draft:
+                # print("continue")
                 continue  # Skip non-draft models when processing drafts
-
+            
             # print("target_model_name: ", target_model_name)
             # Prefer employee-specific formula, else department-specific
             # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
@@ -412,8 +441,18 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                 # Model.objects.filter(id=target_instance.id).update(**{field: value})
                 # print("Model._meta.model_name: ", Model._meta.model_name)
 
-                if Model._meta.model_name in ["incrementdetailssummarydraft", "employee"]:
-                    Model.objects.filter(id=target_instance.id).update(**{field: value})
+                if Model._meta.model_name in ["incrementdetailssummarydraft", "employeedraft"]:
+                    if field.startswith('dynamic_attribute__'):
+                        key = field.split('__', 1)[1]  # get the dynamic key part
+                        # Disconnect
+                        post_save.disconnect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
+                        # Use the instance's set_dynamic_attribute method to update or create the dynamic attribute
+                        target_instance.set_dynamic_attribute(key, value)
+                        # Reconnect
+                        post_save.connect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
+                    else:
+                        # Regular model field update
+                        Model.objects.filter(id=target_instance.id).update(**{field: value})
                 else:
                     Model.objects.filter(employee_draft=target_instance.employee_draft).update(**{field: value})
                 instance.refresh_from_db()

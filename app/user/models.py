@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.dateparse import parse_date
 from django.contrib.auth.models import (
     AbstractBaseUser , 
     PermissionsMixin ,
@@ -263,20 +264,58 @@ class VehicleModel(models.Model):
     
 
 
+class DynamicAttributeDefinition(models.Model):
+    DATA_TYPE_CHOICES = [
+        ('text', 'Text'),
+        ('number', 'Number'),
+        ('boolean', 'Boolean'),
+        ('date', 'Date'),
+        # Add more types as needed
+    ]
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    department_team = models.ForeignKey(DepartmentTeams, on_delete=models.CASCADE)
+    key = models.CharField(max_length=100)
+    display_name = models.CharField(max_length=255)  # Optional: for showing labels
+    data_type = models.CharField(max_length=10, choices=DATA_TYPE_CHOICES)
+    inline_editable = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('company', 'department_team', 'key')
+
+    def __str__(self):
+        return f"{self.key} - {self.data_type} ({self.department_team.name})"
+
+
 class DynamicAttribute(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    definition = models.ForeignKey(DynamicAttributeDefinition, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
 
-    key = models.CharField(max_length=100)
-    value = models.TextField()
+    # key = models.CharField(max_length=100)
+    value = models.TextField(default="0")
 
+    @property
+    def typed_value(self):
+        """Return the value casted to the correct Python type."""
+        try:
+            if self.definition.data_type == 'number':
+                return float(self.value)
+            elif self.definition.data_type == 'boolean':
+                return self.value.lower() in ['true', '1', 'yes']
+            elif self.definition.data_type == 'date':
+                return parse_date(self.value)
+            return self.value  # default to string/text
+        except Exception as e:
+            print(f"Type conversion failed for {self.key}: {e}")
+            return None
+        
     def __str__(self):
-        return f"{self.key}: {self.value}"
+        return f"{self.definition.key} ({self.definition.data_type}): {self.value}"
 
 
 class Employee(models.Model):
-
     emp_id = models.IntegerField(unique=True)
     fullname = models.CharField(max_length=255)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
@@ -299,6 +338,24 @@ class Employee(models.Model):
     is_deleted = models.BooleanField(default=False)
     history = AuditlogHistoryField()  # Required to store log
 
+    @property
+    def dynamic_fields(self):
+        return {attr.definition.key: attr.value for attr in self.dynamic_attribute.all()}
+    
+    def set_dynamic_attribute(self, key, value):
+        attr, created = DynamicAttribute.objects.update_or_create(
+            content_type = ContentType.objects.get_for_model(self),
+            definition = DynamicAttributeDefinition.objects.get(company = self.company, department_team=self.department_team, key=key),
+            object_id = self.pk,
+            # key = key,
+            defaults={'value': str(value)}  # ✅ Correct place to update value
+        )
+
+        return attr, created
+    
+    def get_dynamic_attribute(self, key):
+        return self.dynamic_attribute.get(key=key).value
+        
     def __str__(self):
         return self.fullname
 
@@ -446,11 +503,30 @@ class EmployeeDraft(models.Model):
     auto_mark_eligibility = models.BooleanField(default=True, null=True)
     is_intern = models.BooleanField(default=False, null=True)
     promoted_from_intern_date = models.DateField(blank=True, null=True)
+    dynamic_attribute = GenericRelation(DynamicAttribute)
 
     is_deleted = models.BooleanField(default=False)
     edited_fields = models.JSONField(default=dict, blank=True)
 
     history = AuditlogHistoryField()
+
+    @property
+    def dynamic_fields(self):
+        return {attr.key: attr.value for attr in self.dynamic_attribute.all()}
+    
+    def set_dynamic_attribute(self, key, value):
+        attr, created = DynamicAttribute.objects.update_or_create(
+            content_type = ContentType.objects.get_for_model(self),
+            definition = DynamicAttributeDefinition.objects.get(company = self.company, department_team=self.department_team, key=key),
+            # key=key,
+            object_id = self.pk,
+            defaults={'value': str(value)}  # ✅ Correct place to update value
+        )
+
+        return attr, created
+    
+    def get_dynamic_attribute(self, key):
+        return self.dynamic_attribute.get(key=key).value
 
     def __str__(self):
         return f"Draft for {self.employee.fullname}"
