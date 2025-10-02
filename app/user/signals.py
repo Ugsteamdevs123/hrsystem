@@ -87,9 +87,9 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
         # print("ordered: ", ordered)
 
         for model_name, field in ordered:
-            if model_name.endswith("Draft"):
-                continue
-            # print("model_name", model_name, " ::: field: ", field)
+            # if model_name.endswith("Draft"):
+            #     continue
+            print("model_name", model_name, " ::: field: ", field)
             # Prefer employee-specific formula, else department-specific
             # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
             #                department_formulas.filter(target_model=model_name, target_field=field).first()
@@ -111,7 +111,7 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
             else:
                 model_class = apps.get_model('user', model_name)
                 target_instance = model_class.objects.filter(employee=employee).first()
-
+                
             if not target_instance:
                 # print(f"No instance found for {model_name} with company={company}, department_team={department_team}")
                 continue
@@ -130,11 +130,21 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
             # print("expression: ", expression)
             try:
                 value = evaluate_formula(target_instance, expression, model_name)
-                # print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)
+                print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)
                 Model = apps.get_model('user', model_name)
                 
                 if model_name in ["IncrementDetailsSummary", "Employee"]:
-                    Model.objects.filter(id=target_instance.id).update(**{field: value})
+                    if field.startswith('dynamic_attribute__'):
+                        key = field.split('__', 1)[1]  # get the dynamic key part
+                        # Disconnect
+                        post_save.disconnect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
+                        # Use the instance's set_dynamic_attribute method to update or create the dynamic attribute
+                        target_instance.set_dynamic_attribute(key, value)
+                        # Reconnect
+                        post_save.connect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
+                    else:
+                        # Regular model field update
+                        Model.objects.filter(id=target_instance.id).update(**{field: value})
                 else:
                     Model.objects.filter(employee=target_instance.employee).update(**{field: value})
                     

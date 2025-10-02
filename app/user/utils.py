@@ -358,9 +358,9 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
         parts[-2] = "employeedraft"
     elif parts[-2] not in ['configurations', 'dynamic_attribute']:
         parts[-2] = parts[-2]+'draft' if is_draft else parts[-2]
-    elif parts[-2] == 'dynamic_attribute' and instance._meta.object_name == 'EmployeeDraft':
+    elif parts[-2] == 'dynamic_attribute' and instance._meta.object_name in ['EmployeeDraft', 'Employee']:
         parts.pop(0)
-    # print("parts: ", parts)
+    print("parts: ", parts)
     # print("instance: ", instance._meta.object_name)
     model_mapping = {
         'employee': 'Employee',
@@ -407,6 +407,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
         # print("abcdefg is_draft: ", is_draft, " ::: target_model_name: ", target_model_name, " ::: model_name: ", model_name)
         # Get filter kwargs for non_draft tables at all case as they will be used to fetch those records for increment details summary draft where some employee
         # records are not draft and their values need to be fetched from original tables.
+        print("model_name: ", model_name, "instance._meta.object_name: ", instance._meta.object_name)
         if is_draft and target_model_name.endswith('Draft'):
             if instance._meta.object_name == "IncrementDetailsSummaryDraft" and (target_model_name=="IncrementDetailsSummaryDraft" or target_model_name=='EmployeeDraft'):
                 filter_kwargs = {"company": instance.company, "department_team": instance.department_team}
@@ -428,7 +429,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                     filter_kwargs = {"company": instance.company, "department_team": instance.department_team}
                 elif instance._meta.object_name != "IncrementDetailsSummary" and (model_name=="IncrementDetailsSummary" or target_model_name=="Employee"):
                     filter_kwargs = {"company": instance.employee.company, "department_team": instance.employee.department_team}
-                elif instance._meta.object_name == "IncrementDetailsSummary" and model_name!="IncrementDetailsSummary":
+                elif instance._meta.object_name in ("IncrementDetailsSummary", "Employee") and model_name!="IncrementDetailsSummary":
                     filter_kwargs = {"employee__company": instance.company, "employee__department_team": instance.department_team}
                 else:
                     filter_kwargs = {"employee__company": instance.employee.company, "employee__department_team": instance.employee.department_team}
@@ -641,7 +642,7 @@ def evaluate_formula(instance, expression, target_model, is_draft=False, employe
         'FinancialImpactPerMonth': 'FinancialImpactPerMonthDraft',
         'IncrementDetailsSummary': 'IncrementDetailsSummaryDraft'
     }
-    print(instance)
+    # print(instance)
     for aggregate_type, model_name, display_name in get_variables_from_expression(expression):
         # target_model_name = model_mapping.get(model_name, model_name) if is_draft else model_name
         target_model_name = model_name
