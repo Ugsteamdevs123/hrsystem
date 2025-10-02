@@ -97,9 +97,9 @@
                             <td class="sticky-col sticky-col-1">{{ forloop.counter }}</td>
                             <td class="sticky-col sticky-col-2">{{ employee.emp_id|default:"-" }}</td>
                             <td class="sticky-col sticky-col-3">{{ employee.fullname|default:"-" }}</td>
-                            <td class="sticky-col sticky-col-4 editable" data-tab="employee" data-field="designation_id" data-type="select" data-endpoint="/payroll/designations/?company_id={{ department.company.id }}">{{ employee.designation.title|default:"-" }}</td>
+                            <td class="sticky-col sticky-col-4 editable" data-tab="Employee" data-field="designation_id" data-type="select" data-endpoint="/payroll/designations/?company_id={{ department.company.id }}">{{ employee.designation.title|default:"-" }}</td>
                             <!-- Employee Details -->
-                            <td class="non-sticky editable" data-tab="employee" data-field="eligible_for_increment" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ employee.eligible_for_increment|yesno:"Yes,No,-" }}</td>
+                            <td class="non-sticky editable" data-tab="Employee" data-field="eligible_for_increment" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ employee.eligible_for_increment|yesno:"Yes,No,-" }}</td>
                             <td class="non-sticky">{{ employee.department_team.name|default:"-" }}</td>
                             <td class="non-sticky">{{ employee.department_group.name|default:"-" }}</td>
                             <td class="non-sticky">{{ employee.section.name|default:"-" }}</td>
@@ -144,7 +144,7 @@
                             {% for attr in employee.dynamic_attributes %}
                                 <td class="non-sticky {% if attr.inline_editable %}editable{% endif %}"
                                     data-dynamic="true"
-                                    data-tab="employee"
+                                    data-tab="Employee"
                                     data-field="{{ attr.key }}"
                                     {% if attr.data_type == 'number' %}
                                         data-type="number"
@@ -540,7 +540,7 @@
     }
 
     function isEligibleForIncrement(row, employeeId) {
-        const eligibleCell = row.querySelector('[data-tab="employee"][data-field="eligible_for_increment"]');
+        const eligibleCell = row.querySelector('[data-tab="Employee"][data-field="eligible_for_increment"]');
         let eligibleValue = eligibleCell.dataset.original || eligibleCell.textContent;
         if (draftData[employeeId]?.employee?.eligible_for_increment) {
             eligibleValue = draftData[employeeId].employee.eligible_for_increment;
@@ -623,7 +623,7 @@
                             input.appendChild(opt);
                         });
                     } else if (field === 'section_id' && depends) {
-                        const groupId = cell.parentElement.querySelector(`[data-tab="employee"][data-field="${depends}"] select`)?.value;
+                        const groupId = cell.parentElement.querySelector(`[data-tab="Employee"][data-field="${depends}"] select`)?.value;
                         if (groupId && window.departmentGroups) {
                             const group = window.departmentGroups.find(g => g.id === parseInt(groupId));
                             if (group && group.sections) {
@@ -715,7 +715,7 @@
                 updateRowEditability(row);
             }
 
-            if (field === 'increment_percentage' || field === 'increased_fuel_allowance' || field === 'increased_fuel_litre' || field === 'vehicle_id' || field === "revised_salary") {
+            if (field === 'increment_percentage' || field === 'increased_fuel_allowance' || field === 'increased_fuel_litre' || field === 'vehicle_id' || field === "revised_salary" || effectiveField.startsWith("dynamic_attribute__")) {
                 recalcValues(row);
             }
         });
@@ -856,6 +856,7 @@
     }
 
     function recalcValues(row) {
+        console.log('sjsj');
         const IncreasedFuelAllowance = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="increased_fuel_allowance"]');
         const IncreasedFuelLitre = row.querySelector('[data-tab="ProposedPackageDetails"][data-field="increased_fuel_litre"]');
         
@@ -881,7 +882,9 @@
             } catch (e) {
                 console.error("Failed to evaluate formula:", formula.formula_name, e);
             }
-            const targetSelector = `[data-tab="${formula.target_model}"][data-field="${formula.target_field.trim().toLowerCase().replaceAll(' ', '_')}"]`;
+            console.log(formula.target_field.trim().toLowerCase().replace('dynamic_attribute__', '').replaceAll(' ', '_'));
+            const targetSelector = `[data-tab="${formula.target_model}"][data-field="${formula.target_field.trim().toLowerCase().replace('dynamic_attribute__', '').replaceAll(' ', '_')}"]`;
+            console.log(targetSelector);
             const targetCell = row.querySelector(targetSelector);
             if (targetCell) {
                 targetCell.textContent = result.toFixed(2);
