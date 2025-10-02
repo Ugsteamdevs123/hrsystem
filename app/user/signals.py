@@ -113,7 +113,7 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
                 target_instance = model_class.objects.filter(employee=employee).first()
 
             if not target_instance:
-                print(f"No instance found for {model_name} with company={company}, department_team={department_team}")
+                # print(f"No instance found for {model_name} with company={company}, department_team={department_team}")
                 continue
 
             if model_name == 'FinancialImpactPerMonth' and field == 'gratuity':
@@ -193,7 +193,7 @@ def update_increment_summary(sender, instance, created, **kwargs):
             return
 
         # Topological sort with context
-        print(formulas)
+        # print(formulas)
         ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
         # print("ordered: ", ordered)
 
@@ -384,7 +384,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
         ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
 
         for model_name, field in ordered:
-            print("model_name, field: ", model_name, field)
+            # print("model_name, field: ", model_name, field)
             # Map model to draft version if sender is a draft model
             target_model_name = model_name + 'Draft' if is_draft and model_name in model_mapping.values() else model_name
             # print("target_model_name: ", target_model_name)

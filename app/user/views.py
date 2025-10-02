@@ -82,7 +82,8 @@ from .serializer import (
 
 from .signals import (
     update_increment_summary_employee,
-    update_increment_summary
+    update_increment_summary,
+    update_increment_summary_dynamic_attribute
 )
 
 import json
@@ -835,6 +836,7 @@ class HrFinalApproveSummaryView(PermissionRequiredMixin, View):
                     # employee
                     try:
                         employee_data = model_to_dict(emp_draft, exclude=['id','employee_draft','history','edited_fields','is_deleted'])
+                        print(employee_data)
                         employee_data["company_id"] = employee_data.pop("company")
                         employee_data["department_team_id"] = employee_data.pop("department_team")
                         employee_data["department_group_id"] = employee_data.pop("department_group")
@@ -2657,7 +2659,7 @@ class SaveDraftView(View):
                 employee_draft = EmployeeDraft.objects.filter(employee=employee).first()
                 print("employee_draft: ", employee_draft)
 
-                empl = tabs.get('employee', {})
+                empl = tabs.get('Employee', {})
                 date_of_joining = employee.date_of_joining
                 if empl.get('designation_id'):
                     designation_id = int(empl.get('designation_id'))
@@ -2683,6 +2685,7 @@ class SaveDraftView(View):
                         is_intern = employee.is_intern
                         promoted_from_intern_date = employee.promoted_from_intern_date
 
+                print("is_intern: ", is_intern)
                 if not employee_draft:
                     # fipm = tabs.get('financial_impact', {})
                     # if fipm.get('eligible_for_increment'):
@@ -2697,10 +2700,14 @@ class SaveDraftView(View):
                     employee_draft.save()   # <-- save immediately
                     
                     for emp in employee.dynamic_attribute.all().order_by('definition__id'):
-                        employee_draft.set_dynamic_attribute(
-                            key=emp.definition.key,
-                            value=emp.value,
-                        )
+                        # Disconnect - there might be a lot of dynamic fields so we do not edit it now
+                        post_save.disconnect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
+                        attr, created = employee_draft.set_dynamic_attribute(
+                                            key=emp.definition.key,
+                                            value=emp.value,
+                                        )
+                        # Reconnect
+                        post_save.connect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
 
                 # Save employee fields
                 for field, value in tabs.get('Employee', {}).items():
@@ -2714,7 +2721,8 @@ class SaveDraftView(View):
                             setattr(employee_draft, field, value or None)
                             
                 setattr(employee_draft, 'promoted_from_intern_date', promoted_from_intern_date if promoted_from_intern_date else None)
-                setattr(employee_draft, 'is_intern', int(is_intern) if is_intern else None)
+                if is_intern in (True, False):
+                    setattr(employee_draft, 'is_intern', int(is_intern))
                 # employee_draft.edited_fields = employee_draft_edited
                 if employee_draft_edited:
                     print("employee_draft_edited: ", employee_draft_edited)

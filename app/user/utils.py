@@ -348,7 +348,7 @@ def get_field_path(model_name, display_name):
 def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employee_draft=None):
     """Fetch value via Django-style path, applying aggregate if specified, prioritizing draft tables."""
     # print("PATH: is draft?", path, is_draft)
-    print("path: ", path)
+    # print("path: ", path)
     if 'employee__employee' in path:
         path = path.replace('employee__employee', 'employee')
     # print("PATH: is draft?", path, is_draft)
@@ -360,8 +360,8 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
         parts[-2] = parts[-2]+'draft' if is_draft else parts[-2]
     elif parts[-2] == 'dynamic_attribute' and instance._meta.object_name == 'EmployeeDraft':
         parts.pop(0)
-    print("parts: ", parts)
-    print("instance: ", instance._meta.object_name)
+    # print("parts: ", parts)
+    # print("instance: ", instance._meta.object_name)
     model_mapping = {
         'employee': 'Employee',
         'currentpackagedetails': 'CurrentPackageDetails',
@@ -575,12 +575,9 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                         i += 1
                         continue
                     ConfigurationModel = apps.get_model('user', 'Configurations').objects.first()
-                    print("1")
                     obj = getattr(ConfigurationModel, part)
                     i += 1
                     continue
-
-                print("2")
 
                 # Handle dynamic_attribute + next key in parts
                 if part == 'dynamic_attribute':
@@ -617,7 +614,6 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                         i += 1
                         continue
                     else:
-                        print("3")
                         obj = getattr(obj, part)
                         i += 1
 
@@ -658,7 +654,7 @@ def evaluate_formula(instance, expression, target_model, is_draft=False, employe
             is_draft=is_draft,
             employee_draft=employee_draft
         )
-        print("value: ", value)
+        
         if isinstance(value, tuple):
             data_type = value[1]
             if data_type == 'number':
