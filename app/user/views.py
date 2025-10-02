@@ -841,10 +841,28 @@ class HrFinalApproveSummaryView(PermissionRequiredMixin, View):
                         employee_data["section_id"] = employee_data.pop("section")
                         employee_data["designation_id"] = employee_data.pop("designation")
                         employee_data["location_id"] = employee_data.pop("location")
-                        Employee.objects.update_or_create(
+                        
+                        employee, created = Employee.objects.update_or_create(
                             id=emp_draft.employee.id,
                             defaults=employee_data
                         )
+
+                        # Sync dynamic attributes from draft to employee
+                        draft_dynamic_attrs = emp_draft.dynamic_attribute.all()
+                        for draft_attr in draft_dynamic_attrs:
+                            # Get definition from the draft attribute
+                            definition = draft_attr.definition
+                            
+                            # Update or create the corresponding dynamic attribute on employee
+                            DynamicAttribute.objects.update_or_create(
+                                content_type=ContentType.objects.get_for_model(employee),
+                                definition=definition,
+                                object_id=employee.pk,
+                                defaults={'value': draft_attr.value}
+                            )
+                        
+                        # Delete dynamic attributes from draft after syncing
+                        draft_dynamic_attrs.delete()
                     except CurrentPackageDetailsDraft.DoesNotExist:
                         pass
                     # CurrentPackageDetails
@@ -1254,7 +1272,7 @@ class DepartmentTableView(View):
 
             print("data: ", data)
             # draft_data[emp.emp_id] = {'employee': {}, 'current_package': {}, 'proposed_package': {}, 'financial_impact': {}}
-            draft_data[emp.emp_id] = {'employee': {}, 'CurrentPackageDetails': {}, 'ProposedPackageDetails': {}, 'FinancialImpactPerMonth': {}}
+            draft_data[emp.emp_id] = {'Employee': {}, 'CurrentPackageDetails': {}, 'ProposedPackageDetails': {}, 'FinancialImpactPerMonth': {}}
 
             # ✅ Handle current package
             current_draft = getattr(emp_draft, "currentpackagedetailsdraft", None) if is_draft else None
@@ -1458,6 +1476,14 @@ class EditDynamicAttributeView(View):
                         field_name=new_key,
                         display_name=refined_name.title(),
                         path=f'employee__dynamic_attribute__{new_key}'
+                    )
+
+                    Formula.objects.filter(
+                        fieldformula__department_team_id=department_team_id,
+                        target_model='Employee',
+                        target_field=f'dynamic_attribute__{old_key}'
+                    ).update(
+                        target_field=f'dynamic_attribute__{new_key}'
                     )
 
                     return JsonResponse({'message': 'Dynamic Field Updated Successfully'})
@@ -2102,6 +2128,7 @@ class GetFormulasView(View):
 
             # Serialize the sorted queryset
             field_formulas_data = FieldFormulaSerializer(instance=formulas_sorted, many=True).data
+            print(field_formulas_data)
             # print("field_formulas_data:", field_formulas_data)
             return JsonResponse({'field_formulas_data': list(field_formulas_data), 'configurations_data': configurations_data})
         return JsonResponse({'field_formulas_data': []})
@@ -2554,7 +2581,7 @@ class SaveDraftView(View):
                 # Detect changes
                 for tab, fields in tabs.items():
                     print("tab, fields: ", tab, fields)
-                    if tab == 'employee':
+                    if tab == 'Employee':
                         for field, value in fields.items():
                             if field.startswith("dynamic_attribute__"):
                                 print("DYNAMIC field, value: ", field, value)
@@ -2676,7 +2703,7 @@ class SaveDraftView(View):
                         )
 
                 # Save employee fields
-                for field, value in tabs.get('employee', {}).items():
+                for field, value in tabs.get('Employee', {}).items():
                     print("field, value: ", field, value)
                     if employee_draft_edited.get(field) and not field.startswith("dynamic_attribute__"):
                         if field.endswith('_id'):
@@ -2710,7 +2737,7 @@ class SaveDraftView(View):
                     employee_draft.edited_fields = employee_draft_edited
                     employee_draft.save()
 
-                    for field, value in tabs.get('employee', {}).items():
+                    for field, value in tabs.get('Employee', {}).items():
                         if field.startswith("dynamic_attribute__"):
                             key = field.split('__', 1)[1]
                             value = float(value) if value else None  # or other type casting
