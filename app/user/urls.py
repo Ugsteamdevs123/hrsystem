@@ -103,5 +103,6 @@ urlpatterns = [
     path('configurations/', views.ManageConfigurationsView.as_view(), name='manage_configurations'),
 
     path('create-dynamic-attribute/', views.CreateDynamicAttributeView.as_view(), name='create_dynamic_attribute'),
+    path('get-dynamic-attributes/', views.GetDynamicAttributesView.as_view(), name='get_dynamic_attributes'),
     path('edit-dynamic-attribute/', views.EditDynamicAttributeView.as_view(), name='edit_dynamic_attribute')
 ]

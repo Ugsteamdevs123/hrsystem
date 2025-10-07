@@ -5,7 +5,6 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
-from django.views.decorators.http import require_POST
 from django.views.decorators.cache import cache_control
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import View
@@ -16,8 +15,7 @@ from django.db import transaction, models
 from django.db.models import Q, Case, When
 from django.db.models.signals import post_save
 from django.forms.models import model_to_dict
-from django.shortcuts import render, redirect , get_object_or_404
-from django.contrib.auth.forms import PasswordChangeForm
+from django.shortcuts import render, redirect, get_object_or_404
 
 from .models import (
     CustomUser,
@@ -63,12 +61,12 @@ from .forms import (
     FormulaForm,
     VehicleBrandForm,
     CustomPasswordChangeForm
-
 )
+
 from venv import logger
 from permissions import PermissionRequiredMixin
 
-from .utils import get_companies_and_department_teams, topological_sort, normalize_field_name
+from .utils import get_companies_and_department_teams, topological_sort, normalize_field_name, replace_field_reference_ids_from_expression, replace_field_reference_models_and_fields_from_expression
 from .serializer import (
     IncrementDetailsSummarySerializer,
     IncrementDetailsSummaryDraftSerializer,
@@ -95,15 +93,11 @@ from .signals import (
     update_increment_summary_employee,
     update_increment_summary
 )
+
 import logging
 
 
 logger = logging.getLogger(__name__)
-
-
-'''
-When user login he redirect to pass reset
-'''
 
 
 class LoginView(View):
@@ -1258,15 +1252,15 @@ class DepartmentTableView(View):
 
             data["dynamic_attributes"] = [
                 {
-                    'key': attr.definition.key,
-                    'display_name': attr.definition.display_name,
+                    'key': attr.definition.field_reference.field_name,
+                    'display_name': attr.definition.field_reference.display_name,
                     'value': attr.value,
                     'inline_editable': attr.definition.inline_editable,
                     'data_type': attr.definition.data_type,
                 } for attr in emp_draft.dynamic_attribute.all().order_by('definition__id')
             ] if is_draft else [{
-                'key': attr.definition.key,
-                'display_name': attr.definition.display_name,
+                'key': attr.definition.field_reference.field_name,
+                'display_name': attr.definition.field_reference.display_name,
                 'value': attr.value,
                 'inline_editable': attr.definition.inline_editable,
                 'data_type': attr.definition.data_type
@@ -1274,7 +1268,7 @@ class DepartmentTableView(View):
 
             print("data: ", data)
             # draft_data[emp.emp_id] = {'employee': {}, 'current_package': {}, 'proposed_package': {}, 'financial_impact': {}}
-            draft_data[emp.emp_id] = {'Employee': {}, 'CurrentPackageDetails': {}, 'ProposedPackageDetails': {}, 'FinancialImpactPerMonth': {}}
+            draft_data[emp.emp_id] = {'Employee': {}, 'CurrentPackageDetails': {}, 'ProposedPackageDetails': {}, 'FinancialImpactPerMonth': {}, 'DynamicAttribute': {}}
 
             # ✅ Handle current package
             current_draft = getattr(emp_draft, "currentpackagedetailsdraft", None) if is_draft else None
@@ -1337,6 +1331,44 @@ class DepartmentTableView(View):
 
 
 # For dept team crud
+from django.views import View
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from .models import DynamicAttributeDefinition, FieldReference
+
+@method_decorator(login_required, name='dispatch')
+class GetDynamicAttributesView(View):
+    def get(self, request):
+        company_id = request.GET.get('company_id')
+        department_team_id = request.GET.get('department_team_id')  # Optional: exclude current dept
+
+        if not company_id:
+            return JsonResponse({'error': 'Company ID is required'}, status=400)
+
+        definitions = DynamicAttributeDefinition.objects.filter(company_id=company_id)
+        if department_team_id:
+            definitions = definitions.exclude(department_team_id=department_team_id)
+
+        unique_attrs = {}
+        for defn in definitions:
+            fr = defn.field_reference
+            fr_id = fr.id
+            if fr_id not in unique_attrs:
+                unique_attrs[fr_id] = {
+                    'field_reference_id': fr.id,
+                    'key': fr.field_name,
+                    'display_name': fr.display_name,
+                    'data_type': defn.data_type,
+                    'inline_editable': defn.inline_editable,
+                }
+            # Optional: Check consistency
+            # elif unique_attrs[fr_id]['data_type'] != defn.data_type:
+            #     return JsonResponse({'error': 'Inconsistent data types for shared attribute'}, status=400)
+
+        return JsonResponse(list(unique_attrs.values()), safe=False)
+    
+    
 class CreateDynamicAttributeView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -1347,80 +1379,121 @@ class CreateDynamicAttributeView(View):
         return view
 
     def post(self, request):
-        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 with transaction.atomic():
                     company_id = request.POST.get('company_id')
                     department_team_id = request.POST.get('department_team_id')
-                    raw_name = request.POST.get('attribute_name')
-                    data_type = request.POST.get('data_type')
-                    inline_editable = request.POST.get('inline_editable') == 'true'
+                    existing_field_reference_id = request.POST.get('existing_field_reference_id')
 
-                    refined_name, attribute_name = normalize_field_name(raw_name)
-                    
-                    fields = [field.name for field in Employee._meta.fields]
+                    if existing_field_reference_id:
+                        # Handle assigning existing attribute
+                        try:
+                            fr_id = int(existing_field_reference_id)
+                            fr = FieldReference.objects.get(id=fr_id)
+                        except (ValueError, FieldReference.DoesNotExist):
+                            return JsonResponse({'error': 'Invalid attribute selected'}, status=400)
 
-                    # Check against permanent fields
-                    if attribute_name in fields:
-                        raise ValueError(f"Attribute '{attribute_name}' already exists for this department.")
-                    
-                    # Check if attribute definition already exists
-                    if DynamicAttributeDefinition.objects.filter(
-                        company_id=company_id,
-                        department_team_id=department_team_id,
-                        key=attribute_name
-                    ).exists():
-                        raise ValueError(f"Attribute '{attribute_name}' already exists for this department.")
-                    
-                    print(company_id, "department_team_id: ", department_team_id, "attribute_name: ", attribute_name, "data_type: ", data_type, "refined_name: ", refined_name, "inline_editable: ", inline_editable)
-                    attr = DynamicAttributeDefinition.objects.create(
-                        company_id=company_id,
-                        department_team_id=department_team_id,
-                        key=attribute_name,
-                        data_type=data_type,
-                        display_name=refined_name.title(),  # Original name for display
-                        inline_editable=inline_editable,
-                    )
+                        if not DynamicAttributeDefinition.objects.filter(
+                            company_id=company_id, field_reference=fr
+                        ).exists():
+                            return JsonResponse({'error': 'Attribute not available for this company'}, status=400)
 
-                    FieldReference.objects.create(model_name='Employee', field_name=attribute_name, display_name=refined_name.title(), path=f'employee__dynamic_attribute__{attribute_name}')
-                    
-                    # company = Company.objects.get(id=company_id, id__in=hr_assigned_companies.objects.filter(hr=request.user).values('company'))
+                        existing_def = DynamicAttributeDefinition.objects.filter(
+                            company_id=company_id, field_reference=fr
+                        ).first()
+                        data_type = existing_def.data_type
+                        inline_editable = existing_def.inline_editable
+
+                        if DynamicAttributeDefinition.objects.filter(
+                            company_id=company_id,
+                            department_team_id=department_team_id,
+                            field_reference=fr
+                        ).exists():
+                            return JsonResponse({'error': 'Attribute already exists for this department team'}, status=400)
+
+                        attr = DynamicAttributeDefinition.objects.create(
+                            company_id=company_id,
+                            department_team_id=department_team_id,
+                            field_reference=fr,
+                            data_type=data_type,
+                            inline_editable=inline_editable,
+                        )
+                    else:
+                        # Original logic for new attribute
+                        raw_name = request.POST.get('attribute_name')
+                        data_type = request.POST.get('data_type')
+                        inline_editable = request.POST.get('inline_editable') == 'true'
+
+                        refined_name, attribute_name = normalize_field_name(raw_name)
+
+                        fields = [field.name for field in Employee._meta.fields]
+                        if attribute_name in fields:
+                            raise ValueError(f"Attribute '{attribute_name}' already exists for this department.")
+
+                        field_reference = FieldReference.objects.filter(
+                            model_name=DynamicAttribute._meta.object_name, field_name=attribute_name
+                        )
+                        if not field_reference.exists():
+                            field_reference = FieldReference.objects.create(
+                                model_name=DynamicAttribute._meta.object_name,
+                                field_name=attribute_name,
+                                display_name=refined_name.title(),
+                                path=f'employee__dynamic_attribute__{attribute_name}'
+                            )
+                            attr = DynamicAttributeDefinition.objects.create(
+                                company_id=company_id,
+                                department_team_id=department_team_id,
+                                field_reference=field_reference,
+                                data_type=data_type,
+                                inline_editable=inline_editable,
+                            )
+                        else:
+                            fr = field_reference.first()
+                            if DynamicAttributeDefinition.objects.filter(
+                                company_id=company_id,
+                                department_team_id=department_team_id,
+                                field_reference=fr
+                            ).exists():
+                                raise ValueError(f"Attribute '{attribute_name}' already exists for this department.")
+
+                            attr = DynamicAttributeDefinition.objects.create(
+                                company_id=company_id,
+                                department_team_id=department_team_id,
+                                field_reference=fr,
+                                data_type=data_type,
+                                inline_editable=inline_editable,
+                            )
+
+                    # Bulk create DynamicAttribute instances (same for both cases)
                     employees = Employee.objects.filter(company_id=company_id, department_team_id=department_team_id)
                     employees_draft = EmployeeDraft.objects.filter(company_id=company_id, department_team_id=department_team_id)
-                    #alternatively:
-                    # employees = EmployeeDraft.objects.filter(employe_id__in=employees.values_list('id', flat=True))
+
                     if employees.exists():
                         content_type = ContentType.objects.get_for_model(Employee)
-
                         DynamicAttribute.objects.bulk_create([
                             DynamicAttribute(
                                 content_type=content_type,
                                 object_id=emp.pk,
-                                definition = attr,
-                                # key=attribute_name,
+                                definition=attr,
                             ) for emp in employees
                         ])
-                    
+
                     if employees_draft.exists():
                         content_type = ContentType.objects.get_for_model(EmployeeDraft)
-
                         DynamicAttribute.objects.bulk_create([
                             DynamicAttribute(
                                 content_type=content_type,
                                 object_id=emp_draft.pk,
-                                definition = attr,
-                                # key=attribute_name,
+                                definition=attr,
                             ) for emp_draft in employees_draft
                         ])
 
                     return JsonResponse({'message': 'Dynamic Field Created Successfully'})
             except ValueError as e:
-                print(e)
                 return JsonResponse({'error': str(e)}, status=400)
             except Exception as e:
-                print(e)
-                return JsonResponse({'error': e}, status=400)
+                return JsonResponse({'error': str(e)}, status=400)
         return JsonResponse({'error': 'Invalid request'}, status=400)
     
 
@@ -1445,48 +1518,68 @@ class EditDynamicAttributeView(View):
                     inline_editable = request.POST.get('inline_editable') == 'true'
 
                     refined_name, new_key = normalize_field_name(raw_name)
-                    
-                    fields = [field.name for field in Employee._meta.fields]
-                    if new_key in fields and new_key != old_key:
-                        raise ValueError(f"Attribute '{new_key}' already exists as a permanent field.")
-                    
-                    existing_attr = DynamicAttributeDefinition.objects.filter(
-                        company_id=company_id,
-                        department_team_id=department_team_id,
-                        key=new_key
-                    ).exclude(key=old_key)
-                    if existing_attr.exists():
-                        raise ValueError(f"Attribute '{new_key}' already exists for this department.")
-                    
-                    attr = DynamicAttributeDefinition.objects.get(
-                        company_id=company_id,
-                        department_team_id=department_team_id,
-                        key=old_key
-                    )
-                    
-                    attr.key = new_key
-                    attr.display_name = refined_name.title()
-                    attr.data_type = data_type
-                    attr.inline_editable = inline_editable
-                    attr.save()
 
-                    FieldReference.objects.filter(
-                        model_name='Employee',
-                        field_name=old_key,
-                        path=f'employee__dynamic_attribute__{old_key}'
-                    ).update(
-                        field_name=new_key,
-                        display_name=refined_name.title(),
-                        path=f'employee__dynamic_attribute__{new_key}'
-                    )
+                    if new_key == old_key:
+                        attr = DynamicAttributeDefinition.objects.get(
+                            company_id=company_id,
+                            department_team_id=department_team_id,
+                            field_reference__model_name=DynamicAttribute._meta.object_name,
+                            field_reference__field_name=new_key
+                        )
+                        
+                        attr.data_type = data_type
+                        attr.inline_editable = inline_editable
+                        attr.save()
+                    
+                    else:
+                        existing_attr = DynamicAttributeDefinition.objects.filter(
+                            company_id=company_id,
+                            department_team_id=department_team_id,
+                            field_reference__model_name=DynamicAttribute._meta.object_name,
+                            field_reference__field_name=new_key
+                        )
+                        if existing_attr.exists():
+                            raise ValueError(f"Attribute '{new_key}' already exists for this department.")
+                        
+                        # existing_attr = FieldReference.objects.filter(
+                        #     model_name=DynamicAttribute._meta.object_name,
+                        #     field_name=new_key
+                        # ).exclude(key=old_key)
+                        # if existing_attr.exists():
+                        #     raise ValueError(f"Attribute '{new_key}' already exists for this department.")
+                        
+                        FieldReference.objects.filter(
+                            model_name=DynamicAttribute._meta.object_name,
+                            field_name=old_key,
+                            path=f'employee__dynamic_attribute__{old_key}'
+                        ).update(
+                            field_name=new_key,
+                            display_name=refined_name.title(),
+                            path=f'employee__dynamic_attribute__{new_key}'
+                        )
 
-                    Formula.objects.filter(
-                        fieldformula__department_team_id=department_team_id,
-                        target_model='Employee',
-                        target_field=f'dynamic_attribute__{old_key}'
-                    ).update(
-                        target_field=f'dynamic_attribute__{new_key}'
-                    )
+                        fields = [field.name for field in Employee._meta.fields]
+                        if new_key in fields and new_key != old_key:
+                            raise ValueError(f"Attribute '{new_key}' already exists as a permanent field.")
+                        
+                        attr = DynamicAttributeDefinition.objects.get(
+                            company_id=company_id,
+                            department_team_id=department_team_id,
+                            field_reference__model_name=DynamicAttribute._meta.object_name,
+                            field_reference__field_name=new_key
+                        )
+                        
+                        attr.data_type = data_type
+                        attr.inline_editable = inline_editable
+                        attr.save()
+
+                        Formula.objects.filter(
+                            fieldformula__department_team_id=department_team_id,
+                            target_model='Employee',
+                            target_field=f'dynamic_attribute__{old_key}'
+                        ).update(
+                            target_field=f'dynamic_attribute__{new_key}'
+                        )
 
                     return JsonResponse({'message': 'Dynamic Field Updated Successfully'})
             except DynamicAttributeDefinition.DoesNotExist:
@@ -1977,10 +2070,13 @@ class UpdateEmployeeView(View):
                     }
 
                     for attr, value in dynamic_attributes.items():
-                        key = attr.split('__', 1)[1]
-                        value = int(value) if value else None  # or other type casting
+                        field_name = attr.split('__', 1)[1]
+                        try:
+                            value = int(value) if value else None  # or other type casting
+                        except:
+                            value = value if value else None  # or other type casting
                         employee.set_dynamic_attribute(
-                            key=key,
+                            field_name=field_name,
                             value=value,
                         )
 
@@ -2003,10 +2099,13 @@ class UpdateEmployeeView(View):
                         employee_draft.save()
 
                         for attr, value in dynamic_attributes.items():
-                            key = attr.split('__', 1)[1]
-                            value = int(value) if value else None  # or other type casting
+                            field_name = attr.split('__', 1)[1]
+                            try:
+                                value = int(value) if value else None  # or other type casting
+                            except:
+                                value = value if value else None  # or other type casting
                             employee_draft.set_dynamic_attribute(
-                                key=key,
+                                field_name=field_name,
                                 value=value,
                             )
 
@@ -2115,6 +2214,7 @@ class GetFormulasView(View):
         if department_team_id:
             configurations_data = Configurations.objects.values('fuel_rate', 'bonus_constant_multiplier').first()
             formulas = FieldFormula.objects.filter(department_team_id=department_team_id).exclude(formula__target_model='IncrementDetailsSummary').select_related('formula')
+            print("formulas: ", formulas)
             ordered = topological_sort(formulas, company=Company.objects.all().first(), employee=None, department_team=DepartmentTeams.objects.filter(id=department_team_id).first())
 
             # Create a custom order using Case and When
@@ -2130,7 +2230,9 @@ class GetFormulasView(View):
 
             # Serialize the sorted queryset
             field_formulas_data = FieldFormulaSerializer(instance=formulas_sorted, many=True).data
-            print(field_formulas_data)
+            
+            for field_formula in field_formulas_data:
+                field_formula['formula']['formula_expression'] = replace_field_reference_ids_from_expression(field_formula['formula']['formula_expression'])
             # print("field_formulas_data:", field_formulas_data)
             return JsonResponse({'field_formulas_data': list(field_formulas_data), 'configurations_data': configurations_data})
         return JsonResponse({'field_formulas_data': []})
@@ -2193,8 +2295,8 @@ class GetDataView(View):
                         'remarks': employee.remarks or '',
                         'image': employee.image.url if employee.image else '',
                         'dynamic_attributes': [{
-                            'key': attr.definition.key,
-                            'display_name': attr.definition.display_name,
+                            'key': attr.definition.field_reference.field_name,
+                            'display_name': attr.definition.field_reference.display_name,
                             'value': attr.value,
                             'inline_editable': attr.definition.inline_editable,
                             'data_type': attr.definition.data_type
@@ -2327,9 +2429,18 @@ class FormulaListView(PermissionRequiredMixin, View):
 
     def get(self, request):
         formulas = Formula.objects.all().order_by('-id')  # latest first
+        modified_formulas = []  # This will hold modified expressions
+
+        for formula in formulas:
+            exp = replace_field_reference_ids_from_expression(formula.formula_expression)
+            modified_formulas.append({
+                "id": formula.id,
+                "formula_name": formula.formula_name,
+                "formula_expression": exp
+            })
         
         return render(request, self.template_name, {
-            'formulas': formulas,
+            'formulas': modified_formulas,
             'company_data': get_companies_and_department_teams(request.user)
         })
 
@@ -2351,6 +2462,7 @@ class CreateFormulaView(PermissionRequiredMixin, View):
         form = FormulaForm(request.POST)
         field_references = FieldReference.objects.all()
         if form.is_valid():
+            form.instance.formula_expression = replace_field_reference_models_and_fields_from_expression(form.cleaned_data["formula_expression"])
             form.save()
             messages.success(request, "Formula created successfully!")
             return redirect("view_formula")
@@ -2360,13 +2472,21 @@ class CreateFormulaView(PermissionRequiredMixin, View):
             'company_data': get_companies_and_department_teams(request.user)
         })
     
+    
 class EditFormulaView(PermissionRequiredMixin, View):
     permission_required = "user.change_formula"
     template_name = "update_formula.html"
 
     def get(self, request, pk):
         formula = get_object_or_404(Formula, pk=pk)
-        form = FormulaForm(instance=formula)
+        # Modify formula_expression for display only
+        modified_expression = replace_field_reference_ids_from_expression(formula.formula_expression)
+        
+        # Pass the modified value as initial during form instantiation
+        form = FormulaForm(instance=formula, initial={
+            'formula_expression': modified_expression
+        })
+
         field_references = FieldReference.objects.all()
         return render(request, self.template_name, {
             'form': form,
@@ -2380,6 +2500,7 @@ class EditFormulaView(PermissionRequiredMixin, View):
         form = FormulaForm(request.POST, instance=formula)
         field_references = FieldReference.objects.all()
         if form.is_valid():
+            form.instance.formula_expression = replace_field_reference_models_and_fields_from_expression(form.cleaned_data["formula_expression"])
             form.save()
             messages.success(request, "Formula updated successfully!")
             return redirect("view_formula")
@@ -2399,9 +2520,41 @@ class FieldFormulaListView(PermissionRequiredMixin, View):
     def get(self, request):
         company_data = get_companies_and_department_teams(request.user)
         field_formulas = FieldFormula.objects.all().order_by('company', 'department_team')
+        modified_field_formulas = []  # This will hold modified expressions
+
+        distinct_formulas = Formula.objects.all().distinct()
+        dist_formula_map = []
+        for dist_formula in distinct_formulas:
+            exp = replace_field_reference_ids_from_expression(dist_formula.formula_expression)
+            dist_formula_map.append({"id": dist_formula.id, "formula_expression": exp})
+        
+        print(dist_formula_map)
+
+        for field_formula in field_formulas:
+            # exp = replace_field_reference_ids_from_expression(field_formula.formula.formula_expression)
+            modified_field_formulas.append({
+                "id": field_formula.id,
+                "company": {
+                    "name": field_formula.company.name
+                },
+                "department_team": {
+                    "name": field_formula.department_team.name
+                },
+                "formula": {
+                    "target_model": field_formula.formula.target_model,
+                    "target_field": field_formula.formula.target_field,
+                    "formula_expression": next((f['formula_expression'] for f in dist_formula_map if f['id'] == field_formula.formula.id), None)
+                }
+            })
+
+            # <td>{{ ff.company.name|default:"-" }}</td>
+            # <td>{{ ff.department_team.name|default:"-" }}</td>
+            # <td>{{ ff.formula.target_model }}</td>
+            # <td>{{ ff.formula.target_field }}</td>
+            # <td>{{ ff.formula.formula_expression }}</td>
         field_references = FieldReference.objects.all()
         return render(request, self.template_name, {
-            'field_formulas': field_formulas,
+            'field_formulas': modified_field_formulas,
             'field_references': field_references,
             'company_data': company_data
         })
@@ -2506,15 +2659,18 @@ class GetModelFieldsView(View):
             return JsonResponse({"fields": []})
 
         # Base fields (non-relational)
-        fields = [f.name for f in model._meta.get_fields() if not f.is_relation]
+        fields = FieldReference.objects.filter(model_name=model_name).values_list("field_name", flat=True)
+        # fields = [{"name": f.name, "group_id": None} for f in model._meta.get_fields() if not f.is_relation]
 
-        # ➕ Add dynamic fields if applicable
-        if model.__name__ == "Employee":
-            dynamic_keys = DynamicAttributeDefinition.objects.values_list("key", flat=True).distinct()
-            fields += [f"dynamic_attribute__{key}" for key in dynamic_keys]
+        # # ➕ Add dynamic fields if applicable
+        # if model.__name__ == "Employee":
+        #     # dynamic_keys = DynamicAttributeDefinition.objects.values_list("key", "department_team", flat=True)
+        #     # fields += [f"dynamic_attribute__{key}" for key in dynamic_keys]
+        #     names_and_list = list(DynamicAttributeDefinition.objects.annotate(combined=Concat('department_team__name', Value(': dynamic_attribute__'), 'key')).values_list("combined", 'department_team_id'))
+        #     fields += [{"name": n_and_l[0], "group_id": n_and_l[1]} for n_and_l in names_and_list]
             # fields += [key for key in dynamic_keys]
 
-        return JsonResponse({"fields": fields})
+        return JsonResponse({"fields": list(fields)})
 
 
 
@@ -2579,6 +2735,7 @@ class SaveDraftView(View):
                 current_package_edited = {}
                 proposed_package_edited = {}
                 financial_impact_edited = {}
+                dynamic_attribute_edited = {}
 
                 # Detect changes
                 for tab, fields in tabs.items():
@@ -2587,7 +2744,7 @@ class SaveDraftView(View):
                         for field, value in fields.items():
                             if field.startswith("dynamic_attribute__"):
                                 print("DYNAMIC field, value: ", field, value)
-                                current_value = employee.dynamic_attribute.get(definition__key=field.split('__')[1])
+                                current_value = employee.dynamic_attribute.get(definition__field_reference__field_name=field.split('__')[1])
                                 print("dynamic attribute current_value: ", current_value)
                             else:
                                 print("permanent field, value: ", field, value)
@@ -2650,9 +2807,31 @@ class SaveDraftView(View):
                             if str(value) != str(current_value):
                                 has_changes = True
                                 financial_impact_edited[field] = True
+                    elif tab == 'DynamicAttribute':
+                        dynamic_attribute = DynamicAttribute.objects.filter(object_id=employee.id).first()
+                        print("dynamic_attribute", dynamic_attribute)
+                        for field, value in fields.items():
+                            # Assuming field is like 'dynamic_attribute__new_col'
+                            if 'dynamic_attribute__' in field:
+                                _, field_key = field.split('__')
+                            else:
+                                field_key = field  # fallback
+
+                            # Get the related field_reference
+                            field_reference = FieldReference.objects.get(model_name=DynamicAttribute._meta.object_name, field_name=field_key)
+                            definition = DynamicAttributeDefinition.objects.get(department_team_id=department_id, field_reference=field_reference)
+                            field_dynamic_attribute = DynamicAttribute.objects.filter(
+                                object_id=employee.id,
+                                definition=definition
+                            ).first()
+                            current_value = getattr(field_dynamic_attribute, 'value', None) if financial_impact else None
+                            print("current_value: ", current_value)
+                            if str(value) != str(current_value):
+                                has_changes = True
+                                dynamic_attribute_edited[field] = True
 
                 if not has_changes:
-                    print("HERE")
+                    print("NOT CHANGED")
                     continue
 
                 # Create or update EmployeeDraft
@@ -2703,7 +2882,7 @@ class SaveDraftView(View):
                         # Disconnect - there might be a lot of dynamic fields so we do not edit it now
                         post_save.disconnect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
                         attr, created = employee_draft.set_dynamic_attribute(
-                                            key=emp.definition.key,
+                                            field_name=emp.definition.field_reference.field_name,
                                             value=emp.value,
                                         )
                         # Reconnect
@@ -2712,7 +2891,7 @@ class SaveDraftView(View):
                 # Save employee fields
                 for field, value in tabs.get('Employee', {}).items():
                     print("field, value: ", field, value)
-                    if employee_draft_edited.get(field) and not field.startswith("dynamic_attribute__"):
+                    if employee_draft_edited.get(field):
                         if field.endswith('_id'):
                             setattr(employee_draft, field, int(value) if value else None)
                         elif isinstance(getattr(EmployeeDraft, field).field, models.BooleanField):
@@ -2747,10 +2926,10 @@ class SaveDraftView(View):
 
                     for field, value in tabs.get('Employee', {}).items():
                         if field.startswith("dynamic_attribute__"):
-                            key = field.split('__', 1)[1]
+                            field_name = field.split('__', 1)[1]
                             value = float(value) if value else None  # or other type casting
                             employee_draft.set_dynamic_attribute(
-                                key=key,
+                                field_name=field_name,
                                 value=value,
                             )
 
@@ -2846,6 +3025,29 @@ class SaveDraftView(View):
                     draft.edited_fields = financial_impact_edited
                     draft.save()
                     drafts_saved = True
+                
+                if dynamic_attribute_edited:
+                    print("if dynamic_attribute_edited")
+                    for field, value in tabs.get('DynamicAttribute', {}).items():
+                        if dynamic_attribute_edited.get(field):
+                             # Assuming field is like 'dynamic_attribute__new_col'
+                            if 'dynamic_attribute__' in field:
+                                _, field_key = field.split('__')
+                            else:
+                                field_key = field  # fallback
+
+                            # Get the related field_reference
+                            field_reference = FieldReference.objects.get(model_name=DynamicAttribute._meta.object_name, field_name=field_key)
+                            definition = DynamicAttributeDefinition.objects.get(department_team_id=department_id, field_reference=field_reference)
+                            field_dynamic_attribute = DynamicAttribute.objects.filter(
+                                object_id=employee_draft.id,
+                                definition=definition
+                            ).first()
+
+                            print("setting dynamic attr")
+                            setattr(field_dynamic_attribute, 'value', value)
+                    field_dynamic_attribute.save()
+                    drafts_saved = True
 
                 return_saved_message = True
             
@@ -2857,10 +3059,6 @@ class SaveDraftView(View):
             logger.error(f"Error in SaveDraftView for department {department_id}: {str(e)}", exc_info=True)
             return JsonResponse({'error': str(e)}, status=500)
 
-
-'''
-updated code for save final
-'''
 
 class SaveFinalView(View):
     @classmethod

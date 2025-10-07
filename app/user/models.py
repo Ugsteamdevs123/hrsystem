@@ -116,7 +116,6 @@ class DepartmentTeams(models.Model):
 
     history = AuditlogHistoryField()  # Required to store log
 
-
     def __str__(self):
         return self.name
 
@@ -168,6 +167,77 @@ class Formula(models.Model):
 
     def __str__(self):
         return f"{self.target_model}.{self.target_field}: {self.formula_name}"
+    
+
+class FieldFormula(models.Model):
+    formula = models.ForeignKey(Formula, on_delete=models.CASCADE, null=True, blank=True, default=None)
+    description = models.TextField(blank=True)  # Optional help text
+    # employee = models.ForeignKey(
+    #     Employee,
+    #     on_delete=models.CASCADE,
+    #     null=True,
+    #     blank=True,
+    #     help_text="Optional: Formula applies to this employee only."
+    # )
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        help_text="Required: Formula applies to this company."
+    )
+
+    department_team = models.ForeignKey(
+        DepartmentTeams,
+        on_delete=models.CASCADE,
+        help_text="Required if no employee: Formula applies to this department team."
+    )
+
+    history = AuditlogHistoryField()  # Required to store log
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(models.Q(department_team__isnull=False)),
+                name='department_required'
+            )
+        ]
+
+    def __str__(self):
+        scope = self.department_team or "Global"
+        return f"{self.formula} ({scope})"
+
+
+def default_department_team():
+    return DepartmentTeams.objects.all().values_list('id', flat=True).first()
+
+
+class FieldReference(models.Model):
+    MODEL_CHOICES = [
+        ('CurrentPackageDetails', 'Current Package Details'),
+        ('ProposedPackageDetails', 'Proposed Package Details'),
+        ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
+        ('IncrementDetailsSummary', 'Increment Details Summary'),
+        ('CurrentPackageDetailsDraft', 'Current Package Details Draft'),
+        ('ProposedPackageDetailsDraft', 'Proposed Package Details Draft'),
+        ('FinancialImpactPerMonthDraft', 'Financial Impact Per Month Draft'),
+        ('IncrementDetailsSummaryDraft', 'Increment Details Summary Draft'),
+        ('Employee', 'Employee'),
+        ('Configurations', 'Configurations')
+    ]
+
+    model_name = models.CharField(max_length=255, choices=MODEL_CHOICES)
+    field_name = models.CharField(max_length=255)
+    display_name = models.CharField(max_length=255)
+    path = models.CharField(max_length=255)
+    # group = models.ForeignKey(DepartmentTeams, default=default_department_team)
+
+    history = AuditlogHistoryField()  # Required to store log
+
+    class Meta:
+        unique_together = ('model_name', 'field_name')
+
+    def __str__(self):
+        return f"{self.model_name}: {self.display_name}"
     
 
 class Location(models.Model):
@@ -261,8 +331,10 @@ class VehicleModel(models.Model):
 
     def __str__(self):
         return f"{self.brand.name} {self.model_name} ({self.engine_cc})"
-    
 
+
+def default_field_reference():
+    return FieldReference.objects.all().values_list('id', flat=True).first()
 
 class DynamicAttributeDefinition(models.Model):
     DATA_TYPE_CHOICES = [
@@ -275,16 +347,17 @@ class DynamicAttributeDefinition(models.Model):
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     department_team = models.ForeignKey(DepartmentTeams, on_delete=models.CASCADE)
-    key = models.CharField(max_length=100)
-    display_name = models.CharField(max_length=255)  # Optional: for showing labels
+    field_reference = models.ForeignKey(FieldReference, on_delete=models.DO_NOTHING, default=default_field_reference)
+    # key = models.CharField(max_length=100)
+    # display_name = models.CharField(max_length=255)  # Optional: for showing labels
     data_type = models.CharField(max_length=10, choices=DATA_TYPE_CHOICES)
     inline_editable = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ('company', 'department_team', 'key')
+        unique_together = ('company', 'department_team', 'field_reference')
 
     def __str__(self):
-        return f"{self.key} - {self.data_type} ({self.department_team.name})"
+        return f"{self.field_reference.field_name} - {self.data_type} ({self.department_team.name})"
 
 
 class DynamicAttribute(models.Model):
@@ -308,11 +381,11 @@ class DynamicAttribute(models.Model):
                 return parse_date(self.value)
             return self.value  # default to string/text
         except Exception as e:
-            print(f"Type conversion failed for {self.key}: {e}")
+            print(f"Type conversion failed for {self.definition.field_reference.field_name}: {e}")
             return None
         
     def __str__(self):
-        return f"{self.definition.key} ({self.definition.data_type}): {self.value}"
+        return f"{self.definition.field_reference.field_name} ({self.definition.data_type}): {self.value}"
 
 
 class Employee(models.Model):
@@ -340,12 +413,17 @@ class Employee(models.Model):
 
     @property
     def dynamic_fields(self):
-        return {attr.definition.key: attr.value for attr in self.dynamic_attribute.all()}
+        return {attr.definition.field_reference.field_name: attr.value for attr in self.dynamic_attribute.all()}
     
-    def set_dynamic_attribute(self, key, value):
+    def set_dynamic_attribute(self, field_name, value):
         attr, created = DynamicAttribute.objects.update_or_create(
             content_type = ContentType.objects.get_for_model(self),
-            definition = DynamicAttributeDefinition.objects.get(company = self.company, department_team=self.department_team, key=key),
+            definition = DynamicAttributeDefinition.objects.get(company = self.company, 
+                                                                department_team=self.department_team, 
+                                                                field_reference=FieldReference.objects.get(model_name=DynamicAttribute._meta.object_name, 
+                                                                                                           field_name=field_name
+                                                                                                           )
+                                                                ),
             object_id = self.pk,
             # key = key,
             defaults={'value': str(value)}  # ✅ Correct place to update value
@@ -512,12 +590,17 @@ class EmployeeDraft(models.Model):
 
     @property
     def dynamic_fields(self):
-        return {attr.key: attr.value for attr in self.dynamic_attribute.all()}
+        return {attr.definition.field_reference.field_name: attr.value for attr in self.dynamic_attribute.all()}
     
-    def set_dynamic_attribute(self, key, value):
+    def set_dynamic_attribute(self, field_name, value):
         attr, created = DynamicAttribute.objects.update_or_create(
             content_type = ContentType.objects.get_for_model(self),
-            definition = DynamicAttributeDefinition.objects.get(company = self.company, department_team=self.department_team, key=key),
+            definition = DynamicAttributeDefinition.objects.get(company = self.company, 
+                                                                department_team=self.department_team, 
+                                                                field_reference=FieldReference.objects.get(model_name=DynamicAttribute._meta.object_name, 
+                                                                                                           field_name=field_name
+                                                                                                           )
+                                                                ),
             # key=key,
             object_id = self.pk,
             defaults={'value': str(value)}  # ✅ Correct place to update value
@@ -662,74 +745,6 @@ class Configurations(models.Model):
 
     def __str__(self):
         return f"{self.fuel_rate} - {self.as_of_date} - {self.bonus_constant_multiplier}"
-
-
-class FieldFormula(models.Model):
-    formula = models.ForeignKey(Formula, on_delete=models.CASCADE, null=True, blank=True, default=None)
-    description = models.TextField(blank=True)  # Optional help text
-    # employee = models.ForeignKey(
-    #     Employee,
-    #     on_delete=models.CASCADE,
-    #     null=True,
-    #     blank=True,
-    #     help_text="Optional: Formula applies to this employee only."
-    # )
-
-    company = models.ForeignKey(
-        Company,
-        on_delete=models.CASCADE,
-        help_text="Required: Formula applies to this company."
-    )
-
-    department_team = models.ForeignKey(
-        DepartmentTeams,
-        on_delete=models.CASCADE,
-        help_text="Required if no employee: Formula applies to this department team."
-    )
-
-    history = AuditlogHistoryField()  # Required to store log
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                check=(models.Q(department_team__isnull=False)),
-                name='department_required'
-            )
-        ]
-
-    def __str__(self):
-        scope = self.department_team or "Global"
-        return f"{self.formula} ({scope})"
-
-
-class FieldReference(models.Model):
-    MODEL_CHOICES = [
-        ('CurrentPackageDetails', 'Current Package Details'),
-        ('ProposedPackageDetails', 'Proposed Package Details'),
-        ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
-        ('IncrementDetailsSummary', 'Increment Details Summary'),
-        ('CurrentPackageDetailsDraft', 'Current Package Details Draft'),
-        ('ProposedPackageDetailsDraft', 'Proposed Package Details Draft'),
-        ('FinancialImpactPerMonthDraft', 'Financial Impact Per Month Draft'),
-        ('IncrementDetailsSummaryDraft', 'Increment Details Summary Draft'),
-        ('Employee', 'Employee'),
-        ('Configurations', 'Configurations')
-    ]
-
-    model_name = models.CharField(max_length=255, choices=MODEL_CHOICES)
-    field_name = models.CharField(max_length=255)
-    display_name = models.CharField(max_length=255)
-    path = models.CharField(max_length=255)
-
-    history = AuditlogHistoryField()  # Required to store log
-
-    class Meta:
-        unique_together = ('model_name', 'field_name')
-
-    def __str__(self):
-        return f"{self.model_name}: {self.display_name}"
-
-
 
 
 
