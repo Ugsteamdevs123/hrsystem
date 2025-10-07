@@ -43,7 +43,7 @@
                         <th colspan="8" class="group-header non-sticky-header financial-impact-color">Financial Impact</th>
                         <!-- Dynamic Attributes group header -->
                         {% if employees.0.dynamic_attributes|length > 0 %}
-                            <th colspan="{{ employees.0.dynamic_attributes|length }}" class="group-header non-sticky-header dynamic-attributes-color">Dynamic Attributes</th>
+                            <th colspan="{{ employees.0.dynamic_attributes|length }}" class="group-header non-sticky-header dynamic-attributes-color">Dynamic Columns</th>
                         {% endif %}
                     </tr>
                     <tr>
@@ -87,7 +87,7 @@
                         {% for attr in employees.0.dynamic_attributes %}
                             <th class="group-header non-sticky-header dynamic-attributes-color">
                                 {{ attr.display_name }}
-                                <button class="edit-dynamic-btn" data-key="{{ attr.key }}" data-display-name="{{ attr.display_name }}" data-type="{{ attr.data_type }}" data-editable="{{ attr.inline_editable }}" title="Edit Dynamic Attribute">✎</button>
+                                <button class="edit-dynamic-btn" data-key="{{ attr.key }}" data-display-name="{{ attr.display_name }}" data-type="{{ attr.data_type }}" data-editable="{{ attr.inline_editable }}" title="Edit Column">✎</button>
                             </th>
                         {% endfor %}
                     </tr>
@@ -165,35 +165,44 @@
                 </tbody>
             </table>
             <div class="btn-add-dynamic-backgorund">
-                <button type="button" class="form-btn btn-add-dynamic" id="addDynamicAttributeBtn" title="Add Dynamic Attribute">+</button>
+                <button type="button" class="form-btn btn-add-dynamic" id="addDynamicAttributeBtn" title="Add New Column">+</button>
             </div>
         </div>
 
         <!-- Add Dynamic Attribute Modal -->
         <div id="addDynamicAttributeModal" class="modal" style="display: none;">
             <div class="modal-content">
-                <h3>Add New Dynamic Attribute</h3>
+                <h3>Add New Column</h3>
                 <form id="addDynamicAttributeForm">
                     <input type="hidden" name="company_id" value="{{ department.company.id }}">
                     <input type="hidden" name="department_team_id" value="{{ department_id }}">
                     <div class="form-group">
-                        <label for="attribute_name">Attribute Name:</label>
-                        <input type="text" id="attribute_name" name="attribute_name" required>
+                        <label for="attribute_mode">Column Creation Mode:</label>
+                        <select id="attribute_mode" name="attribute_mode" required onchange="toggleAttributeMode()">
+                            <option value="new">Create New Column</option>
+                            <option value="existing">Select Existing Column (from other groups)</option>
+                        </select>
                     </div>
-                    <div class="form-group">
-                        <label for="data_type">Data Type:</label>
+                    <div id="new_attribute_group" class="form-group">
+                        <label for="attribute_name">Column Name:</label>
+                        <input type="text" id="attribute_name" name="attribute_name" required>
+                        <label for="data_type" class="form-elements">Data Type:</label>
                         <select id="data_type" name="data_type" required>
                             <option value="text">Text</option>
                             <option value="number">Number</option>
                             <option value="date">Date</option>
                             <option value="boolean">Boolean</option>
                         </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="inline_editable">Inline Editable:</label>
+                        <label for="inline_editable" class="form-elements">Inline Editable:</label>
                         <select id="inline_editable" name="inline_editable" required>
                             <option value="true">Yes</option>
                             <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div id="existing_attribute_group" class="form-group" style="display: none;">
+                        <label for="existing_field_reference_id">Select Existing Column:</label>
+                        <select id="existing_field_reference_id" name="existing_field_reference_id">
+                            <option value="">Loading...</option>
                         </select>
                     </div>
                     <div class="button-group">
@@ -207,13 +216,13 @@
         <!-- Edit Dynamic Attribute Modal -->
         <div id="editDynamicAttributeModal" class="modal" style="display: none;">
             <div class="modal-content">
-                <h3>Edit Dynamic Attribute</h3>
+                <h3>Edit Column</h3>
                 <form id="editDynamicAttributeForm">
                     <input type="hidden" name="key" id="edit_attribute_key">
                     <input type="hidden" name="company_id" value="{{ department.company.id }}">
                     <input type="hidden" name="department_team_id" value="{{ department_id }}">
                     <div class="form-group">
-                        <label for="edit_attribute_name">Attribute Name:</label>
+                        <label for="edit_attribute_name">Column Name:</label>
                         <input type="text" id="edit_attribute_name" name="attribute_name" required>
                     </div>
                     <div class="form-group">
@@ -441,6 +450,9 @@
             border-radius: 4px;
             font-size: 14px;
         }
+        .form-elements {
+            margin-top: 15px;
+        }
         .editable select, .editable input, .editable textarea {
 							
             width: 100%;
@@ -513,6 +525,55 @@
     <script>
     const editedCells = {};
     const draftData = {{ draft_data|safe }};
+
+    // Toggle between new and existing attribute fields
+    function toggleAttributeMode() {
+        const mode = document.getElementById('attribute_mode').value;
+        const newGroup = document.getElementById('new_attribute_group');
+        const existingGroup = document.getElementById('existing_attribute_group');
+        const existingSelect = document.getElementById('existing_field_reference_id');
+        const attributeName = document.getElementById('attribute_name');
+        const dataType = document.getElementById('data_type');
+        const inlineEditable = document.getElementById('inline_editable');
+
+        if (mode === 'existing') {
+            newGroup.style.display = 'none';
+            existingGroup.style.display = 'block';
+            existingSelect.required = true;
+            attributeName.required = false;
+            dataType.required = false;
+            inlineEditable.required = false;
+        } else {
+            newGroup.style.display = 'block';
+            existingGroup.style.display = 'none';
+            existingSelect.required = false;
+            attributeName.required = true;
+            dataType.required = true;
+            inlineEditable.required = true;
+        }
+    }
+
+    // Fetch existing dynamic attributes from other departments
+    async function fetchExistingDynamicAttributes() {
+        const select = document.getElementById('existing_field_reference_id');
+        select.innerHTML = '<option value="">Loading...</option>';
+        try {
+            const res = await fetchJSON(`/payroll/get-dynamic-attributes/?company_id={{ department.company.id }}&department_team_id={{ department_id }}`);
+            select.innerHTML = '<option value="">Select an attribute</option>';
+            res.forEach(attr => {
+                const option = document.createElement('option');
+                option.value = attr.field_reference_id;
+                option.textContent = `${attr.display_name} (${attr.key}) - Type: ${attr.data_type}, Editable: ${attr.inline_editable ? 'Yes' : 'No'}`;
+                select.appendChild(option);
+            });
+            if (res.length === 0) {
+                select.innerHTML = '<option value="">No existing attributes available</option>';
+            }
+        } catch (e) {
+            showSnackbar('Failed to load existing dynamic columns', '#dc3545');
+            select.innerHTML = '<option value="">Error loading columns</option>';
+        }
+    }
 
     async function fetchJSON(url, opts = {}, timeoutMs = 5000) {
         const controller = new AbortController();
@@ -943,6 +1004,8 @@
         // Add Dynamic Attribute
         document.getElementById('addDynamicAttributeBtn').addEventListener('click', () => {
             document.getElementById('addDynamicAttributeModal').style.display = 'flex';
+            fetchExistingDynamicAttributes();
+            toggleAttributeMode(); // Default to 'new' mode
         });
 
         document.getElementById('addDynamicAttributeForm').addEventListener('submit', async (e) => {
@@ -965,11 +1028,11 @@
                 });
                 const result = await res.json();
                 if (res.ok) {
-                    showSnackbar('Dynamic attribute added successfully', '#28a745');
+                    showSnackbar('New Column added successfully', '#28a745');
                     showSpinner();
                     setTimeout(() => window.location.reload(), 1000); // Reload to reflect new column
                 } else {
-                    showSnackbar(result.error || 'Failed to add dynamic attribute', '#dc3545');
+                    showSnackbar(result.error || 'Failed to add new column', '#dc3545');
                 }
             } catch (e) {
                 showSnackbar(`Error: ${e.message}`, '#dc3545');
@@ -1011,11 +1074,11 @@
                 });
                 const result = await res.json();
                 if (res.ok) {
-                    showSnackbar('Dynamic attribute updated successfully', '#28a745');
+                    showSnackbar('Column updated successfully', '#28a745');
                     showSpinner();
                     setTimeout(() => window.location.reload(), 1000); // Reload to reflect changes
                 } else {
-                    showSnackbar(result.error || 'Failed to update dynamic attribute', '#dc3545');
+                    showSnackbar(result.error || 'Failed to update column', '#dc3545');
                 }
             } catch (e) {
                 showSnackbar(`Error: ${e.message}`, '#dc3545');

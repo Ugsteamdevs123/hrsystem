@@ -1331,6 +1331,44 @@ class DepartmentTableView(View):
 
 
 # For dept team crud
+from django.views import View
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from .models import DynamicAttributeDefinition, FieldReference
+
+@method_decorator(login_required, name='dispatch')
+class GetDynamicAttributesView(View):
+    def get(self, request):
+        company_id = request.GET.get('company_id')
+        department_team_id = request.GET.get('department_team_id')  # Optional: exclude current dept
+
+        if not company_id:
+            return JsonResponse({'error': 'Company ID is required'}, status=400)
+
+        definitions = DynamicAttributeDefinition.objects.filter(company_id=company_id)
+        if department_team_id:
+            definitions = definitions.exclude(department_team_id=department_team_id)
+
+        unique_attrs = {}
+        for defn in definitions:
+            fr = defn.field_reference
+            fr_id = fr.id
+            if fr_id not in unique_attrs:
+                unique_attrs[fr_id] = {
+                    'field_reference_id': fr.id,
+                    'key': fr.field_name,
+                    'display_name': fr.display_name,
+                    'data_type': defn.data_type,
+                    'inline_editable': defn.inline_editable,
+                }
+            # Optional: Check consistency
+            # elif unique_attrs[fr_id]['data_type'] != defn.data_type:
+            #     return JsonResponse({'error': 'Inconsistent data types for shared attribute'}, status=400)
+
+        return JsonResponse(list(unique_attrs.values()), safe=False)
+    
+    
 class CreateDynamicAttributeView(View):
     @classmethod
     def as_view(cls, **initkwargs):
@@ -1341,94 +1379,121 @@ class CreateDynamicAttributeView(View):
         return view
 
     def post(self, request):
-        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 with transaction.atomic():
                     company_id = request.POST.get('company_id')
                     department_team_id = request.POST.get('department_team_id')
-                    raw_name = request.POST.get('attribute_name')
-                    data_type = request.POST.get('data_type')
-                    inline_editable = request.POST.get('inline_editable') == 'true'
+                    existing_field_reference_id = request.POST.get('existing_field_reference_id')
 
-                    refined_name, attribute_name = normalize_field_name(raw_name)
-                    
-                    fields = [field.name for field in Employee._meta.fields]
+                    if existing_field_reference_id:
+                        # Handle assigning existing attribute
+                        try:
+                            fr_id = int(existing_field_reference_id)
+                            fr = FieldReference.objects.get(id=fr_id)
+                        except (ValueError, FieldReference.DoesNotExist):
+                            return JsonResponse({'error': 'Invalid attribute selected'}, status=400)
 
-                    # Check against permanent fields
-                    if attribute_name in fields:
-                        raise ValueError(f"Attribute '{attribute_name}' already exists for this department.")
-                    
-                    field_reference = FieldReference.objects.filter(model_name=DynamicAttribute._meta.object_name, field_name=attribute_name)
-                    if not field_reference.exists():
-                        field_reference = FieldReference.objects.create(model_name=DynamicAttribute._meta.object_name, 
-                                                      field_name=attribute_name, 
-                                                      display_name=refined_name.title(), 
-                                                      path=f'employee__dynamic_attribute__{attribute_name}'
-                                                      )
-                        
-                        attr = DynamicAttributeDefinition.objects.create(
-                            company_id=company_id,
-                            department_team_id=department_team_id,
-                            field_reference=field_reference,
-                            data_type=data_type,
-                            inline_editable=inline_editable,
-                        )
-                    
-                    else:
-                        # Check if attribute definition already exists
+                        if not DynamicAttributeDefinition.objects.filter(
+                            company_id=company_id, field_reference=fr
+                        ).exists():
+                            return JsonResponse({'error': 'Attribute not available for this company'}, status=400)
+
+                        existing_def = DynamicAttributeDefinition.objects.filter(
+                            company_id=company_id, field_reference=fr
+                        ).first()
+                        data_type = existing_def.data_type
+                        inline_editable = existing_def.inline_editable
+
                         if DynamicAttributeDefinition.objects.filter(
                             company_id=company_id,
                             department_team_id=department_team_id,
-                            field_reference=field_reference.first()
+                            field_reference=fr
                         ).exists():
-                            raise ValueError(f"Attribute '{attribute_name}' already exists for this department.")
-                        
-                        print(company_id, "department_team_id: ", department_team_id, "attribute_name: ", attribute_name, "data_type: ", data_type, "refined_name: ", refined_name, "inline_editable: ", inline_editable)
+                            return JsonResponse({'error': 'Attribute already exists for this department team'}, status=400)
+
                         attr = DynamicAttributeDefinition.objects.create(
                             company_id=company_id,
                             department_team_id=department_team_id,
-                            field_reference=field_reference.first(),
+                            field_reference=fr,
                             data_type=data_type,
                             inline_editable=inline_editable,
                         )
-                    
-                    # company = Company.objects.get(id=company_id, id__in=hr_assigned_companies.objects.filter(hr=request.user).values('company'))
+                    else:
+                        # Original logic for new attribute
+                        raw_name = request.POST.get('attribute_name')
+                        data_type = request.POST.get('data_type')
+                        inline_editable = request.POST.get('inline_editable') == 'true'
+
+                        refined_name, attribute_name = normalize_field_name(raw_name)
+
+                        fields = [field.name for field in Employee._meta.fields]
+                        if attribute_name in fields:
+                            raise ValueError(f"Attribute '{attribute_name}' already exists for this department.")
+
+                        field_reference = FieldReference.objects.filter(
+                            model_name=DynamicAttribute._meta.object_name, field_name=attribute_name
+                        )
+                        if not field_reference.exists():
+                            field_reference = FieldReference.objects.create(
+                                model_name=DynamicAttribute._meta.object_name,
+                                field_name=attribute_name,
+                                display_name=refined_name.title(),
+                                path=f'employee__dynamic_attribute__{attribute_name}'
+                            )
+                            attr = DynamicAttributeDefinition.objects.create(
+                                company_id=company_id,
+                                department_team_id=department_team_id,
+                                field_reference=field_reference,
+                                data_type=data_type,
+                                inline_editable=inline_editable,
+                            )
+                        else:
+                            fr = field_reference.first()
+                            if DynamicAttributeDefinition.objects.filter(
+                                company_id=company_id,
+                                department_team_id=department_team_id,
+                                field_reference=fr
+                            ).exists():
+                                raise ValueError(f"Attribute '{attribute_name}' already exists for this department.")
+
+                            attr = DynamicAttributeDefinition.objects.create(
+                                company_id=company_id,
+                                department_team_id=department_team_id,
+                                field_reference=fr,
+                                data_type=data_type,
+                                inline_editable=inline_editable,
+                            )
+
+                    # Bulk create DynamicAttribute instances (same for both cases)
                     employees = Employee.objects.filter(company_id=company_id, department_team_id=department_team_id)
                     employees_draft = EmployeeDraft.objects.filter(company_id=company_id, department_team_id=department_team_id)
-                    #alternatively:
-                    # employees = EmployeeDraft.objects.filter(employe_id__in=employees.values_list('id', flat=True))
+
                     if employees.exists():
                         content_type = ContentType.objects.get_for_model(Employee)
-
                         DynamicAttribute.objects.bulk_create([
                             DynamicAttribute(
                                 content_type=content_type,
                                 object_id=emp.pk,
-                                definition = attr,
-                                # key=attribute_name,
+                                definition=attr,
                             ) for emp in employees
                         ])
-                    
+
                     if employees_draft.exists():
                         content_type = ContentType.objects.get_for_model(EmployeeDraft)
-
                         DynamicAttribute.objects.bulk_create([
                             DynamicAttribute(
                                 content_type=content_type,
                                 object_id=emp_draft.pk,
-                                definition = attr,
-                                # key=attribute_name,
+                                definition=attr,
                             ) for emp_draft in employees_draft
                         ])
 
                     return JsonResponse({'message': 'Dynamic Field Created Successfully'})
             except ValueError as e:
-                print(e)
                 return JsonResponse({'error': str(e)}, status=400)
             except Exception as e:
-                print(e)
-                return JsonResponse({'error': e}, status=400)
+                return JsonResponse({'error': str(e)}, status=400)
         return JsonResponse({'error': 'Invalid request'}, status=400)
     
 
