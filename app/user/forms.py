@@ -16,7 +16,6 @@ from .models import (
     Formula, 
     FieldFormula,
     FieldReference,
-    Employee,
     DepartmentTeams,
     Configurations
 )
@@ -47,6 +46,7 @@ class FormulaForm(forms.ModelForm):
                     ('ProposedPackageDetails', 'Proposed Package Details'),
                     ('FinancialImpactPerMonth', 'Financial Impact Per Month'),
                     ('IncrementDetailsSummary', 'Increment Details Summary'),
+                    ('DynamicAttribute', 'Dynamic Attribute'),
                 ],
                 attrs={'required': 'true'}
             ),

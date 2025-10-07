@@ -5,7 +5,7 @@ from django.db import transaction
 
 LOCAL_APPS = ['user']
                 
-def populate_default_formulas(sender, **kwargs):
+def populate_default_data(sender, **kwargs):
     from .models import Formula, DepartmentTeams, FieldFormula, Company, FieldReference
     from django.apps import apps
 
@@ -13,7 +13,7 @@ def populate_default_formulas(sender, **kwargs):
         all_models = apps.get_models()
 
         models = ["CurrentPackageDetails", "ProposedPackageDetails", "FinancialImpactPerMonth", "IncrementDetailsSummary", "Employee", "Configurations"]
-        not_allowed_fields = ["mobile_provided", "vehicle", "resign", "approved", "is_deleted", "is_intern", "auto_mark_eligibility"]
+        not_allowed_fields = ["id", "mobile_provided", "vehicle", "resign", "approved", "is_deleted", "is_intern", "auto_mark_eligibility"]
         allowed_field_types = ["IntegerField", "DecimalField", "BooleanField", "FloatField"]
         for model in all_models:
 
@@ -191,4 +191,4 @@ class UserConfig(AppConfig):
     def ready(self):
         import user.signals
         # Connect the populate_default_formulas function to the post_migrate signal
-        post_migrate.connect(populate_default_formulas, sender=self)
+        post_migrate.connect(populate_default_data, sender=self)

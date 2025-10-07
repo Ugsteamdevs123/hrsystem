@@ -17,11 +17,13 @@ from .models import (
     ProposedPackageDetailsDraft, 
     FinancialImpactPerMonthDraft, 
     IncrementDetailsSummaryDraft,
-    FieldReference
+    FieldReference,
+    DynamicAttribute
 )
 
 from django.apps import apps
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Value
+from django.db.models.functions import Concat
 
 
 def normalize_field_name(name):
@@ -138,7 +140,7 @@ def iter_allowed_models():
             yield app_label, m
 
 def get_model_by_name(model_name: str):
-    print("model_name: ", model_name)
+    # print("model_name: ", model_name)
     for app_label, m in iter_allowed_models():
         if m.__name__ == model_name:
             return app_label, m
@@ -321,14 +323,46 @@ def list_fields(model):
 # #         print("obj: ", obj)
 # #     return obj
 
+
+def replace_with_model_and_field(match):
+    func = match.group(1) or ''
+    inner = FieldReference.objects.annotate(combined=Concat('model_name', Value(': '), 'display_name')).filter(id=int(match.group(2))).values_list('combined', flat=True).first()
+    return f"{func}[{inner}]" if func else f"[{inner}]"
+
+
+def replace_field_reference_ids_from_expression(expression):
+    """Extract field references ids with optional aggregates like SUM[12]."""
+    # Match optional function and bracketed number
+    pattern = r'(\b(?:SUM|AVG|COUNT))?\[(\d+)\]'
+    result = re.sub(pattern, replace_with_model_and_field, expression)
+    return result
+
+
+def replace_with_id(match):
+    func = match.group(1)   # "SUM", "AVG", "COUNT", or empty
+    value = str(FieldReference.objects.annotate(combined=Concat('model_name', Value(': '), 'display_name')).filter(combined=match.group(2)).values_list('id', flat=True).first())
+    return f"{func}[{value}]" if func else f"[{value}]"
+    # return str(FieldReference.objects.annotate(combined=Concat('model_name', Value(': '), 'display_name')).filter(combined=match.group(2)).values_list('id', flat=True).first())
+
+
+def replace_field_reference_models_and_fields_from_expression(expression):
+    """Extract field references with optional aggregates like SUM[Model: Field]."""
+    pattern = r'(\b(?:SUM|AVG|COUNT))?\[(.*?)\]'
+    result = re.sub(pattern, replace_with_id, expression)
+    return result
+
+
 def get_variables_from_expression(expression):
     """Extract field references with optional aggregates like SUM[Model: Field]."""
+    expression = replace_field_reference_ids_from_expression(expression) # converts ids to Model: display name and return full expression
+    # print("expression: ", expression)
     pattern = r'(SUM|AVG|COUNT)?\[([^:]+): ([^\]]+)\]'
     matches = re.findall(pattern, expression)
     # print(f"Expression: {expression}, Matches: {matches}")
     if not matches:
         raise ValueError(f"No valid field references found in expression: {expression}")
-    return [(match[0] or None, match[1], match[2]) for match in matches]
+    # print(matches)
+    return [(match[0] or None, match[1], match[2], expression) for match in matches]
 
 def get_field_path(model_name, display_name):
     """Map display name to Django path, supporting draft models."""
@@ -336,14 +370,27 @@ def get_field_path(model_name, display_name):
         ref = FieldReference.objects.get(model_name=model_name, display_name=display_name)
         return ref.path
     except FieldReference.DoesNotExist:
-        # Try with draft model
-        if not model_name.endswith('Draft'):
-            try:
-                ref = FieldReference.objects.get(model_name=f"{model_name}Draft", display_name=display_name)
-                return ref.path
-            except FieldReference.DoesNotExist:
-                raise ValueError(f"Field {model_name} or {model_name}Draft: {display_name} not found")
+        # # Try with draft model
+        # if not model_name.endswith('Draft'):
+        #     try:
+        #         ref = FieldReference.objects.get(model_name=f"{model_name}Draft", display_name=display_name)
+        #         return ref.path
+        #     except FieldReference.DoesNotExist:
+        #         raise ValueError(f"Field {model_name} or {model_name}Draft: {display_name} not found")
         raise ValueError(f"Field {model_name}: {display_name} not found")
+
+def get_dynamic_attr_id(instance, field_name):
+    if instance._meta.object_name == 'DynamicAttribute':
+        return instance.id
+    elif instance._meta.object_name in ['Employee', 'EmployeeDraft']:
+        return instance.dynamic_attribute.filter(definition__field_reference__field_name=field_name).values_list('id', flat=True).first()
+    elif instance._meta.object_name.endswith('Draft'):
+        return instance.employee_draft.dynamic_attribute.filter(definition__field_reference__field_name=field_name).values_list('id', flat=True).first()
+    else:
+        return instance.employee.dynamic_attribute.filter(definition__field_reference__field_name=field_name).values_list('id', flat=True).first()
+
+def get_dynamic_attribute_value(instance, key_to_find):
+    return DynamicAttribute.objects.filter(object_id=instance.object_id, definition__field_reference__field_name=key_to_find).first()
 
 def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employee_draft=None):
     """Fetch value via Django-style path, applying aggregate if specified, prioritizing draft tables."""
@@ -358,9 +405,9 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
         parts[-2] = "employeedraft"
     elif parts[-2] not in ['configurations', 'dynamic_attribute']:
         parts[-2] = parts[-2]+'draft' if is_draft else parts[-2]
-    elif parts[-2] == 'dynamic_attribute' and instance._meta.object_name in ['EmployeeDraft', 'Employee']:
+    elif parts[-2] == 'dynamic_attribute' and instance._meta.object_name == 'DynamicAttribute':
         parts.pop(0)
-    print("parts: ", parts)
+    # print("parts: ", parts)
     # print("instance: ", instance._meta.object_name)
     model_mapping = {
         'employee': 'Employee',
@@ -409,7 +456,10 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
         # records are not draft and their values need to be fetched from original tables.
         print("model_name: ", model_name, "instance._meta.object_name: ", instance._meta.object_name)
         if is_draft and target_model_name.endswith('Draft'):
-            if instance._meta.object_name == "IncrementDetailsSummaryDraft" and (target_model_name=="IncrementDetailsSummaryDraft" or target_model_name=='EmployeeDraft'):
+            if instance._meta.object_name == "DynamicAttribute":
+                filter_kwargs = {"company": instance.definition.company, "department_team": instance.definition.department_team}
+                filter_kwargs_non_draft = {"company": instance.definition.company, "department_team": instance.definition.department_team}
+            elif instance._meta.object_name == "IncrementDetailsSummaryDraft" and (target_model_name=="IncrementDetailsSummaryDraft" or target_model_name=='EmployeeDraft'):
                 filter_kwargs = {"company": instance.company, "department_team": instance.department_team}
                 filter_kwargs_non_draft = {"company": instance.company, "department_team": instance.department_team}
             elif instance._meta.object_name != "IncrementDetailsSummaryDraft" and (target_model_name=="IncrementDetailsSummaryDraft" or target_model_name=='EmployeeDraft'):
@@ -425,7 +475,9 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
             # print("filter_kwargs_non_draft draft (for non draft): ", filter_kwargs_non_draft)
         else:
             if target_model_name!='configurations':
-                if instance._meta.object_name == "IncrementDetailsSummary" and (model_name=="IncrementDetailsSummary" or target_model_name=="Employee"):
+                if instance._meta.object_name == "DynamicAttribute":
+                    filter_kwargs = {"company": instance.definition.company, "department_team": instance.definition.department_team}
+                elif instance._meta.object_name == "IncrementDetailsSummary" and (model_name=="IncrementDetailsSummary" or target_model_name=="Employee"):
                     filter_kwargs = {"company": instance.company, "department_team": instance.department_team}
                 elif instance._meta.object_name != "IncrementDetailsSummary" and (model_name=="IncrementDetailsSummary" or target_model_name=="Employee"):
                     filter_kwargs = {"company": instance.employee.company, "department_team": instance.employee.department_team}
@@ -462,6 +514,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                         filter_kwargs["employee_draft__eligible_for_increment"] = True
                         filter_kwargs["employee_draft__resign"] = False
                         draft_rows = Model.objects.filter(**filter_kwargs).values('employee_draft__employee_id', field_name)
+                        # print("draft_rows: ", draft_rows)
                     
                     # draft_rows = DraftModel.objects.filter(
                     #     employee_draft__employee__company=instance.employee_draft.employee.company
@@ -478,10 +531,14 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                                 draft_employee_ids.add(row['employee_id'])
                             else:
                                 draft_employee_ids.add(row['employee_draft__employee_id'])
-
+                    # print("target_model_name: ", target_model_name)
+                    # print("draft_employee_ids: ", draft_employee_ids)
+                    # print("field_name: ", field_name)
+                    # print("aggrgate: ", aggregate_type)
                     # Get non-draft rows for employees without drafts (from original non-draft tables)
                     non_draft_model = apps.get_model('user', target_model_name[:-5]) # target_model_name ends with 'Draft' in this case so we slice it to remove 'Draft'
-                    if Model._meta.model_name == 'employeedraft':
+                    # print("non_draft_model: ", non_draft_model)
+                    if Model._meta.model_name in ['employeedraft', 'incrementdetailssummarydraft']:
                         # non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_id__in=draft_employee_ids).values(field_name)
                         filter_kwargs_non_draft["eligible_for_increment"] = True
                         filter_kwargs_non_draft["resign"] = False
@@ -490,6 +547,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                         # non_draft_employees = Model.objects.filter(**filter_kwargs).exclude(employee_draft__employee_id__in=draft_employee_ids).values(field_name)
                         filter_kwargs_non_draft["employee__eligible_for_increment"] = True
                         filter_kwargs_non_draft["employee__resign"] = False
+                        print("filter_kwargs_non_draft: ", filter_kwargs_non_draft)
                         non_draft_employees = non_draft_model.objects.filter(**filter_kwargs_non_draft).exclude(employee_id__in=draft_employee_ids).values(field_name)
                     # non_draft_employees = Model.objects.filter(
                     #     employee__company=instance.employee_draft.employee.company
@@ -497,10 +555,11 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                     #     employee__department_team=instance.employee_draft.employee.department_team
                     #     if hasattr(instance, 'employee_draft') else instance.employee.department_team
                     # ).exclude(employee_id__in=draft_employee_ids).values(field_name)
-                    for row in non_draft_employees:
-                        value = row[field_name]
-                        if value is not None:
-                            draft_values.append(float(value))
+                    if non_draft_employees:
+                        for row in non_draft_employees:
+                            value = row[field_name]
+                            if value is not None:
+                                draft_values.append(float(value))
 
                 else:
                     if target_model_name=="Employee":
@@ -567,6 +626,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
             previous_part = ''
             i = 0
 
+            print("parts: ", parts)
             while i < len(parts):
                 part = parts[i]
 
@@ -581,7 +641,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                     continue
 
                 # Handle dynamic_attribute + next key in parts
-                if part == 'dynamic_attribute':
+                if part == 'dynamic_attribute' and instance._meta.object_name != 'DynamicAttribute':
                     dynamic_attrs = getattr(obj, part, None)
                     key_to_find = None
 
@@ -593,12 +653,31 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                     if dynamic_attrs is not None:
                         attr = None
                         if key_to_find:
-                            attr = dynamic_attrs.filter(definition__key=key_to_find).first()
+                            print("get_dynamic_attr_id(instance, key_to_find): ", get_dynamic_attr_id(instance, key_to_find))
+                            attr = dynamic_attrs.filter(definition__field_reference__field_name=key_to_find, id=get_dynamic_attr_id(instance, key_to_find)).first()
                         if not attr:
                             attr = dynamic_attrs.last()
                         obj = (attr.value, attr.definition.data_type) if attr else None
                     else:
                         obj = None
+
+                    i += 1
+                    continue
+                
+                # Handle dynamic_attribute + next key in parts
+                if part == 'dynamic_attribute' and instance._meta.object_name == 'DynamicAttribute':
+                    key_to_find = None
+
+                    # Check if next part exists as key
+                    if i + 1 < len(parts):
+                        key_to_find = parts[i + 1]
+                        i += 1  # Consume the key part as well
+                        
+                    attr = None
+                    if key_to_find:
+                        attr = get_dynamic_attribute_value(instance, key_to_find)
+
+                    obj = (attr.value, attr.definition.data_type) if attr else None
 
                     i += 1
                     continue
@@ -623,6 +702,17 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
     else:
         return getattr(instance, path)
 
+def verify_value(value):
+    if isinstance(value, tuple):
+        data_type = value[1]
+        if data_type == 'number':
+            value = float(value[0])
+        else:
+            value = value[0]
+    elif isinstance(value, Decimal):
+        value = float(value)
+    return value
+
 def sanitize_expression(expression, context):
     """Sanitize expression by replacing field references with safe variable names."""
     mapping = {}
@@ -642,8 +732,8 @@ def evaluate_formula(instance, expression, target_model, is_draft=False, employe
         'FinancialImpactPerMonth': 'FinancialImpactPerMonthDraft',
         'IncrementDetailsSummary': 'IncrementDetailsSummaryDraft'
     }
-    # print(instance)
-    for aggregate_type, model_name, display_name in get_variables_from_expression(expression):
+    # print("instance: ", instance)
+    for aggregate_type, model_name, display_name, exp in get_variables_from_expression(expression):
         # target_model_name = model_mapping.get(model_name, model_name) if is_draft else model_name
         target_model_name = model_name
         path = get_field_path(target_model_name, display_name)
@@ -656,21 +746,16 @@ def evaluate_formula(instance, expression, target_model, is_draft=False, employe
             employee_draft=employee_draft
         )
         
-        if isinstance(value, tuple):
-            data_type = value[1]
-            if data_type == 'number':
-                value = float(value[0])
-            else:
-                value = value[0]
-        elif isinstance(value, Decimal):
-            value = float(value)
+        value = verify_value(value)
+        
         context[f'{aggregate_type or ""}[{model_name}: {display_name}]'] = value
 
     try:
-        expr = expression.split('=', 1)[1].strip() if '=' in expression else expression
+        expr = exp.split('=', 1)[1].strip() if '=' in exp else exp
         expr, safe_context = sanitize_expression(expr, context)
-        # print(safe_context)
+        print("safe_context: ", safe_context, " ::: exp: ", exp, " ::: expr: ", expr)
         result = eval(expr, {"__builtins__": {}}, safe_context)
+        print("result: ", result)
         return Decimal(result)
     except Exception as e:
         raise ValueError(f"Formula evaluation failed: {e}")
@@ -757,8 +842,7 @@ def build_dependency_graph(formulas, company=None, employee=None, department_tea
             # print(f"indegree for target '{target}' set to 0: ", indegree)
 
         deps = get_variables_from_expression(expression)
-        # print("deps: ", deps)
-        for _, model, field in deps:
+        for _, model, field, exp in deps:
             dep_node = (model.strip(), field.strip().lower().replace(" ", "_"))
             # print("dep_node: ", dep_node)
             if dep_node not in indegree:

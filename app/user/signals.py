@@ -22,14 +22,162 @@ def update_increment_summary_dynamic_attribute(sender, instance, created, **kwar
         #     employee = instance
         # check_inst = instance.content_object
         if str(instance.content_object._meta) == 'user.employeedraft':
-            print("calling draft")
-            update_draft_increment_summary_employee(sender=EmployeeDraft, instance=instance.content_object, created=False)
+            is_draft = True
+            print("signals DYNAMIC ATTRIBUTE draft: ")
+            # update_draft_increment_summary_employee(sender=EmployeeDraft, instance=instance.content_object, created=False)
+            increment_details_summary_draft = IncrementDetailsSummaryDraft.objects.filter(company = instance.definition.company, department_team = instance.definition.department_team)
+
+            if not increment_details_summary_draft.exists():
+                existing_summary_status = SummaryStatus.objects.filter(summary_submitted=False)
+                if not existing_summary_status.exists():
+                    new_summary_status = SummaryStatus.objects.create()
+                    IncrementDetailsSummaryDraft.objects.create(company = instance.definition.company, department_team = instance.definition.department_team, summaries_status = new_summary_status)
+                else:
+                    IncrementDetailsSummaryDraft.objects.create(company = instance.definition.company, department_team = instance.definition.department_team, summaries_status = existing_summary_status.first())
+
+            update_draft_department_team_increment_summary(sender, instance, instance.definition.company, instance.definition.department_team)
+
+            # Determine context
+            employee_draft = EmployeeDraft.objects.get(id=instance.content_object.id)
+            employee = employee_draft.employee
+
+            # print("instance.id: ", instance.id)
+
+            currentpackagedetailsdraft_dr = getattr(employee_draft, 'currentpackagedetailsdraft', None)
+            if not currentpackagedetailsdraft_dr:
+                currentpackagedetails = employee.currentpackagedetails
+                CurrentPackageDetailsDraft.objects.get_or_create(
+                    employee_draft=employee_draft, 
+                    gross_salary=currentpackagedetails.gross_salary, 
+                    vehicle=currentpackagedetails.vehicle,
+                    mobile_provided=currentpackagedetails.mobile_provided, 
+                    fuel_litre=currentpackagedetails.fuel_litre, 
+                    fuel_allowance=currentpackagedetails.fuel_allowance, 
+                    total=currentpackagedetails.total, 
+                    company_pickup=currentpackagedetails.company_pickup, 
+                    is_deleted=currentpackagedetails.is_deleted
+                )
+            
+            proposedpackagedetailsdraft_dr = getattr(employee_draft, 'proposedpackagedetailsdraft', None)
+            if not proposedpackagedetailsdraft_dr:
+                proposedpackagedetails = employee.proposedpackagedetails
+                ProposedPackageDetailsDraft.objects.get_or_create(
+                    employee_draft=employee_draft,
+                    increment_percentage=proposedpackagedetails.increment_percentage,
+                    increased_fuel_litre=proposedpackagedetails.increased_fuel_litre, 
+                    increased_fuel_allowance=proposedpackagedetails.increased_fuel_allowance,
+                    vehicle=proposedpackagedetails.vehicle, 
+                    mobile_provided=proposedpackagedetails.mobile_provided,
+                    company_pickup=proposedpackagedetails.company_pickup, 
+                    is_deleted=proposedpackagedetails.is_deleted
+                )
+                
+            financialimpactpermonthdraft_dr = getattr(employee_draft, 'financialimpactpermonthdraft', None)
+            if not financialimpactpermonthdraft_dr:
+                financialimpactpermonth = employee.financialimpactpermonth
+                FinancialImpactPerMonthDraft.objects.get_or_create(
+                    employee_draft=employee_draft, 
+                    emp_status=financialimpactpermonth.emp_status, 
+                    serving_years=financialimpactpermonth.serving_years
+                )    
+
+            company = getattr(employee_draft, 'company', None) or (employee.company if employee else None)
+            department_team = getattr(employee_draft, 'department_team', None) or (employee.department_team if employee else None)
+
+            # Map sender to corresponding non-draft model for reference
+            model_mapping = {
+                'EmployeeDraft': 'Employee',
+                'CurrentPackageDetailsDraft': 'CurrentPackageDetails',
+                'ProposedPackageDetailsDraft': 'ProposedPackageDetails',
+                'FinancialImpactPerMonthDraft': 'FinancialImpactPerMonth',
+                'IncrementDetailsSummaryDraft': 'IncrementDetailsSummary'
+            }
+            # sender_name = sender._meta.model_name
+            # is_draft = sender_name.endswith('draft')
+
+            # Get all formulas for the company
+            formulas = FieldFormula.objects.filter(company=company).select_related('formula')
+            
+            department_formulas = formulas.filter(department_team=department_team)
+
+            formula_ids = list(department_formulas.values_list('id', flat=True))
+            formulas = FieldFormula.objects.filter(id__in=formula_ids).select_related('formula')
+
+            if not formulas:
+                # print(f"No formulas found for company={company}, department_team={department_team}, employee={employee}")
+                return
+
+            # Perform topological sort with context
+            ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
+
+            for model_name, field in ordered:
+                print("dyn attr model_name, field, is_draft: ", model_name, field, is_draft)
+                # Map model to draft version if sender is a draft model
+                target_model_name = model_name + 'Draft' if is_draft and model_name in model_mapping.values() else model_name
+                if not target_model_name.endswith('Draft') and is_draft and model_name!='DynamicAttribute':
+                    # print("continue")
+                    continue  # Skip non-draft models when processing drafts
+                
+                # print("target_model_name: ", target_model_name)
+                field_formula = department_formulas.filter(formula__target_model=model_name, formula__target_field=field).first()
+                if not field_formula:
+                    # print(f"No formula found for {model_name}.{field}")
+                    continue
+
+                # Choose instance
+                if target_model_name == "IncrementDetailsSummary" or target_model_name == "IncrementDetailsSummaryDraft":
+                    target_instance = IncrementDetailsSummary.objects.filter(
+                        company=company, department_team=department_team
+                    ).first() if target_model_name == "IncrementDetailsSummary" else \
+                    IncrementDetailsSummaryDraft.objects.filter(
+                        company=company, department_team=department_team
+                    ).first()
+                elif target_model_name == "EmployeeDraft":
+                    model_class = apps.get_model('user', target_model_name)
+                    target_instance = model_class.objects.filter(id=employee_draft.id).first()
+                elif target_model_name == "DynamicAttribute":
+                    target_instance = employee_draft.dynamic_attribute.filter(definition__field_reference__field_name = field).first()
+                else:
+                    model_class = apps.get_model('user', target_model_name)
+                    target_instance = model_class.objects.filter(employee_draft=employee_draft).first()
+
+                if not target_instance:
+                    # print(f"No instance found for {target_model_name} with company={company}, department_team={department_team}")
+                    continue
+
+                if target_model_name == 'FinancialImpactPerMonthDraft' and field == 'gratuity':
+                    employee_status = FinancialImpactPerMonthDraft.objects.filter(employee_draft=employee_draft.id)
+                    if employee_status.exists():
+                        employee_status = employee_status.first()
+                        employee_status = employee_status.emp_status
+                        if employee_status and employee_status.status != 'P':
+                            continue
+
+                expression = field_formula.formula.formula_expression
+                try:
+                    # print("eveavavavav isdraff: ", is_draft, "  ::: target_model_name: ", target_model_name)
+                    value = evaluate_formula(
+                        target_instance, expression, target_model_name, is_draft=is_draft, employee_draft=employee_draft
+                    )
+                    Model = apps.get_model('user', target_model_name)
+                    print("Model._meta.model_name: ", Model._meta.model_name)
+
+                    if Model._meta.model_name in ["incrementdetailssummarydraft", "employeedraft"]:
+                        # Regular model field update
+                        Model.objects.filter(id=target_instance.id).update(**{field: value})
+                    elif Model._meta.model_name == "dynamicattribute":
+                        Model.objects.filter(id=target_instance.id).update(value=value)
+                    else:
+                        Model.objects.filter(employee_draft=target_instance.employee_draft).update(**{field: value})
+                    employee_draft.refresh_from_db()
+                except ValueError as e:
+                    print(f"Error evaluating formula for {target_model_name}.{field}: {e}")
         elif str(instance.content_object._meta) == 'user.employee':
             print("calling")
             update_increment_summary_employee(sender=Employee, instance=instance.content_object, created=False)
 
     except Exception as e:
-        print(f"Error in updating increment summary employee: {e}")
+        print(f"Error in updating draft increment summary dynamic attribute: {e}")
 
 
 @receiver(post_save, sender=Employee)
@@ -108,6 +256,8 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
             elif model_name == "Employee":
                 employee.refresh_from_db()
                 target_instance = employee
+            elif model_name == "DynamicAttribute":
+                target_instance = employee.dynamic_attribute.filter(definition__field_reference__field_name = field).first()
             else:
                 model_class = apps.get_model('user', model_name)
                 target_instance = model_class.objects.filter(employee=employee).first()
@@ -134,17 +284,10 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
                 Model = apps.get_model('user', model_name)
                 
                 if model_name in ["IncrementDetailsSummary", "Employee"]:
-                    if field.startswith('dynamic_attribute__'):
-                        key = field.split('__', 1)[1]  # get the dynamic key part
-                        # Disconnect
-                        post_save.disconnect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
-                        # Use the instance's set_dynamic_attribute method to update or create the dynamic attribute
-                        target_instance.set_dynamic_attribute(key, value)
-                        # Reconnect
-                        post_save.connect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
-                    else:
-                        # Regular model field update
-                        Model.objects.filter(id=target_instance.id).update(**{field: value})
+                    # Regular model field update
+                    Model.objects.filter(id=target_instance.id).update(**{field: value})
+                elif model_name == "DynamicAttribute":
+                    Model.objects.filter(id=target_instance.id).update(value=value)
                 else:
                     Model.objects.filter(employee=target_instance.employee).update(**{field: value})
                     
@@ -208,8 +351,6 @@ def update_increment_summary(sender, instance, created, **kwargs):
         # print("ordered: ", ordered)
 
         for model_name, field in ordered:
-            if model_name.endswith("Draft"):
-                continue
             # print("model_name", model_name, " ::: field: ", field)
             # Prefer employee-specific formula, else department-specific
             # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
@@ -225,6 +366,9 @@ def update_increment_summary(sender, instance, created, **kwargs):
                     company=company,
                     department_team=department_team
                 ).first()
+            elif model_name == "DynamicAttribute":
+                instance.refresh_from_db()
+                target_instance = instance.employee.dynamic_attribute.filter(definition__field_reference__field_name = field).first()
             else:
                 instance.refresh_from_db()
                 target_instance = instance
@@ -252,6 +396,8 @@ def update_increment_summary(sender, instance, created, **kwargs):
                 
                 if model_name == "IncrementDetailsSummary":
                     Model.objects.filter(id=target_instance.id).update(**{field: value})
+                elif model_name == "DynamicAttribute":
+                    Model.objects.filter(id=target_instance.id).update(value=value)
                 else:
                     Model.objects.filter(employee=target_instance.employee).update(**{field: value})
                     
@@ -394,15 +540,15 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
         ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
 
         for model_name, field in ordered:
-            # print("model_name, field: ", model_name, field)
+            print("model_name, field: ", model_name, field)
             # Map model to draft version if sender is a draft model
             target_model_name = model_name + 'Draft' if is_draft and model_name in model_mapping.values() else model_name
             # print("target_model_name: ", target_model_name)
-            if not target_model_name.endswith('Draft') and is_draft:
+            if not target_model_name.endswith('Draft') and is_draft and model_name!='DynamicAttribute':
                 # print("continue")
                 continue  # Skip non-draft models when processing drafts
             
-            # print("target_model_name: ", target_model_name)
+            print("target_model_name: ", target_model_name)
             # Prefer employee-specific formula, else department-specific
             # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
             #                department_formulas.filter(target_model=model_name, target_field=field).first()
@@ -422,6 +568,8 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
             elif target_model_name == "EmployeeDraft":
                 instance.refresh_from_db()
                 target_instance = instance
+            elif target_model_name == "DynamicAttribute":
+                target_instance = employee_draft.dynamic_attribute.filter(definition__field_reference__field_name = field).first()
             else:
                 model_class = apps.get_model('user', target_model_name)
                 target_instance = model_class.objects.filter(employee_draft=instance).first()
@@ -449,20 +597,11 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
                 # print(f"model_name: {target_model_name}, field: {field}, value: {value}")
                 Model = apps.get_model('user', target_model_name)
                 # Model.objects.filter(id=target_instance.id).update(**{field: value})
-                # print("Model._meta.model_name: ", Model._meta.model_name)
 
                 if Model._meta.model_name in ["incrementdetailssummarydraft", "employeedraft"]:
-                    if field.startswith('dynamic_attribute__'):
-                        key = field.split('__', 1)[1]  # get the dynamic key part
-                        # Disconnect
-                        post_save.disconnect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
-                        # Use the instance's set_dynamic_attribute method to update or create the dynamic attribute
-                        target_instance.set_dynamic_attribute(key, value)
-                        # Reconnect
-                        post_save.connect(update_increment_summary_dynamic_attribute, sender=DynamicAttribute)
-                    else:
-                        # Regular model field update
-                        Model.objects.filter(id=target_instance.id).update(**{field: value})
+                    Model.objects.filter(id=target_instance.id).update(**{field: value})
+                elif Model._meta.model_name == "dynamicattribute":
+                    Model.objects.filter(id=target_instance.id).update(value= value)
                 else:
                     Model.objects.filter(employee_draft=target_instance.employee_draft).update(**{field: value})
                 instance.refresh_from_db()
@@ -594,7 +733,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
             # print("field check: ", field)
             # Map model to draft version if sender is a draft model
             target_model_name = model_name + 'Draft' if is_draft and model_name in model_mapping.values() else model_name
-            if not target_model_name.endswith('Draft') and is_draft:
+            if not target_model_name.endswith('Draft') and is_draft and model_name!='DynamicAttribute':
                 continue  # Skip non-draft models when processing drafts
 
             # Prefer employee-specific formula, else department-specific
@@ -613,6 +752,8 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
                 IncrementDetailsSummaryDraft.objects.filter(
                     company=company, department_team=department_team
                 ).first()
+            elif target_model_name == "DynamicAttribute":
+                target_instance = instance.employee_draft.dynamic_attribute.filter(definition__field_reference__field_name = field).first()
             else:
                 target_instance = instance
                 target_instance.refresh_from_db()
@@ -643,6 +784,8 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
 
                 if Model._meta.model_name == "incrementdetailssummarydraft":
                     Model.objects.filter(id=target_instance.id).update(**{field: value})
+                elif Model._meta.model_name == "dynamicattribute":
+                    Model.objects.filter(id=target_instance.id).update(value=value)
                 else:
                     Model.objects.filter(employee_draft=target_instance.employee_draft).update(**{field: value})
                 instance.refresh_from_db()

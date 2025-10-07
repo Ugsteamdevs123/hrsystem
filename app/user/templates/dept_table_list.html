@@ -145,7 +145,7 @@
                             {% for attr in employee.dynamic_attributes %}
                                 <td class="non-sticky {% if attr.inline_editable %}editable{% endif %}"
                                     data-dynamic="true"
-                                    data-tab="Employee"
+                                    data-tab="DynamicAttribute"
                                     data-field="{{ attr.key }}"
                                     {% if attr.data_type == 'number' %}
                                         data-type="number"
@@ -550,7 +550,8 @@
 
     function isEligibleForIncrement(row, employeeId) {
         const eligibleCell = row.querySelector('[data-tab="Employee"][data-field="eligible_for_increment"]');
-        let eligibleValue = eligibleCell.dataset.original || eligibleCell.textContent;
+        // let eligibleValue = eligibleCell.dataset.original || eligibleCell.textContent;
+        let eligibleValue = eligibleCell.textContent;
         if (draftData[employeeId]?.employee?.eligible_for_increment) {
             eligibleValue = draftData[employeeId].employee.eligible_for_increment;
         }
@@ -894,6 +895,7 @@
             console.log(formula.target_field.trim().toLowerCase().replace('dynamic_attribute__', '').replaceAll(' ', '_'));
             const targetSelector = `[data-tab="${formula.target_model}"][data-field="${formula.target_field.trim().toLowerCase().replace('dynamic_attribute__', '').replaceAll(' ', '_')}"]`;
             console.log(targetSelector);
+            console.log("result: ", result);
             const targetCell = row.querySelector(targetSelector);
             if (targetCell) {
                 targetCell.textContent = result.toFixed(2);
@@ -984,7 +986,7 @@
                 form.querySelector('#edit_attribute_key').value = btn.dataset.key;
                 form.querySelector('#edit_attribute_name').value = btn.dataset.displayName;
                 form.querySelector('#edit_data_type').value = btn.dataset.type;
-                form.querySelector('#edit_inline_editable').value = btn.dataset.editable;
+                form.querySelector('#edit_inline_editable').value = btn.dataset.editable.toLowerCase();
                 modal.style.display = 'flex';
             });
         });
