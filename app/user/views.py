@@ -1429,7 +1429,7 @@ class CreateDynamicAttributeView(View):
 
                         fields = [field.name for field in Employee._meta.fields]
                         if attribute_name in fields:
-                            raise ValueError(f"Attribute '{attribute_name}' already exists for this department.")
+                            raise ValueError(f"Column '{attribute_name}' already exists for this department.")
 
                         field_reference = FieldReference.objects.filter(
                             model_name=DynamicAttribute._meta.object_name, field_name=attribute_name
@@ -1455,7 +1455,7 @@ class CreateDynamicAttributeView(View):
                                 department_team_id=department_team_id,
                                 field_reference=fr
                             ).exists():
-                                raise ValueError(f"Attribute '{attribute_name}' already exists for this department.")
+                                raise ValueError(f"Column '{attribute_name}' already exists for this department.")
 
                             attr = DynamicAttributeDefinition.objects.create(
                                 company_id=company_id,
@@ -1539,7 +1539,7 @@ class EditDynamicAttributeView(View):
                             field_reference__field_name=new_key
                         )
                         if existing_attr.exists():
-                            raise ValueError(f"Attribute '{new_key}' already exists for this department.")
+                            raise ValueError(f"Column '{new_key}' already exists for this department.")
                         
                         # existing_attr = FieldReference.objects.filter(
                         #     model_name=DynamicAttribute._meta.object_name,
@@ -1560,7 +1560,7 @@ class EditDynamicAttributeView(View):
 
                         fields = [field.name for field in Employee._meta.fields]
                         if new_key in fields and new_key != old_key:
-                            raise ValueError(f"Attribute '{new_key}' already exists as a permanent field.")
+                            raise ValueError(f"Column '{new_key}' already exists as a permanent field.")
                         
                         attr = DynamicAttributeDefinition.objects.get(
                             company_id=company_id,
@@ -1819,7 +1819,12 @@ class CreateEmployeeView(View):
                     # Get or create employee by emp_id
                     if is_update:
                         print('updating')
-                        employee = Employee.objects.filter(emp_id=emp_id).first()
+
+                        if emp_id != original_emp_id:
+                            check_employee_id = Employee.objects.filter(emp_id=emp_id)
+                            if check_employee_id.exists():
+                                raise ValueError(f"ID '{emp_id}' is already taken.")
+                        
                         created = False
                         if not employee:
                             print("assigining emp_id: ", emp_id)
@@ -1830,21 +1835,28 @@ class CreateEmployeeView(View):
                     else:
                         print('creating')
                         # basically just creates a new one according to happy flow
-                        employee, created = Employee.objects.get_or_create(emp_id=emp_id, defaults={
-                            'fullname': request.POST.get('fullname'),
-                            'company_id': company_id,
-                            'department_team': department,
-                            'department_group_id': request.POST.get('department_group_id') or None,
-                            'section_id': request.POST.get('section_id') or None,
-                            'designation_id': request.POST.get('designation_id') or None,
-                            'location_id': request.POST.get('location_id') or None,
-                            'date_of_joining': request.POST.get('date_of_joining') or None,
-                            'resign': request.POST.get('resign') == 'true',
-                            'date_of_resignation': request.POST.get('date_of_resignation') or None,
-                            'remarks': request.POST.get('remarks') or '',
-                            'image': request.FILES.get('image') if 'image' in request.FILES else None,
-                            'eligible_for_increment': eligible_for_increment,
-                        })
+                        check_employee_id = Employee.objects.filter(emp_id=emp_id)
+                        if check_employee_id.exists():
+                            raise ValueError(f"ID '{emp_id}' is already taken.")
+                        
+                        employee = Employee.objects.create(
+                            emp_id=emp_id,
+                            fullname= request.POST.get('fullname'),
+                            company_id= company_id,
+                            department_team= department,
+                            department_group_id= request.POST.get('department_group_id') or None,
+                            section_id= request.POST.get('section_id') or None,
+                            designation_id= request.POST.get('designation_id') or None,
+                            location_id= request.POST.get('location_id') or None,
+                            date_of_joining= request.POST.get('date_of_joining') or None,
+                            resign= request.POST.get('resign') == 'true',
+                            date_of_resignation= request.POST.get('date_of_resignation') or None,
+                            remarks= request.POST.get('remarks') or '',
+                            image= request.FILES.get('image') if 'image' in request.FILES else None,
+                            eligible_for_increment= eligible_for_increment,
+                        )
+
+                        created=True
 
                     designation_id_str = request.POST.get('designation_id')
                     if designation_id_str:
@@ -1941,6 +1953,8 @@ class CreateEmployeeView(View):
 
                 return JsonResponse({'error': 'Invalid step'}, status=400)
 
+        except ValueError as e:
+            return JsonResponse({'error': str(e)}, status=400)
         except Exception as e:
             logger.error(f"Error in CreateEmployeeView: {str(e)}")
             return JsonResponse({'error': 'Invalid data'}, status=400)
@@ -2696,10 +2710,6 @@ class GetDepartmentEmployeesView(View):
             return JsonResponse({'employees': list(employees)})
         return JsonResponse({'employees': []})
 
-
-'''
-Updated save draft view
-'''
 
 class SaveDraftView(View):
     @classmethod

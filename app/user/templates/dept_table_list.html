@@ -206,7 +206,7 @@
                         </select>
                     </div>
                     <div class="button-group">
-                        <button type="submit" class="form-btn btn-submit">Add Attribute</button>
+                        <button type="submit" class="form-btn btn-submit">Add Column</button>
                         <button type="button" class="form-btn btn-back" onclick="document.getElementById('addDynamicAttributeModal').style.display='none';">Cancel</button>
                     </div>
                 </form>
@@ -559,7 +559,7 @@
         select.innerHTML = '<option value="">Loading...</option>';
         try {
             const res = await fetchJSON(`/payroll/get-dynamic-attributes/?company_id={{ department.company.id }}&department_team_id={{ department_id }}`);
-            select.innerHTML = '<option value="">Select an attribute</option>';
+            select.innerHTML = '<option value="">Select Column</option>';
             res.forEach(attr => {
                 const option = document.createElement('option');
                 option.value = attr.field_reference_id;
