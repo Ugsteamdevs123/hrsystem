@@ -92,8 +92,12 @@ def update_department_team_increment_summary(sender, instance, company, departme
                     date_of_joining = datetime.strptime(date_of_joining, "%Y-%m-%d").date()
 
                 years = as_of_date.year - date_of_joining.year
-                if (as_of_date.month, as_of_date.day) < (date_of_joining.month, date_of_joining.day):
+                # if (as_of_date.month, as_of_date.day) < (date_of_joining.month, date_of_joining.day):
+                #     years -= 1
+                if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee_draft.employee.date_of_joining.month, instance.employee_draft.employee.date_of_joining.day):
                     years -= 1
+                    if years < 0:
+                        years = 0
 
                 FinancialImpactPerMonth.objects.filter(id=instance.id).update(serving_years = years)
            
