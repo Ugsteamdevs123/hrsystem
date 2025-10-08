@@ -567,7 +567,7 @@
                 select.appendChild(option);
             });
             if (res.length === 0) {
-                select.innerHTML = '<option value="">No existing attributes available</option>';
+                select.innerHTML = '<option value="">No existing columns available</option>';
             }
         } catch (e) {
             showSnackbar('Failed to load existing dynamic columns', '#dc3545');

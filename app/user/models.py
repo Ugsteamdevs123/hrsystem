@@ -368,6 +368,7 @@ class DynamicAttribute(models.Model):
 
     # key = models.CharField(max_length=100)
     value = models.TextField(default="0")
+    is_draft = models.BooleanField(default=False)
 
     @property
     def typed_value(self):
@@ -425,7 +426,6 @@ class Employee(models.Model):
                                                                                                            )
                                                                 ),
             object_id = self.pk,
-            # key = key,
             defaults={'value': str(value)}  # ✅ Correct place to update value
         )
 
@@ -601,8 +601,8 @@ class EmployeeDraft(models.Model):
                                                                                                            field_name=field_name
                                                                                                            )
                                                                 ),
-            # key=key,
             object_id = self.pk,
+            is_draft=True,
             defaults={'value': str(value)}  # ✅ Correct place to update value
         )
 
