@@ -1486,6 +1486,7 @@ class CreateDynamicAttributeView(View):
                                 content_type=content_type,
                                 object_id=emp_draft.pk,
                                 definition=attr,
+                                is_draft=True,
                             ) for emp_draft in employees_draft
                         ])
 
@@ -2815,8 +2816,6 @@ class SaveDraftView(View):
                                 has_changes = True
                                 financial_impact_edited[field] = True
                     elif tab == 'DynamicAttribute':
-                        dynamic_attribute = DynamicAttribute.objects.filter(object_id=employee.id).first()
-                        print("dynamic_attribute", dynamic_attribute)
                         for field, value in fields.items():
                             # Assuming field is like 'dynamic_attribute__new_col'
                             if 'dynamic_attribute__' in field:
@@ -3048,7 +3047,8 @@ class SaveDraftView(View):
                             definition = DynamicAttributeDefinition.objects.get(department_team_id=department_id, field_reference=field_reference)
                             field_dynamic_attribute = DynamicAttribute.objects.filter(
                                 object_id=employee_draft.id,
-                                definition=definition
+                                definition=definition,
+                                is_draft=True
                             ).first()
 
                             print("setting dynamic attr")

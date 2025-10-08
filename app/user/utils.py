@@ -355,7 +355,7 @@ def replace_field_reference_models_and_fields_from_expression(expression):
 def get_variables_from_expression(expression):
     """Extract field references with optional aggregates like SUM[Model: Field]."""
     expression = replace_field_reference_ids_from_expression(expression) # converts ids to Model: display name and return full expression
-    # print("expression: ", expression)
+    print("expression: ", expression)
     pattern = r'(SUM|AVG|COUNT)?\[([^:]+): ([^\]]+)\]'
     matches = re.findall(pattern, expression)
     # print(f"Expression: {expression}, Matches: {matches}")
@@ -415,8 +415,8 @@ def get_dynamic_attr_id(instance, field_name):
         return instance.employee.dynamic_attribute.filter(definition__field_reference__field_name=field_name).values_list('id', flat=True).first()
 
 
-def get_dynamic_attribute_value(instance, key_to_find):
-    return DynamicAttribute.objects.filter(object_id=instance.object_id, definition__field_reference__field_name=key_to_find).first()
+def get_dynamic_attribute_value(instance, key_to_find, is_draft):
+    return DynamicAttribute.objects.filter(object_id=instance.object_id, definition__field_reference__field_name=key_to_find, is_draft=is_draft).first()
 
 
 # def get_nested_attr_draft(instance, path, aggregate_type=None, is_draft=False, employee_draft=None):
@@ -696,7 +696,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
                         
                     attr = None
                     if key_to_find:
-                        attr = get_dynamic_attribute_value(instance, key_to_find)
+                        attr = get_dynamic_attribute_value(instance, key_to_find, is_draft)
 
                     obj = (attr.value, attr.definition.data_type) if attr else None
 
