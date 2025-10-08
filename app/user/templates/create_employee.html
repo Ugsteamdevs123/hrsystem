@@ -746,18 +746,18 @@ async function handleNext() {
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
             body: formData
         });
-        
-        if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(`HTTP ${res.status}: ${errorText}`);
-        }
-        
+
         const result = await res.json();
         
         if (result.error) {
             console.error('❌ Backend error:', result.error);
             showSnackbar(result.error, '#dc3545');
             return;
+        }
+        
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`HTTP ${res.status}: ${errorText}`);
         }
         
         console.log('✅ Backend response:', result);
