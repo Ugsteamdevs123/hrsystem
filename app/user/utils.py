@@ -379,6 +379,29 @@ def get_field_path(model_name, display_name):
         #         raise ValueError(f"Field {model_name} or {model_name}Draft: {display_name} not found")
         raise ValueError(f"Field {model_name}: {display_name} not found")
 
+
+def modify_path(path, is_draft):
+    if 'employee__employee' in path:
+        path = path.replace('employee__employee', 'employee')
+    # print("PATH: is draft?", path, is_draft)
+    path = path.replace('employee', 'employee_draft') if is_draft else path
+
+    return path
+
+
+def modify_parts(parts, is_draft, instance):
+    if is_draft:
+        if parts[-2] == "employee_draft":
+            parts[-2] = "employeedraft"
+        elif parts[-2] not in ['configurations', 'dynamic_attribute']:
+            parts[-2] = parts[-2]+'draft'
+
+    elif parts[-2] == 'dynamic_attribute' and instance._meta.object_name == 'DynamicAttribute':
+        parts.pop(0)
+    
+    return parts
+
+
 def get_dynamic_attr_id(instance, field_name):
     if instance._meta.object_name == 'DynamicAttribute':
         return instance.id
@@ -389,24 +412,21 @@ def get_dynamic_attr_id(instance, field_name):
     else:
         return instance.employee.dynamic_attribute.filter(definition__field_reference__field_name=field_name).values_list('id', flat=True).first()
 
+
 def get_dynamic_attribute_value(instance, key_to_find):
     return DynamicAttribute.objects.filter(object_id=instance.object_id, definition__field_reference__field_name=key_to_find).first()
 
+
+# def get_nested_attr_draft(instance, path, aggregate_type=None, is_draft=False, employee_draft=None):
 def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employee_draft=None):
     """Fetch value via Django-style path, applying aggregate if specified, prioritizing draft tables."""
     # print("PATH: is draft?", path, is_draft)
     # print("path: ", path)
-    if 'employee__employee' in path:
-        path = path.replace('employee__employee', 'employee')
-    # print("PATH: is draft?", path, is_draft)
-    path = path.replace('employee', 'employee_draft') if is_draft else path
+    path = modify_path(path, is_draft)
+    
     parts = path.split('__')
-    if parts[-2] == "employee_draft":
-        parts[-2] = "employeedraft"
-    elif parts[-2] not in ['configurations', 'dynamic_attribute']:
-        parts[-2] = parts[-2]+'draft' if is_draft else parts[-2]
-    elif parts[-2] == 'dynamic_attribute' and instance._meta.object_name == 'DynamicAttribute':
-        parts.pop(0)
+
+    parts = modify_parts(parts, is_draft, instance)
     # print("parts: ", parts)
     # print("instance: ", instance._meta.object_name)
     model_mapping = {
@@ -427,7 +447,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
 
     if len(parts) > 1:  # External model field
         if len(parts) == 2:
-            model_name = parts[-2].replace('_', '')
+            model_name = parts[-2].replace('_', '') # Currently, parts having len=2 will be => ['dynamic_attribute', '<field_name>']
         else:
             model_name = parts[-2]
         field_name = parts[-1]
@@ -702,6 +722,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
     else:
         return getattr(instance, path)
 
+
 def verify_value(value):
     if isinstance(value, tuple):
         data_type = value[1]
@@ -712,6 +733,7 @@ def verify_value(value):
     elif isinstance(value, Decimal):
         value = float(value)
     return value
+
 
 def sanitize_expression(expression, context):
     """Sanitize expression by replacing field references with safe variable names."""
@@ -726,17 +748,17 @@ def sanitize_expression(expression, context):
 def evaluate_formula(instance, expression, target_model, is_draft=False, employee_draft=None):
     """Evaluate formula, replacing [Model: Field] or SUM[Model: Field] with values, considering drafts."""
     context = {}
-    model_mapping = {
-        'CurrentPackageDetails': 'CurrentPackageDetailsDraft',
-        'ProposedPackageDetails': 'ProposedPackageDetailsDraft',
-        'FinancialImpactPerMonth': 'FinancialImpactPerMonthDraft',
-        'IncrementDetailsSummary': 'IncrementDetailsSummaryDraft'
-    }
+    # model_mapping = {
+    #     'CurrentPackageDetails': 'CurrentPackageDetailsDraft',
+    #     'ProposedPackageDetails': 'ProposedPackageDetailsDraft',
+    #     'FinancialImpactPerMonth': 'FinancialImpactPerMonthDraft',
+    #     'IncrementDetailsSummary': 'IncrementDetailsSummaryDraft'
+    # }
     # print("instance: ", instance)
     for aggregate_type, model_name, display_name, exp in get_variables_from_expression(expression):
         # target_model_name = model_mapping.get(model_name, model_name) if is_draft else model_name
-        target_model_name = model_name
-        path = get_field_path(target_model_name, display_name)
+        # target_model_name = model_name
+        path = get_field_path(model_name, display_name)
         # path = get_field_path(model_name, display_name)
         value = get_nested_attr(
             instance,
@@ -753,9 +775,9 @@ def evaluate_formula(instance, expression, target_model, is_draft=False, employe
     try:
         expr = exp.split('=', 1)[1].strip() if '=' in exp else exp
         expr, safe_context = sanitize_expression(expr, context)
-        print("safe_context: ", safe_context, " ::: exp: ", exp, " ::: expr: ", expr)
+        # print("safe_context: ", safe_context, " ::: exp: ", exp, " ::: expr: ", expr)
         result = eval(expr, {"__builtins__": {}}, safe_context)
-        print("result: ", result)
+        # print("result: ", result)
         return Decimal(result)
     except Exception as e:
         raise ValueError(f"Formula evaluation failed: {e}")

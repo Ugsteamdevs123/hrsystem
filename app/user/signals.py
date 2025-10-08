@@ -4,8 +4,31 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.apps import apps
 
-from .utils import update_department_team_increment_summary, topological_sort, evaluate_formula
-from .models import DynamicAttribute, Employee, SummaryStatus, CurrentPackageDetails, ProposedPackageDetails, FinancialImpactPerMonth, IncrementDetailsSummary, DepartmentTeams, Formula, FieldFormula, CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft, IncrementDetailsSummaryDraft
+from .utils import (
+    update_department_team_increment_summary, 
+    topological_sort, 
+    evaluate_formula, 
+    update_draft_department_team_increment_summary
+)
+
+from .models import (
+    DynamicAttribute, 
+    Employee, 
+    SummaryStatus, 
+    CurrentPackageDetails, 
+    ProposedPackageDetails, 
+    FinancialImpactPerMonth, 
+    IncrementDetailsSummary, 
+    DepartmentTeams, 
+    Formula, 
+    FieldFormula, 
+    CurrentPackageDetailsDraft, 
+    ProposedPackageDetailsDraft, 
+    FinancialImpactPerMonthDraft, 
+    IncrementDetailsSummaryDraft,
+    EmployeeDraft
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +39,6 @@ def update_increment_summary_dynamic_attribute(sender, instance, created, **kwar
     Signal to check the driver wallet amount when a DriverAdditional is saved.
     """
     try:
-        # if sender == DynamicAttribute:
-        #     employee = instance.content_object
-        # else:
-        #     employee = instance
-        # check_inst = instance.content_object
         if str(instance.content_object._meta) == 'user.employeedraft':
             is_draft = True
             print("signals DYNAMIC ATTRIBUTE draft: ")
@@ -186,10 +204,6 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
     Signal to check the driver wallet amount when a DriverAdditional is saved.
     """
     try:
-        # if sender == DynamicAttribute:
-        #     employee = instance.content_object
-        # else:
-        #     employee = instance
         employee = instance
         increment_details_summary = IncrementDetailsSummary.objects.filter(company = employee.company, department_team = employee.department_team)
 
@@ -230,14 +244,14 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
             return
 
         # Topological sort with context
-        print(formulas)
+        # print(formulas)
         ordered = topological_sort(formulas, company=company, employee=employee, department_team=department_team)
         # print("ordered: ", ordered)
 
         for model_name, field in ordered:
             # if model_name.endswith("Draft"):
             #     continue
-            print("model_name", model_name, " ::: field: ", field)
+            # print("model_name", model_name, " ::: field: ", field)
             # Prefer employee-specific formula, else department-specific
             # field_formula = employee_formulas.filter(target_model=model_name, target_field=field).first() or \
             #                department_formulas.filter(target_model=model_name, target_field=field).first()
@@ -280,7 +294,7 @@ def update_increment_summary_employee(sender, instance, created, **kwargs):
             # print("expression: ", expression)
             try:
                 value = evaluate_formula(target_instance, expression, model_name)
-                print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)
+                # print("model_name: ", model_name, "  :::  field: ", field, "  :::  value: ", value)
                 Model = apps.get_model('user', model_name)
                 
                 if model_name in ["IncrementDetailsSummary", "Employee"]:
@@ -421,18 +435,6 @@ def update_increment_summary(sender, instance, created, **kwargs):
 #     except Exception as e:
 #         print(f"Error in adding new increment details summary record: {e}")
 #         # logger.error(f"Error in checking driver wallet balance: {e}", extra={'id': instance.id})
-
-
-
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.apps import apps
-from .models import (
-    CurrentPackageDetailsDraft, ProposedPackageDetailsDraft, FinancialImpactPerMonthDraft,
-    IncrementDetailsSummary, ProposedPackageDetails, FinancialImpactPerMonth, FieldFormula,
-    EmployeeDraft
-)
-from .utils import topological_sort, evaluate_formula, update_draft_department_team_increment_summary
 
 
 @receiver(post_save, sender=EmployeeDraft)

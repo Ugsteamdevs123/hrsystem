@@ -456,7 +456,8 @@ async function updateApproved(checkbox) {
         });
 
         if (!resp.ok) throw new Error('Failed to save approved');
-        showSnackbar(`Row ${rowId} approved status updated to ${approved}`);
+        // showSnackbar(`Row ${rowId} approved status updated to ${approved}`);
+        showSnackbar(`Approved status updated to ${approved}`);
         window.location.reload();
     } catch (e) {
         console.error(e);
