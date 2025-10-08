@@ -62,7 +62,7 @@ class FieldFormulaForm(forms.ModelForm):
     #     help_text="Choose the company for this formula."
     # )
     department_team = forms.ModelChoiceField(
-        queryset=DepartmentTeams.objects.all(),
+        queryset=DepartmentTeams.objects.filter(is_deleted=False),
         required=False,
         empty_label="Select a department team",
         help_text="Choose a department team (required if no employee is selected)."
