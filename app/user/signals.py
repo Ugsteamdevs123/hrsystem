@@ -776,7 +776,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
 
             expression = field_formula.formula.formula_expression
             try:
-                # print("eveavavavav isdraff: ", is_draft, "  ::: target_model_name: ", target_model_name)
+                print("eveavavavav isdraff: ", is_draft, "  ::: target_model_name: ", target_model_name)
                 value = evaluate_formula(
                     target_instance, expression, target_model_name, is_draft=is_draft, employee_draft=employee_draft
                 )

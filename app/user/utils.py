@@ -497,8 +497,8 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
             else:
                 filter_kwargs = {"employee_draft__company": instance.employee_draft.employee.company, "employee_draft__department_team": instance.employee_draft.employee.department_team}
                 filter_kwargs_non_draft = {"employee__company": instance.employee_draft.employee.company, "employee__department_team": instance.employee_draft.employee.department_team}
-            # print("filter_kwargs draft: ", filter_kwargs)
-            # print("filter_kwargs_non_draft draft (for non draft): ", filter_kwargs_non_draft)
+            print("filter_kwargs draft: ", filter_kwargs)
+            print("filter_kwargs_non_draft draft (for non draft): ", filter_kwargs_non_draft)
         else:
             if target_model_name!='configurations':
                 if instance._meta.object_name == "DynamicAttribute":
@@ -654,6 +654,13 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
             
             while i < len(parts):
                 part = parts[i]
+                print("part: ", part)
+
+                if i == 0 and target_model_name != 'DynamicAttribute' and instance._meta.object_name == 'DynamicAttribute':
+                    # content_obj_id = instance.content_object.id
+                    obj = EmployeeDraft.objects.get(id=instance.content_object.id) if is_draft else Employee.objects.get(id=instance.content_object.id)
+                    i=i+1
+                    continue
 
                 if part == 'configurations' or previous_part == 'configurations':
                     previous_part = 'configurations'
