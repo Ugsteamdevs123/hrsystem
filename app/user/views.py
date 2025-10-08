@@ -1883,6 +1883,10 @@ class CreateEmployeeView(View):
                         employee.is_intern = is_intern
                         employee.promoted_from_intern_date = promoted_from_intern_date
                         employee.save()
+                        dynamicattrdefs = DynamicAttributeDefinition.objects.filter(company=company_id, department_team=department)
+                        if dynamicattrdefs.exists():
+                            for dynamicattrdef in dynamicattrdefs:
+                                employee.set_dynamic_attribute(field_name=dynamicattrdef.field_reference.field_name)
 
                     # Create related models
                     CurrentPackageDetails.objects.get_or_create(employee=employee)
@@ -2254,11 +2258,6 @@ class GetDataView(View):
         try:
             if table == 'employee':
                 logger.debug(f"Fetching employee with emp_id: {id}")
-                
-                employee = Employee.objects.filter(
-                    emp_id=id,
-                    department_team__company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-                ).first()
 
                 employee = Employee.objects.filter(
                     emp_id=id,
@@ -2268,8 +2267,6 @@ class GetDataView(View):
                 ).prefetch_related(
                     'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts', 'dynamic_attribute'
                 ).first()
-
-                print(employee.__dict__)
 
                 if not employee:
                     logger.error(f"Employee with emp_id {id} not found or not authorized")

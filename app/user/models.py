@@ -415,7 +415,7 @@ class Employee(models.Model):
     def dynamic_fields(self):
         return {attr.definition.field_reference.field_name: attr.value for attr in self.dynamic_attribute.all()}
     
-    def set_dynamic_attribute(self, field_name, value):
+    def set_dynamic_attribute(self, field_name, value=0):
         attr, created = DynamicAttribute.objects.update_or_create(
             content_type = ContentType.objects.get_for_model(self),
             definition = DynamicAttributeDefinition.objects.get(company = self.company, 
