@@ -395,6 +395,8 @@ def modify_parts(parts, is_draft, instance):
             parts[-2] = "employeedraft"
         elif parts[-2] not in ['configurations', 'dynamic_attribute']:
             parts[-2] = parts[-2]+'draft'
+        elif parts[-2] == 'dynamic_attribute' and instance._meta.object_name == 'DynamicAttribute':
+            parts.pop(0)
 
     elif parts[-2] == 'dynamic_attribute' and instance._meta.object_name == 'DynamicAttribute':
         parts.pop(0)
@@ -444,7 +446,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
         'financialimpactpermonthdraft': 'FinancialImpactPerMonthDraft',
         'incrementdetailssummarydraft': 'IncrementDetailsSummaryDraft'
     }
-
+    
     if len(parts) > 1:  # External model field
         if len(parts) == 2:
             model_name = parts[-2].replace('_', '') # Currently, parts having len=2 will be => ['dynamic_attribute', '<field_name>']
@@ -474,7 +476,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
         # print("abcdefg is_draft: ", is_draft, " ::: target_model_name: ", target_model_name, " ::: model_name: ", model_name)
         # Get filter kwargs for non_draft tables at all case as they will be used to fetch those records for increment details summary draft where some employee
         # records are not draft and their values need to be fetched from original tables.
-        print("model_name: ", model_name, "instance._meta.object_name: ", instance._meta.object_name)
+        # print("model_name: ", model_name, "instance._meta.object_name: ", instance._meta.object_name)
         if is_draft and target_model_name.endswith('Draft'):
             if instance._meta.object_name == "DynamicAttribute":
                 filter_kwargs = {"company": instance.definition.company, "department_team": instance.definition.department_team}
@@ -645,8 +647,7 @@ def get_nested_attr(instance, path, aggregate_type=None, is_draft=False, employe
             obj = instance
             previous_part = ''
             i = 0
-
-            print("parts: ", parts)
+            
             while i < len(parts):
                 part = parts[i]
 
