@@ -76,6 +76,7 @@ urlpatterns = [
     path('employee/update/<int:employee_id>/', views.UpdateEmployeeView.as_view(), name='update_employee'),
     path('department/delete/<int:employee_id>/', views.DeleteEmployeeView.as_view(), name='delete_employee'),
     path('employee/<int:employee_id>/', views.EmployeeDetailView.as_view(), name='employee_detail'),
+    path('employee/upload_file/', views.FileUploadView.as_view(), name='upload_file'),
 
     # For dept table crud
     path('department/<int:department_id>/', views.DepartmentTableView.as_view(), name='department_table'),

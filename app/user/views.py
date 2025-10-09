@@ -1971,6 +1971,31 @@ class EmployeeDetailView(View):
         })
 
 
+class FileUploadView(View):
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = permission_required('user.view_employee', raise_exception=True)(view)
+        viw = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
+        return view
+    
+    def post(self, request):
+        uploaded_file = request.FILES.get('file')
+        if uploaded_file:
+            print(uploaded_file)
+            # file_path = default_storage.save(f"uploads/{uploaded_file.name}", uploaded_file)
+            pass
+
+            # You can add parsing logic here
+            # e.g., parse_csv_or_excel(file_path)
+
+            return render(request, 'employee_table_list.html', {'message': 'Upload successful!'})
+        return render(request, 'employee_table_list.html', {'message': 'No file uploaded.'})
+
+
 class UpdateEmployeeView(View):
     template_name = 'update_employee.html'
 
