@@ -63,6 +63,13 @@
                 </div>
 
                 <div class="form-field">
+                    <label for="report_to_id">Report To <span class="req">*</span></label>
+                    <select id="report_to_id" name="report_to_id" required>
+                        <option value="">Select Employee To Report To</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
                     <label for="location_id">Location <span class="req">*</span></label>
                     <select id="location_id" name="location_id">
                         <option value="">Select Location</option>
@@ -234,7 +241,7 @@
             }
             try {
                 const [departmentTeamsRaw, departmentGroupsRaw, designationsRaw, locationsRaw, vehiclesRaw, statusRaw] = await Promise.all([
-                    fetchJSON(`/payroll/department-teams/?company_id=${companyId}`),
+                    fetchJSON(`/payroll/department-teams-employees/?company_id=${companyId}`),
                     fetchJSON('/payroll/department-groups-sections/'),
                     fetchJSON(`/payroll/designations/?company_id=${companyId}`),
                     fetchJSON('/payroll/locations/'),
@@ -250,7 +257,8 @@
                 const statuses = asArray(statusRaw);
 
                 if (departmentTeamsRaw.error || !departmentTeams) {
-                    showSnackbar(departmentTeamsRaw.error || 'No department teams available', '#dc3545');
+                    showSnackbar(departmentTeamsRaw.error || 'No department groups available', '#dc3545');
+                    window.departmentTeams = [];
                 } else {
                     populateDepartmentTeams(departmentTeams);
                 }
@@ -293,11 +301,13 @@
         function populateDepartmentTeams(data) {
             const select = document.getElementById('department_team_id');
             select.innerHTML = '<option value="">Select Department Group</option>';
+            window.departmentTeams = [];
             data.forEach(team => {
                 const opt = document.createElement('option');
                 opt.value = team.id;
                 opt.textContent = team.name;
                 select.appendChild(opt);
+                window.departmentTeams.push({ id: team.id, name: team.name, employees: team.employees || [] });
             });
         }
 
@@ -366,7 +376,7 @@
             const select = document.getElementById('section_id');
             select.innerHTML = '<option value="">Select Section</option>';
             if (!window.departmentGroups) {
-                // showSnackbar('Department groups not loaded', '#dc3545');
+                // showSnackbar('Departments not loaded', '#dc3545');
                 return;
             }
             if (groupId) {
@@ -376,6 +386,26 @@
                         const opt = document.createElement('option');
                         opt.value = section.id;
                         opt.textContent = section.name;
+                        select.appendChild(opt);
+                    });
+                }
+            }
+        }
+
+        function populateReportToDropDown(groupId) {
+            const select = document.getElementById('report_to_id');
+            select.innerHTML = '<option value="">Select Employee To Report To</option>';
+            if (!window.departmentTeams) {
+                // showSnackbar('Department groups not loaded', '#dc3545');
+                return;
+            }
+            if (groupId) {
+                const group = window.departmentTeams.find(g => g.id === parseInt(groupId));
+                if (group && group.employees) {
+                    group.employees.forEach(employee => {
+                        const opt = document.createElement('option');
+                        opt.value = employee.id;
+                        opt.textContent = employee.fullname;
                         select.appendChild(opt);
                     });
                 }
@@ -403,6 +433,10 @@
         addNewDesignationCheckbox.addEventListener('change', updateDesignationFieldVisibility);
         document.getElementById('department_group_id').addEventListener('change', function () {
             populateSections(this.value);
+        });
+
+        document.getElementById('department_team_id').addEventListener('change', function () {
+            populateReportToDropDown(this.value);
         });
 
         async function createNewDesignation() {
@@ -440,8 +474,8 @@
             const q = sel => form.querySelector(sel);
             if (!q('#emp_id').value.trim()) errors.push('Employee ID is required');
             if (!q('#fullname').value.trim()) errors.push('Full Name is required');
-            if (!q('#department_team_id').value) errors.push('Department Team is required');
-            if (!q('#department_group_id').value) errors.push('Department Group is required');
+            if (!q('#department_team_id').value) errors.push('Department Group is required');
+            if (!q('#department_group_id').value) errors.push('Department is required');
             if (!q('#section_id').value) errors.push('Section is required');
             if (!q('#location_id').value) errors.push('Location is required');
             if (!q('#date_of_joining').value) errors.push('Date of Joining is required');
@@ -510,6 +544,7 @@ function clearStepData(stepIndex) {
         resignationContainer.style.display = 'none';
         resignationInput.disabled = true;
         populateSections('');
+        populateReportToDropDown('');
     }
 }
 
@@ -655,7 +690,9 @@ function restoreStepData(stepIndex) {
             if (key === 'department_group_id' && value) {
                 populateSections(value);
             }
-            
+            if (key === 'department_team_id' && value) {
+                populateReportToDropDown(value);
+            }
             if (key === 'designation_id' && value) {
                 addNewDesignationCheckbox.checked = false;
                 updateDesignationFieldVisibility();

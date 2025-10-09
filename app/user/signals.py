@@ -96,7 +96,7 @@ def update_increment_summary_dynamic_attribute(sender, instance, created, **kwar
                 FinancialImpactPerMonthDraft.objects.get_or_create(
                     employee_draft=employee_draft, 
                     emp_status=financialimpactpermonth.emp_status, 
-                    serving_years=financialimpactpermonth.serving_years
+                    serving_period=financialimpactpermonth.serving_period
                 )    
 
             company = getattr(employee_draft, 'company', None) or (employee.company if employee else None)
@@ -504,7 +504,7 @@ def update_draft_increment_summary_employee(sender, instance, created, **kwargs)
             FinancialImpactPerMonthDraft.objects.get_or_create(
                 employee_draft=instance, 
                 emp_status=financialimpactpermonth.emp_status, 
-                serving_years=financialimpactpermonth.serving_years
+                serving_period=financialimpactpermonth.serving_period
             )    
 
         company = getattr(instance, 'company', None) or (employee.company if employee else None)
@@ -684,7 +684,7 @@ def update_draft_increment_summary(sender, instance, created, **kwargs):
             FinancialImpactPerMonthDraft.objects.get_or_create(
                 employee_draft=employee_draft, 
                 emp_status=financialimpactpermonth.emp_status, 
-                serving_years=financialimpactpermonth.serving_years
+                serving_period=financialimpactpermonth.serving_period
             )
 
         company = getattr(instance, 'company', None) or (employee.company if employee else None)

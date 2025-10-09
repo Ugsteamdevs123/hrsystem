@@ -36,11 +36,14 @@
                         <!-- Employee Details -->
                         <th colspan="9" class="group-header non-sticky-header employee-color">Employee Details</th>
                         <!-- Current Package -->
-                        <th colspan="6" class="group-header non-sticky-header current-package-color">Current Package</th>
+                        <th colspan="7" class="group-header non-sticky-header current-package-color">Current Package</th>
                         <!-- Proposed Package -->
-                        <th colspan="9" class="group-header non-sticky-header proposed-package-color">Proposed Package</th>
+                        <th colspan="10" class="group-header non-sticky-header proposed-package-color">Proposed Package</th>
                         <!-- Financial Impact -->
                         <th colspan="8" class="group-header non-sticky-header financial-impact-color">Financial Impact</th>
+                        <!-- Remarks and Picture -->
+                        <th rowspan="2" class="non-sticky-header employee-color">Remarks</th>
+                        <th rowspan="2" class="non-sticky-header employee-color">Photograph</th>
                         <!-- Dynamic Attributes group header -->
                         {% if employees.0.dynamic_attributes|length > 0 %}
                             <th colspan="{{ employees.0.dynamic_attributes|length }}" class="group-header non-sticky-header dynamic-attributes-color">Dynamic Columns</th>
@@ -52,11 +55,12 @@
                         <th class="non-sticky-header employee-color">Department Group</th>
                         <th class="non-sticky-header employee-color">Department</th>
                         <th class="non-sticky-header employee-color">Section</th>
+                        <th class="non-sticky-header employee-color">Report To</th>
                         <th class="non-sticky-header employee-color">Location</th>
                         <th class="non-sticky-header employee-color">Date of Joining</th>
                         <th class="non-sticky-header employee-color">Resign</th>
                         <th class="non-sticky-header employee-color">Date of Resignation</th>
-                        <th class="non-sticky-header employee-color">Remarks</th>
+                        {% comment %} <th class="non-sticky-header employee-color">Remarks</th> {% endcomment %}
                         <!-- Current Package Subheaders -->
                         <th class="non-sticky-header current-package-color">Gross Salary</th>
                         <th class="non-sticky-header current-package-color">Company Pickup</th>
@@ -64,6 +68,7 @@
                         <th class="non-sticky-header current-package-color">Fuel Allowance</th>
                         <th class="non-sticky-header current-package-color">Fuel Litre</th>
                         <th class="non-sticky-header current-package-color">Mobile Provided</th>
+                        <th class="non-sticky-header current-package-color">Total</th>
                         <!-- Proposed Package Subheaders -->
                         <th class="non-sticky-header proposed-package-color">Increment Percentage</th>
                         <th class="non-sticky-header proposed-package-color">Increased Amount</th>
@@ -74,9 +79,10 @@
                         <th class="non-sticky-header proposed-package-color">Mobile Provided</th>
                         <th class="non-sticky-header proposed-package-color">Company Pickup</th>
                         <th class="non-sticky-header proposed-package-color">Vehicle</th>
+                        <th class="non-sticky-header proposed-package-color">Total</th>
                         <!-- Financial Impact Subheaders -->
                         <th class="non-sticky-header financial-impact-color">Employee Status</th>
-                        <th class="non-sticky-header financial-impact-color">Serving Years</th>
+                        <th class="non-sticky-header financial-impact-color">Serving Period</th>
                         <th class="non-sticky-header financial-impact-color">Salary</th>
                         <th class="non-sticky-header financial-impact-color">Gratuity</th>
                         <th class="non-sticky-header financial-impact-color">Bonus</th>
@@ -104,11 +110,11 @@
                             <td class="non-sticky">{{ employee.department_team.name|default:"-" }}</td>
                             <td class="non-sticky">{{ employee.department_group.name|default:"-" }}</td>
                             <td class="non-sticky">{{ employee.section.name|default:"-" }}</td>
+                            <td class="non-sticky">{{ employee.report_to|default:"-" }}</td>
                             <td class="non-sticky">{{ employee.location.location|default:"-" }}</td>
                             <td class="non-sticky">{{ employee.date_of_joining|date:"Y-m-d"|default:"-" }}</td>
                             <td class="non-sticky">{{ employee.resign|yesno:"Yes,No,-" }}</td>
                             <td class="non-sticky">{{ employee.date_of_resignation|date:"Y-m-d"|default:"-" }}</td>
-                            <td class="non-sticky">{{ employee.remarks|default:"-" }}</td>
                             <!-- Current Package -->
                             {% with current_package=employee.currentpackagedetails %}
                                 <td class="non-sticky" data-tab="CurrentPackageDetails" data-field="gross_salary">{{ current_package.gross_salary|floatformat:2|default:"-" }}</td>
@@ -117,6 +123,7 @@
                                 <td class="non-sticky" data-tab="CurrentPackageDetails" data-field="fuel_allowance">{{ current_package.fuel_allowance|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky">{{ current_package.fuel_litre|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky">{{ current_package.mobile_provided|yesno:"Yes,No,-" }}</td>
+                                <td class="non-sticky" data-tab="CurrentPackageDetails" data-field="total">{{ current_package.total|floatformat:2|default:"-" }}</td>
                             {% endwith %}
                             <!-- Proposed Package -->
                             {% with proposed_package=employee.proposedpackagedetails %}
@@ -129,11 +136,12 @@
                                 <td class="non-sticky editable" data-tab="ProposedPackageDetails" data-field="mobile_provided" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.mobile_provided|yesno:"Yes,No,-" }}</td>
                                 <td class="non-sticky editable" data-tab="ProposedPackageDetails" data-field="company_pickup" data-type="select" data-options='[{"value": "true", "label": "Yes"}, {"value": "false", "label": "No"}]'>{{ proposed_package.company_pickup|yesno:"Yes,No,-" }}</td>
                                 <td class="non-sticky editable" data-tab="ProposedPackageDetails" data-field="vehicle_id" data-type="select" data-endpoint="/payroll/vehicles-dropdown/">{{ proposed_package.vehicle|default:"-" }}</td>
+                                <td class="non-sticky" data-tab="ProposedPackageDetails" data-field="total">{{ proposed_package.total|floatformat:2|default:"-" }}</td>
                             {% endwith %}
                             <!-- Financial Impact -->
                             {% with financial_impact=employee.financialimpactpermonth %}
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="emp_status">{{ financial_impact.emp_status.status|default:"-" }}</td>
-                                <td class="non-sticky">{{ financial_impact.serving_years|floatformat:1|default:"-" }}</td>
+                                <td class="non-sticky">{{ financial_impact.serving_period|default:"0 days" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="salary">{{ financial_impact.salary|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="gratuity">{{ financial_impact.gratuity|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="bonus">{{ financial_impact.bonus|floatformat:2|default:"-" }}</td>
@@ -141,6 +149,15 @@
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="fuel">{{ financial_impact.fuel|floatformat:2|default:"-" }}</td>
                                 <td class="non-sticky" data-tab="FinancialImpactPerMonth" data-field="total">{{ financial_impact.total|floatformat:2|default:"-" }}</td>
                             {% endwith %}
+                            <!-- Remarks and Photograph -->
+                            <td class="non-sticky">{{ employee.remarks|default:"-" }}</td>
+                            <td class="non-sticky">
+                                {% if employee.photograph %}
+                                    <img src="{{ employee.photograph.url }}" alt="Employee Image" style="width: 80px; height: auto; border-radius: 5px;" />
+                                {% else %}
+                                    <span>No Image</span>
+                                {% endif %}
+                            </td>
                             <!-- Dynamic Attributes -->
                             {% for attr in employee.dynamic_attributes %}
                                 <td class="non-sticky {% if attr.inline_editable %}editable{% endif %}"
@@ -310,7 +327,7 @@
             text-align: left;
             padding: 10px;
             border: 1px solid #dee2e6;
-            white-space: nowrap;
+            /* white-space: nowrap; */
             background-color: inherit;
         }
         th {
@@ -335,9 +352,11 @@
             background-color: #6495ed !important;
         }
         .non-sticky-header {
+            white-space: normal;         /* Allow wrapping */
             position: sticky;
             top: 0;
             z-index: 20;
+            max-width: 100px;
         }
         .non-sticky {
             z-index: 5;

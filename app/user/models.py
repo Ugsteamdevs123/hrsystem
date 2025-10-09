@@ -407,6 +407,7 @@ class Employee(models.Model):
     auto_mark_eligibility = models.BooleanField(default=True)
     is_intern = models.BooleanField(default=False)
     promoted_from_intern_date = models.DateField(blank=True, null=True)
+    report_to = models.CharField(max_length=255, null=True)
     dynamic_attribute = GenericRelation(DynamicAttribute)
 
     is_deleted = models.BooleanField(default=False)
@@ -520,7 +521,7 @@ class ProposedPackageDetails(models.Model):
 class FinancialImpactPerMonth(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE)
     emp_status = models.ForeignKey(EmployeeStatus, on_delete=models.CASCADE, null=True, blank=True)
-    serving_years = models.IntegerField(null=True, blank=True)
+    serving_period = models.IntegerField(null=True, blank=True)
     salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     gratuity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
     bonus = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Changed from FK
@@ -581,6 +582,7 @@ class EmployeeDraft(models.Model):
     auto_mark_eligibility = models.BooleanField(default=True, null=True)
     is_intern = models.BooleanField(default=False, null=True)
     promoted_from_intern_date = models.DateField(blank=True, null=True)
+    report_to = models.CharField(max_length=255, null=True)
     dynamic_attribute = GenericRelation(DynamicAttribute)
 
     is_deleted = models.BooleanField(default=False)
@@ -703,7 +705,7 @@ class ProposedPackageDetailsDraft(models.Model):
 class FinancialImpactPerMonthDraft(models.Model):
     employee_draft = models.OneToOneField(EmployeeDraft, on_delete=models.CASCADE)
     emp_status = models.ForeignKey('EmployeeStatus', on_delete=models.CASCADE, null=True, blank=True)
-    serving_years = models.IntegerField(null=True, blank=True)
+    serving_period = models.IntegerField(null=True, blank=True)
     salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     gratuity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     bonus = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
