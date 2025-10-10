@@ -65,7 +65,8 @@ urlpatterns = [
     path('hr/approved/', views.HrUpdateApprovedView.as_view(), name='hr_approved'),
     path('hr/final-approve/', views.HrFinalApproveSummaryView.as_view(), name='hr_final_approve'),
     path('department-team/', views.DepartmentTeamView.as_view(), name='department_team'),
-    path('department-teams/', views.CompanyDepartmentTeamView.as_view(), name='company_department_team'),
+    # path('department-teams/', views.CompanyDepartmentTeamView.as_view(), name='company_department_team'),
+    path('department-teams-employees/', views.CompanyDepartmentTeamEmployeeView.as_view(), name='company_department_team_employees'),
     path('get-companies-and-department-teams/', views.GetCompaniesAndDepartmentTeamsView.as_view(), name='get_companies_and_department_teams'),
     path('company-summary/<int:company_id>/', views.CompanySummaryView.as_view(), name='company_summary'),
 
@@ -75,12 +76,10 @@ urlpatterns = [
     path('employee/update/<int:employee_id>/', views.UpdateEmployeeView.as_view(), name='update_employee'),
     path('department/delete/<int:employee_id>/', views.DeleteEmployeeView.as_view(), name='delete_employee'),
     path('employee/<int:employee_id>/', views.EmployeeDetailView.as_view(), name='employee_detail'),
+    path('employee/upload_file/', views.FileUploadView.as_view(), name='upload_file'),
 
     # For dept table crud
     path('department/<int:department_id>/', views.DepartmentTableView.as_view(), name='department_table'),
-    # path('department/<int:department_id>/create/', views.CreateEmployeeView.as_view(), name='create_employee'),
-    # path('department/<int:department_id>/update/<int:employee_id>/', views.UpdateEmployeeView.as_view(), name='update_employee'),
-    # path('department/<int:department_id>/delete/<int:employee_id>/', views.DeleteEmployeeView.as_view(), name='delete_employee'),
     path('get-data/<str:table>/<str:id>/', views.GetDataView.as_view(), name='get_data'),
     path('save-draft/<int:department_id>/', views.SaveDraftView.as_view(), name='save_draft'),
     path('save-final/<int:department_id>/', views.SaveFinalView.as_view(), name='save_final'),

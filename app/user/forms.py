@@ -64,8 +64,8 @@ class FieldFormulaForm(forms.ModelForm):
     department_team = forms.ModelChoiceField(
         queryset=DepartmentTeams.objects.filter(is_deleted=False),
         required=False,
-        empty_label="Select a department team",
-        help_text="Choose a department team (required if no employee is selected)."
+        empty_label="Select a department group",
+        help_text="Choose a department group (required if no employee is selected)."
     )
 
     class Meta:

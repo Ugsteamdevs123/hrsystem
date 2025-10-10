@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fetch departments & employees based on company
     companySelect.addEventListener('change', function() {
         const companyId = this.value;
-        departmentSelect.innerHTML = '<option value="">Select a department team</option>';
+        departmentSelect.innerHTML = '<option value="">Select a department group</option>';
         if (companyId) {
             fetch(`/payroll/get-company-departments-employees/?company_id=${encodeURIComponent(companyId)}`)
                 .then(res => res.json())

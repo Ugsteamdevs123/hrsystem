@@ -15,10 +15,22 @@
         </div>
 
         <!-- Buttons -->
-        <div class="button-group">
+        <div class="button-group-top">
             {% if perms.user.add_employee %}
                 <a href="{% url 'create_employee' %}" class="form-btn btn-submit">Add New Employee</a>
             {% endif %}
+
+            <!-- templates/upload.html -->
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="file-upload-wrapper">
+                    <input type="file" id="file-upload" name="file" accept=".csv, .xlsx" hidden>
+                    <label for="file-upload" class="form-btn btn-choose">Choose File</label>
+                    <span id="file-name" class="file-name">No file chosen</span>
+                    <button class="form-btn btn-submit" type="submit">Upload</button>
+                </div>
+                
+            </form>
         </div>
 
         <!-- Combined Table -->
@@ -118,11 +130,15 @@
             font-size: 24px;
             color: #343a40;
         }
+        .button-group-top,
         .button-group {
             margin-top: 20px;
             margin-bottom: 20px;
             display: flex;
             gap: 10px;
+        }
+        .button-group-top {
+            justify-content: space-between;
         }
         .table-wrap {
             width: 100%;
@@ -196,6 +212,22 @@
         }
         .btn-submit:hover {
             background-color: #218838;
+        }
+        .btn-choose {
+            background-color: #007bff;
+            color: #fff;
+            display: inline-block;
+        }
+
+        .file-upload-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-name {
+            font-size: 14px;
+            color: #555;
         }
         .action-btn {
             width: 36px;
@@ -446,6 +478,13 @@
         }
 
         bindRowActions();
+    });
+
+    const fileInput = document.getElementById('file-upload');
+    const fileName = document.getElementById('file-name');
+
+    fileInput.addEventListener('change', function () {
+        fileName.textContent = this.files.length > 0 ? this.files[0].name : 'No file chosen';
     });
     </script>
 {% else %}

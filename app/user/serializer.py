@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from collections import OrderedDict
 from .models import (
+    Employee,
+    DepartmentTeams,
     IncrementDetailsSummary, 
     Formula,
     FieldFormula,
@@ -125,6 +127,19 @@ class DepartmentGroupsSerializer(serializers.ModelSerializer):
     class Meta:
         model = DepartmentGroups
         fields = ['id', 'name', 'sections']
+
+
+class EmployeesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = ['id', 'fullname']
+
+class DepartmentGroupsEmployeeSerializer(serializers.ModelSerializer):
+    employees = EmployeesSerializer(many=True, read_only=True, source='employee_set')
+
+    class Meta:
+        model = DepartmentTeams
+        fields = ['id', 'name', 'employees']
 
 
 class DesignationSerializer(serializers.ModelSerializer):

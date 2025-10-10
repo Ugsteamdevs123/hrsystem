@@ -60,6 +60,12 @@
                     </div>
                 </div>
                 <div class="form-field">
+                    <label for="report_to_id">Report To <span class="req">*</span></label>
+                    <select id="report_to_id" name="report_to_id">
+                        <option value="">Select Employee To Report To</option>
+                    </select>
+                </div>
+                <div class="form-field">
                     <label for="location_id">Location <span class="req">*</span></label>
                     <select id="location_id" name="location_id">
                         <option value="">Select Location</option>
@@ -244,10 +250,12 @@
             q('#emp_id').value = data.employee.emp_id || '';
             q('#fullname').value = data.employee.fullname || '';
             q('#department_team_id').value = data.employee.department_team_id || '';
+            populateReportToDropDown(data.employee.department_team_id);
             q('#department_group_id').value = data.employee.department_group_id || '';
             populateSections(data.employee.department_group_id);
             q('#section_id').value = data.employee.section_id || '';
             q('#designation_id').value = data.employee.designation_id || '';
+            q('#report_to_id').value = data.employee.report_to || '';
             q('#location_id').value = data.employee.location_id || '';
             q('#date_of_joining').value = data.employee.date_of_joining || '';
             q('#date_of_resignation').value = data.employee.date_of_resignation || '';
@@ -292,13 +300,13 @@
             q('#fuel_allowance').value = data.current_package?.fuel_allowance || '';
             q('#fuel_litre').value = data.current_package?.fuel_litre || '';
             q('#emp_status_id').value = data.financial_impact?.emp_status_id || '';
-            formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_team_id: q('#department_team_id').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, date_of_resignation: q('#date_of_resignation').value, remarks: q('#remarks').value };
+            formDataStore[0] = { ...formDataStore[0], fullname: q('#fullname').value, department_team_id: q('#department_team_id').value, department_group_id: q('#department_group_id').value, section_id: q('#section_id').value, designation_id: q('#designation_id').value, report_to_id: q('#report_to_id').value, location_id: q('#location_id').value, date_of_joining: q('#date_of_joining').value, date_of_resignation: q('#date_of_resignation').value, remarks: q('#remarks').value };
             // Add dynamic attributes with prefix
             document.querySelectorAll('input[data-dynamic="true"]').forEach(input => {
                 const key = `dynamic_attribute__${input.name}`;
                 formDataStore[0][key] = input.value;
             });
-            console.log(formDataStore);
+            
             formDataStore[1] = { ...formDataStore[1], gross_salary: q('#gross_salary').value, company_pickup_current: companyPickupCurrentValue, vehicle_id: q('#vehicle_id').value, fuel_allowance: q('#fuel_allowance').value, mobile_provided: mobileProvidedValue, fuel_litre: q('#fuel_litre').value };
             formDataStore[2] = { ...formDataStore[2], emp_status_id: q('#emp_status_id').value };
         }
@@ -325,16 +333,16 @@
             }
 
             try {
-                const raw = await fetchJSON(`/payroll/department-teams/?company_id=${companyId}`);
+                const raw = await fetchJSON(`/payroll/department-teams-employees/?company_id=${companyId}`);
                 const list = asArray(raw);
                 if (!Array.isArray(list)) {
-                    showSnackbar('No department team available', '#dc3545');
+                    showSnackbar('No department group available', '#dc3545');
                     window.departmentTeams = [];
                     return;
                 }
                 populateDepartmentTeams(list);
             } catch (e) {
-                showSnackbar('Error loading department teams', '#dc3545');
+                showSnackbar('Error loading department groups', '#dc3545');
                 window.departmentGroups = [];
             }
 
@@ -397,7 +405,7 @@
                 opt.value = dept.id;
                 opt.textContent = dept.name;
                 select.appendChild(opt);
-                window.departmentTeams.push({ id: dept.id, name: dept.name });
+                window.departmentTeams.push({ id: dept.id, name: dept.name, employees:dept.employees});
             });
         }
 
@@ -452,7 +460,7 @@
             const select = document.getElementById('section_id');
             select.innerHTML = '<option value="">Select Section</option>';
             if (!window.departmentGroups) {
-                showSnackbar('Department groups not loaded', '#dc3545');
+                showSnackbar('Departments not loaded', '#dc3545');
                 return;
             }
             if (groupId) {
@@ -464,6 +472,29 @@
                         opt.textContent = section.name;
                         select.appendChild(opt);
                     });
+                }
+            }
+        }
+
+        function populateReportToDropDown(groupId) {
+            const select = document.getElementById('report_to_id');
+            select.innerHTML = '<option value="">Select Employee To Report To</option>';
+            if (!window.departmentTeams) {
+                // showSnackbar('Department groups not loaded', '#dc3545');
+                return;
+            }
+            if (groupId) {
+                const group = window.departmentTeams.find(g => g.id === parseInt(groupId));
+                if (group && group.employees) {
+                    data = window.employeeData;
+                    group.employees.forEach(employee => {
+                        if (employee.id != data.employee.id) {
+                            const opt = document.createElement('option');
+                            opt.value = employee.id;
+                            opt.textContent = employee.fullname;
+                            select.appendChild(opt);
+                        }
+                        });
                 }
             }
         }
@@ -488,6 +519,10 @@
         addNewDesignationCheckbox.addEventListener('change', updateDesignationFieldVisibility);
         document.getElementById('department_group_id').addEventListener('change', function () {
             populateSections(this.value);
+        });
+
+        document.getElementById('department_team_id').addEventListener('change', function () {
+            populateReportToDropDown(this.value);
         });
 
         async function createNewDesignation() {
@@ -735,7 +770,10 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await fetchDropdownData();
             const employeeData = await fetchEmployeeData();
-            if (employeeData) populateForm(employeeData);
+            if (employeeData) {
+                window.employeeData = employeeData;
+                populateForm(employeeData);
+            };
             updateDesignationFieldVisibility();
             showStep(currentStep);
             document.getElementById('prevBtn').addEventListener('click', () => {

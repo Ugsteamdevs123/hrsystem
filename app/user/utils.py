@@ -25,6 +25,36 @@ from django.apps import apps
 from django.db.models import Prefetch, Value
 from django.db.models.functions import Concat
 
+from dateutil.relativedelta import relativedelta
+from datetime import date, timedelta
+
+
+def get_serving_period_pretty(date_of_joining, serving_period):
+    if serving_period is None:
+        return "N/A"
+
+    join_date = date_of_joining
+    as_of_date = Configurations.objects.all().first().as_of_date
+
+    if as_of_date < join_date:
+        return '0 days'
+    
+    start_date = date(2000, 1, 1)
+    end_date = start_date + timedelta(days=serving_period)
+    # delta = relativedelta(end_date, start_date)
+
+    delta = relativedelta(as_of_date, join_date)
+
+    parts = []
+    if delta.years:
+        parts.append(f"{delta.years} year{'s' if delta.years != 1 else ''}")
+    if delta.months:
+        parts.append(f"{delta.months} month{'s' if delta.months != 1 else ''}")
+    if delta.days:
+        parts.append(f"{delta.days} day{'s' if delta.days != 1 else ''}")
+
+    return ', '.join(parts) if parts else '0 days'
+
 
 def normalize_field_name(name):
     # Lowercase, remove extra spaces, replace spaces with underscores
@@ -53,19 +83,19 @@ def update_draft_department_team_increment_summary(sender, instance, company, de
 
                 IncrementDetailsSummaryDraft.objects.filter(company=company, department_team=department_team).update(total_employees = employee_count,)
 
-        if sender is FinancialImpactPerMonthDraft:
-            configuration = Configurations.objects.first()
-            if configuration:
-                years = configuration.as_of_date.year - instance.employee_draft.employee.date_of_joining.year
-                if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee_draft.employee.date_of_joining.month, instance.employee_draft.employee.date_of_joining.day):
-                    years -= 1
-                    if years < 0:
-                        years = 0
+        # if sender is FinancialImpactPerMonthDraft:
+        #     configuration = Configurations.objects.first()
+        #     if configuration:
+        #         years = configuration.as_of_date.year - instance.employee_draft.employee.date_of_joining.year
+        #         if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee_draft.employee.date_of_joining.month, instance.employee_draft.employee.date_of_joining.day):
+        #             years -= 1
+        #             if years < 0:
+        #                 years = 0
 
-                FinancialImpactPerMonthDraft.objects.filter(id=instance.id).update(serving_years = years)
+        #         FinancialImpactPerMonthDraft.objects.filter(id=instance.id).update(serving_period = years)
            
     except Exception as e:
-        print(f"Error in updating draft department team increment summary: {e}")
+        print(f"Error in updating draft department group increment summary: {e}")
 
 
 def update_department_team_increment_summary(sender, instance, company, department_team):
@@ -75,31 +105,31 @@ def update_department_team_increment_summary(sender, instance, company, departme
         if sender in [Employee, CurrentPackageDetails, ProposedPackageDetails]:
                 IncrementDetailsSummary.objects.filter(company=company, department_team=department_team).update(total_employees = employee_count,)
 
-        if sender is FinancialImpactPerMonth:
-            proposed_package = ProposedPackageDetails.objects.get(employee=instance.employee)
-            configuration = Configurations.objects.first()
-            if proposed_package:
+        # if sender is FinancialImpactPerMonth:
+        #     proposed_package = ProposedPackageDetails.objects.get(employee=instance.employee)
+        #     configuration = Configurations.objects.first()
+        #     if proposed_package:
 
-                # Ensure both are datetime/date
-                as_of_date = configuration.as_of_date
-                date_of_joining = instance.employee.date_of_joining
+        #         # Ensure both are datetime/date
+        #         as_of_date = configuration.as_of_date
+        #         date_of_joining = instance.employee.date_of_joining
 
-                # Convert string to date if needed
-                if isinstance(as_of_date, str):
-                    as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
+        #         # Convert string to date if needed
+        #         if isinstance(as_of_date, str):
+        #             as_of_date = datetime.strptime(as_of_date, "%Y-%m-%d").date()
 
-                if isinstance(date_of_joining, str):
-                    date_of_joining = datetime.strptime(date_of_joining, "%Y-%m-%d").date()
+        #         if isinstance(date_of_joining, str):
+        #             date_of_joining = datetime.strptime(date_of_joining, "%Y-%m-%d").date()
 
-                years = as_of_date.year - date_of_joining.year
-                # if (as_of_date.month, as_of_date.day) < (date_of_joining.month, date_of_joining.day):
-                #     years -= 1
-                if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee_draft.employee.date_of_joining.month, instance.employee_draft.employee.date_of_joining.day):
-                    years -= 1
-                    if years < 0:
-                        years = 0
+        #         years = as_of_date.year - date_of_joining.year
+        #         # if (as_of_date.month, as_of_date.day) < (date_of_joining.month, date_of_joining.day):
+        #         #     years -= 1
+        #         if (configuration.as_of_date.month, configuration.as_of_date.day) < (instance.employee_draft.employee.date_of_joining.month, instance.employee_draft.employee.date_of_joining.day):
+        #             years -= 1
+        #             if years < 0:
+        #                 years = 0
 
-                FinancialImpactPerMonth.objects.filter(id=instance.id).update(serving_years = years)
+        #         FinancialImpactPerMonth.objects.filter(id=instance.id).update(serving_period = years)
            
     except Exception as e:
         print(f"Error in updating department team increment summary: {e}")

@@ -66,7 +66,7 @@ from .forms import (
 from venv import logger
 from permissions import PermissionRequiredMixin
 
-from .utils import get_companies_and_department_teams, topological_sort, normalize_field_name, replace_field_reference_ids_from_expression, replace_field_reference_models_and_fields_from_expression
+from .utils import get_companies_and_department_teams, topological_sort, normalize_field_name, replace_field_reference_ids_from_expression, replace_field_reference_models_and_fields_from_expression, get_serving_period_pretty
 from .serializer import (
     IncrementDetailsSummarySerializer,
     IncrementDetailsSummaryDraftSerializer,
@@ -75,7 +75,8 @@ from .serializer import (
     DesignationCreateSerializer,
     LocationsSerializer,
     EmployeeStatusSerializer,
-    FieldFormulaSerializer
+    FieldFormulaSerializer,
+    DepartmentGroupsEmployeeSerializer
 )
 
 from .signals import (
@@ -472,7 +473,6 @@ class DeleteDepartmentGroupView(PermissionRequiredMixin, View):
     permission_required = "user.delete_departmentgroups"
 
     def get(self, request, pk):
-        # group = get_object_or_404(DepartmentGroups, pk=pk, is_deleted=False)
         group = DepartmentGroups.objects.filter(pk=pk, is_deleted=False).prefetch_related('section_set').first()
 
         for section in group.section_set.all():
@@ -702,10 +702,6 @@ class HrDashboardView(PermissionRequiredMixin, View):
             draft_department_team_ids = increment_details_summary_draft.values_list("department_team_id", flat=True)
             print(draft_department_team_ids , 'Dept Teams Id')
 
-            # increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id ).exclude(
-            #     department_team__in=draft_department_team_ids
-            # )
-
             increment_details_summary = IncrementDetailsSummary.objects.filter(company__id=company_id , department_team__is_deleted=False).exclude(
                 department_team__in=draft_department_team_ids
             )
@@ -715,7 +711,6 @@ class HrDashboardView(PermissionRequiredMixin, View):
                 data = IncrementDetailsSummarySerializer(increment_details_summary, many=True).data
             else:
                 # create a dict with all serializer fields set to None
-                # fields = IncrementDetailsSummarySerializer().get_fields().keys()
                 data = []
             
             # Fetch summary status (1 per company ideally)
@@ -732,9 +727,6 @@ class HrDashboardView(PermissionRequiredMixin, View):
             })
         except DepartmentTeams.DoesNotExist:
             return JsonResponse({'data': []})
-
-        # logger.info(f"User {request.user.username} accessed HR dashboard with {len(company_data)} companies")
-        # return render(request, 'hr_dashboard.html', {'company_data': company_data})
 
     def patch(self, request):
         # Handle AJAX PATCH request to update eligible_for_increment
@@ -919,7 +911,7 @@ class HrFinalApproveSummaryView(PermissionRequiredMixin, View):
 
 
 @method_decorator(login_required, name='dispatch')
-class CompanyDepartmentTeamView(View):
+class CompanyDepartmentTeamEmployeeView(View):
     def get(self, request):
         company_id = request.GET.get('company_id')
         if not company_id:
@@ -931,8 +923,10 @@ class CompanyDepartmentTeamView(View):
 
         # Fetch DepartmentTeams for the given company_id
         try:
-            departments = DepartmentTeams.objects.filter(company=company_id, is_deleted=False).values('id', 'name')
-            return JsonResponse({'data': list(departments)}, status=200)
+            departments = DepartmentTeams.objects.filter(company=company_id, is_deleted=False)
+            departments_employees = DepartmentGroupsEmployeeSerializer(departments, many=True).data
+            print("departments_employees: ", departments_employees)
+            return JsonResponse({'data': departments_employees}, status=200)
         except Exception as e:
             return JsonResponse({'error': 'Failed to fetch department teams'}, status=500)
 
@@ -1223,12 +1217,9 @@ class DepartmentTableView(View):
                 past_six_months = False
             
             data = {}
-            # for key, value in emp.__dict__:
-            #     if key == "dynamic_attribute":
-            #         for d_key, d_value in value:
-            #             data[d_key] = d_value
-            #     if key not in ["auto_mark_eligibility", "is_intern", "promoted_from_intern_date", "is_deleted", "history"]:
-            #         data[key] = value
+            
+            report_to_id = emp_draft.report_to if is_draft and emp_draft.edited_fields.get('report_to') else emp.report_to
+            report_to_name = Employee.objects.filter(id=report_to_id).values_list('fullname', flat=True).first()
             data = {
                 'emp_id': emp.emp_id,
                 'past_six_months': past_six_months,
@@ -1238,12 +1229,14 @@ class DepartmentTableView(View):
                 'department_team': emp.department_team,
                 'department_group': emp_draft.department_group if is_draft and emp_draft.edited_fields.get('department_group_id') else emp.department_group,
                 'section': emp_draft.section if is_draft and emp_draft.edited_fields.get('section_id') else emp.section,
+                "report_to": report_to_name,
                 'designation': emp_draft.designation if is_draft and emp_draft.edited_fields.get('designation_id') else emp.designation,
                 'location': emp_draft.location if is_draft and emp_draft.edited_fields.get('location_id') else emp.location,
                 'date_of_joining': emp_draft.date_of_joining if is_draft and emp_draft.edited_fields.get('date_of_joining') else emp.date_of_joining,
                 'resign': emp_draft.resign if is_draft and emp_draft.edited_fields.get('resign') else emp.resign,
                 'date_of_resignation': emp_draft.date_of_resignation if is_draft and emp_draft.edited_fields.get('date_of_resignation') else emp.date_of_resignation,
                 'remarks': emp_draft.remarks if is_draft and emp_draft.edited_fields.get('remarks') else emp.remarks,
+                'photograph': emp_draft.image if is_draft and emp_draft.edited_fields.get('image') else emp.image,
                 'is_draft': is_draft,
                 'currentpackagedetails': None,
                 'proposedpackagedetails': None,
@@ -1266,7 +1259,7 @@ class DepartmentTableView(View):
                 'data_type': attr.definition.data_type
             } for attr in emp.dynamic_attribute.all().order_by('definition__id')]
 
-            print("data: ", data)
+            # print("data: ", data)
             # draft_data[emp.emp_id] = {'employee': {}, 'current_package': {}, 'proposed_package': {}, 'financial_impact': {}}
             draft_data[emp.emp_id] = {'Employee': {}, 'CurrentPackageDetails': {}, 'ProposedPackageDetails': {}, 'FinancialImpactPerMonth': {}, 'DynamicAttribute': {}}
 
@@ -1298,8 +1291,8 @@ class DepartmentTableView(View):
                     'revised_fuel_allowance': proposed_package.revised_fuel_allowance,
                     'company_pickup': proposed_package.company_pickup,
                     'mobile_provided': proposed_package.mobile_provided,
-                    'total': proposed_package.total,
                     'vehicle': proposed_package.vehicle,
+                    'total': proposed_package.total,
                 }
 
             # ✅ Handle financial impact (Prioritize draft)
@@ -1308,7 +1301,7 @@ class DepartmentTableView(View):
             if financial_package:
                 data['financialimpactpermonth'] = {
                     'emp_status': financial_package.emp_status,
-                    'serving_years': financial_package.serving_years,
+                    'serving_period': get_serving_period_pretty(data["date_of_joining"], financial_package.serving_period),
                     'salary': financial_package.salary,
                     'gratuity': financial_package.gratuity,
                     'bonus': financial_package.bonus,
@@ -1317,7 +1310,7 @@ class DepartmentTableView(View):
                     'vehicle': financial_package.vehicle,
                     'total': financial_package.total,
                 }
-
+                
             employee_data.append(data)
 
         return render(request, self.template_name, {
@@ -1604,9 +1597,6 @@ class EmployeesView(View):
         return view
 
     def get(self, request):
-        # department = DepartmentTeams.objects.filter(
-        #     company__in=hr_assigned_companies.objects.filter(hr=request.user).values('company')
-        # ).first()
         department = DepartmentTeams.objects.filter(
             company=Company.objects.first()
         ).first()
@@ -1614,11 +1604,6 @@ class EmployeesView(View):
             return render(request, 'error.html', {'error': 'Invalid department'}, status=400)
 
         company_data = get_companies_and_department_teams(request.user)
-        # employees = Employee.objects.all().select_related(
-        #     'company', 'department_team', 'department_group', 'section', 'designation', 'location'
-        # ).prefetch_related(
-        #     'currentpackagedetails', 'proposedpackagedetails', 'financialimpactpermonth', 'drafts'
-        # )
 
         employees = Employee.objects.filter(is_deleted=False).select_related(
             'company', 'department_team', 'department_group', 'section', 'designation', 'location'
@@ -1627,7 +1612,6 @@ class EmployeesView(View):
         )
 
         employee_data = []
-        draft_data = {}
 
         for emp in employees:
             data = {
@@ -1649,7 +1633,7 @@ class EmployeesView(View):
             }
 
             employee_data.append(data)
-
+        
         return render(request, self.template_name, {
             'department': department,
             'employees': employee_data,
@@ -1726,7 +1710,7 @@ class GetEmployeeDataView(View):
                 },
                 'financial_impact': {
                     'emp_status_id': getattr(getattr(use_financial, 'emp_status', None), 'id', ''),
-                    'serving_years': fmt_float(getattr(use_financial, 'serving_years', None)),
+                    'serving_period': fmt_float(getattr(use_financial, 'serving_period', None)),
                     'salary': fmt_float(getattr(use_financial, 'salary', None)),
                     'gratuity': fmt_float(getattr(use_financial, 'gratuity', None)),
                 }
@@ -1849,6 +1833,7 @@ class CreateEmployeeView(View):
                             section_id= request.POST.get('section_id') or None,
                             designation_id= request.POST.get('designation_id') or None,
                             location_id= request.POST.get('location_id') or None,
+                            report_to= request.POST.get('report_to_id') or None,
                             date_of_joining= request.POST.get('date_of_joining') or None,
                             resign= request.POST.get('resign') == 'true',
                             date_of_resignation= request.POST.get('date_of_resignation') or None,
@@ -1882,6 +1867,7 @@ class CreateEmployeeView(View):
                         employee.section_id = request.POST.get('section_id') or None
                         employee.designation_id = request.POST.get('designation_id') or None
                         employee.location_id = request.POST.get('location_id') or None
+                        employee.report_to = request.POST.get('report_to_id') or None
                         employee.date_of_joining = request.POST.get('date_of_joining') or None
                         employee.resign = request.POST.get('resign') == 'true'
                         employee.date_of_resignation = request.POST.get('date_of_resignation') or None
@@ -1985,6 +1971,31 @@ class EmployeeDetailView(View):
         })
 
 
+class FileUploadView(View):
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        view = login_required(view)
+        view = permission_required('user.view_employee', raise_exception=True)(view)
+        viw = cache_control(no_cache=True, must_revalidate=True, no_store=True)(view)
+        view = ensure_csrf_cookie(view)
+        return view
+    
+    def post(self, request):
+        uploaded_file = request.FILES.get('file')
+        if uploaded_file:
+            print(uploaded_file)
+            # file_path = default_storage.save(f"uploads/{uploaded_file.name}", uploaded_file)
+            pass
+
+            # You can add parsing logic here
+            # e.g., parse_csv_or_excel(file_path)
+
+            return render(request, 'employee_table_list.html', {'message': 'Upload successful!'})
+        return render(request, 'employee_table_list.html', {'message': 'No file uploaded.'})
+
+
 class UpdateEmployeeView(View):
     template_name = 'update_employee.html'
 
@@ -2020,7 +2031,7 @@ class UpdateEmployeeView(View):
     def post(self, request, employee_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
-                company_data = get_companies_and_department_teams(request.user)
+                # company_data = get_companies_and_department_teams(request.user)
                 employee = get_object_or_404(Employee, emp_id=employee_id)
                 step = request.POST.get('step')
 
@@ -2049,6 +2060,7 @@ class UpdateEmployeeView(View):
                     employee.department_group_id = request.POST.get('department_group_id') or None
                     employee.section_id = request.POST.get('section_id') or None
                     employee.designation_id = request.POST.get('designation_id') or None
+                    employee.report_to = request.POST.get('report_to_id') or None
 
                     designation_id_str = request.POST.get('designation_id')
                     if designation_id_str:
@@ -2111,6 +2123,7 @@ class UpdateEmployeeView(View):
                         employee_draft.section_id = employee.section_id
                         employee_draft.designation_id = employee.designation_id
                         employee_draft.location_id = employee.location_id
+                        employee_draft.report_to = employee.report_to
                         employee_draft.date_of_joining = employee.date_of_joining
                         employee_draft.date_of_resignation = employee.date_of_resignation
                         employee_draft.resign = employee.resign
@@ -2172,7 +2185,7 @@ class UpdateEmployeeView(View):
                 elif step == 'financial_impact':
                     financial_impact, _ = FinancialImpactPerMonth.objects.get_or_create(employee=employee)
                     financial_impact.emp_status_id = request.POST.get('emp_status_id') or None
-                    # financial_impact.serving_years = request.POST.get('serving_years') or None
+                    # financial_impact.serving_period = request.POST.get('serving_period') or None
                     # financial_impact.salary = request.POST.get('salary') or None
                     # financial_impact.gratuity = request.POST.get('gratuity') or None
                     financial_impact.save()
@@ -2293,6 +2306,7 @@ class GetDataView(View):
 
                 data = {
                     'employee': {
+                        "id": employee.id,
                         "emp_id" : employee.emp_id,
                         'fullname': employee.fullname,
                         'department_team_id': employee.department_team_id,
@@ -2300,6 +2314,7 @@ class GetDataView(View):
                         'section_id': employee.section_id,
                         'designation_id': employee.designation_id,
                         'location_id': employee.location_id,
+                        'report_to': employee.report_to,
                         'date_of_joining': employee.date_of_joining.isoformat() if employee.date_of_joining else '',
                         'resign': employee.resign,
                         'date_of_resignation': employee.date_of_resignation.isoformat() if employee.date_of_resignation else '',
@@ -2333,7 +2348,7 @@ class GetDataView(View):
                     },
                     'financial_impact': {
                         'emp_status_id': str(financial_impact.emp_status_id) if financial_impact and financial_impact.emp_status_id else '',
-                        'serving_years': str(financial_impact.serving_years) if financial_impact and financial_impact.serving_years else '',
+                        'serving_period': str(financial_impact.serving_period) if financial_impact and financial_impact.serving_period else '',
                         'salary': str(financial_impact.salary) if financial_impact and financial_impact.salary else '',
                         'gratuity': str(financial_impact.gratuity) if financial_impact and financial_impact.gratuity else ''
                     }
@@ -3159,11 +3174,11 @@ class SaveFinalView(View):
                         logger.info(f"Updating financial_impact {employee_id}: {fin_data}")
                         financial_impact, _ = FinancialImpactPerMonth.objects.get_or_create(employee=employee)
                         for field, value in fin_data.items():
-                            if field in ['emp_status_id', 'serving_years', 'salary', 'gratuity']:
+                            if field in ['emp_status_id', 'serving_period', 'salary', 'gratuity']:
                                 if field == 'emp_status_id':
                                     financial_impact.emp_status_id = int(value) if value else None
-                                elif field == 'serving_years':
-                                    financial_impact.serving_years = Decimal(value) if value else Decimal('0')
+                                elif field == 'serving_period':
+                                    financial_impact.serving_period = Decimal(value) if value else Decimal('0')
                                 else:
                                     setattr(financial_impact, field, Decimal(value) if value else Decimal('0'))
                         financial_impact.save()
@@ -3273,8 +3288,8 @@ class SaveFinalView(View):
 #                                 for field, value in fields.items():
 #                                     if field == 'emp_status_id':
 #                                         financial_impact.emp_status_id = int(value) if value else None
-#                                     elif field in ['serving_years']:
-#                                         financial_impact.serving_years = int(value) if value else None
+#                                     elif field in ['serving_period']:
+#                                         financial_impact.serving_period = int(value) if value else None
 #                                     elif field in ['salary', 'gratuity']:
 #                                         setattr(financial_impact, field, Decimal(value) if value else Decimal('0'))
 #                                 financial_impact.save()
